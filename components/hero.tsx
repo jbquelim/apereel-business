@@ -14,10 +14,7 @@ export function Hero() {
         <p className="animate-rise font-mono text-[11px] tracking-[0.28em] text-electric uppercase">
           {site.tagline}
         </p>
-        <p className="animate-rise-delay-1 mt-8 text-[13px] font-semibold tracking-[0.38em] text-ink/40 uppercase sm:text-[15px]">
-          APEREEL
-        </p>
-        <h1 className="animate-rise-delay-1 font-display mt-5 max-w-5xl text-[2.5rem] leading-[1.08] text-ink sm:text-5xl md:text-6xl lg:text-[4.75rem]">
+        <h1 className="animate-rise-delay-1 font-display mt-8 max-w-5xl text-[2.5rem] leading-[1.08] text-ink sm:text-5xl md:text-6xl lg:text-[4.75rem]">
           {site.headline}
           <br />
           <span className="text-electric">{site.headlineLine2}</span>

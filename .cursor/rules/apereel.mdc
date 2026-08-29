@@ -1,0 +1,20 @@
+---
+description: Apereel constitution — positioning, skill composition, and non-negotiables for this consultancy site.
+alwaysApply: true
+---
+
+# Apereel
+
+Business-First Digital Growth consultancy. Visitors are CEOs, owners, CMOs, e-commerce directors, and senior decision makers. They should leave thinking: “These people understand business, not just marketing.”
+
+Never describe Apereel as a generic SEO agency.
+
+Domain skills live in `.cursor/skills/` (Claude Code: `.claude/skills/`, same files). Match the task and read that `SKILL.md`. Combine skills; do not run them as isolated checklists.
+
+- **Hero / homepage:** brand-strategy → conversion-copy → executive-ux → premium-art-direction → conversion-optimization → business-first-seo → web-performance → premium-design-critic
+- **Case study / proof:** case-study-storytelling → brand-strategy → conversion-copy → confidentiality-claims → premium-art-direction → business-first-seo
+- **Imagery / video:** ai-creative-direction + confidentiality-claims
+- **After any meaningful visual or copy change:** premium-design-critic before declaring done
+- **Any metric, client, testimonial, or brand name:** confidentiality-claims
+
+Do not overwrite the Next.js block in `AGENTS.md`.

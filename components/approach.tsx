@@ -1,3 +1,4 @@
+import { ButtonLink } from "@/components/button-link";
 import { Container } from "@/components/container";
 import { approach } from "@/lib/site";
 
@@ -43,6 +44,11 @@ export function Approach() {
             </li>
           ))}
         </ol>
+        <div className="mt-10">
+          <ButtonLink href="/#contact" variant="secondary">
+            Find Your Growth Opportunity
+          </ButtonLink>
+        </div>
       </Container>
     </section>
   );

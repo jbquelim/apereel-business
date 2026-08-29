@@ -20,19 +20,21 @@ export function JsonLd() {
           sameAs: [site.linkedin],
         },
         areaServed: "CA",
-        knowsAbout: services.map((s) => s.title),
+        knowsAbout: services.map((s: { title: string; body: string }) => s.title),
         hasOfferCatalog: {
           "@type": "OfferCatalog",
           name: "Digital Growth Services",
-          itemListElement: services.map((s, i) => ({
-            "@type": "Offer",
-            itemOffered: {
-              "@type": "Service",
-              name: s.title,
-              description: s.body,
-              position: i + 1,
-            },
-          })),
+          itemListElement: services.map(
+            (s: { title: string; body: string }, i: number) => ({
+              "@type": "Offer",
+              itemOffered: {
+                "@type": "Service",
+                name: s.title,
+                description: s.body,
+                position: i + 1,
+              },
+            }),
+          ),
         },
         sameAs: [site.linkedin],
       },

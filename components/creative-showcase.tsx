@@ -7,40 +7,57 @@ function TransformationVisual() {
     <div className="grid gap-4 sm:grid-cols-3 sm:items-center">
       <div className="rounded-xl border border-white/10 bg-navy-mid p-6">
         <svg
-          viewBox="0 0 200 160"
+          viewBox="0 0 200 180"
           role="img"
-          aria-label="Simple product photograph representation"
+          aria-label="A basic product photograph — single item, plain background"
           className="mx-auto h-auto w-full max-w-[180px]"
         >
           <rect
-            x="30"
+            x="20"
             y="10"
-            width="140"
-            height="140"
-            rx="6"
-            fill="#132240"
-            stroke="rgba(244,241,234,0.12)"
+            width="160"
+            height="160"
+            rx="4"
+            fill="#0c1730"
+            stroke="rgba(244,241,234,0.1)"
           />
           <rect
-            x="55"
-            y="35"
-            width="90"
-            height="90"
-            rx="4"
-            fill="rgba(244,241,234,0.08)"
+            x="50"
+            y="100"
+            width="100"
+            height="50"
+            rx="3"
+            fill="rgba(244,241,234,0.06)"
           />
-          <circle
-            cx="100"
-            cy="80"
-            r="28"
+          <rect
+            x="65"
+            y="30"
+            width="70"
+            height="70"
+            rx="35"
             fill="none"
-            stroke="rgba(244,241,234,0.2)"
+            stroke="rgba(244,241,234,0.18)"
             strokeWidth="1.5"
           />
-          <circle cx="100" cy="80" r="10" fill="rgba(244,241,234,0.15)" />
+          <rect
+            x="80"
+            y="45"
+            width="40"
+            height="40"
+            rx="20"
+            fill="rgba(244,241,234,0.1)"
+          />
+          <rect
+            x="60"
+            y="155"
+            width="80"
+            height="4"
+            rx="2"
+            fill="rgba(244,241,234,0.12)"
+          />
         </svg>
         <p className="mt-4 text-center font-mono text-[10px] tracking-[0.16em] text-muted uppercase">
-          Standard Asset
+          Standard Product Photo
         </p>
       </div>
 
@@ -79,78 +96,114 @@ function TransformationVisual() {
 
       <div className="rounded-xl border border-electric/25 bg-navy-mid p-6">
         <svg
-          viewBox="0 0 200 160"
+          viewBox="0 0 200 180"
           role="img"
-          aria-label="Premium campaign composition representation"
+          aria-label="A premium campaign layout — hero image, headline, product feature, styled composition"
           className="mx-auto h-auto w-full max-w-[180px]"
         >
-          <defs>
-            <linearGradient
-              id="creative-grad"
-              x1="0"
-              y1="0"
-              x2="1"
-              y2="1"
-            >
-              <stop offset="0%" stopColor="#3d9eff" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#d45a4e" stopOpacity="0.08" />
-            </linearGradient>
-          </defs>
           <rect
             x="10"
             y="10"
             width="180"
-            height="140"
-            rx="6"
-            fill="url(#creative-grad)"
-            stroke="rgba(61,158,255,0.25)"
-          />
-          <rect
-            x="20"
-            y="20"
-            width="76"
-            height="56"
+            height="160"
             rx="4"
-            fill="rgba(61,158,255,0.12)"
+            fill="#0c1730"
+            stroke="rgba(61,158,255,0.2)"
           />
           <rect
-            x="104"
-            y="20"
-            width="76"
-            height="120"
+            x="10"
+            y="10"
+            width="180"
+            height="90"
             rx="4"
             fill="rgba(61,158,255,0.08)"
           />
           <rect
             x="20"
-            y="84"
-            width="76"
-            height="56"
-            rx="4"
-            fill="rgba(212,90,78,0.1)"
-          />
-          <circle cx="58" cy="48" r="14" fill="rgba(61,158,255,0.2)" />
-          <circle cx="142" cy="80" r="20" fill="rgba(61,158,255,0.15)" />
-          <circle cx="142" cy="80" r="8" fill="#3d9eff" fillOpacity="0.4" />
-          <rect
-            x="114"
-            y="115"
+            y="20"
             width="56"
-            height="8"
-            rx="2"
-            fill="rgba(244,241,234,0.18)"
-          />
-          <rect
-            x="114"
-            y="128"
-            width="36"
             height="6"
             rx="2"
-            fill="rgba(244,241,234,0.1)"
+            fill="rgba(244,241,234,0.25)"
+          />
+          <rect
+            x="20"
+            y="30"
+            width="40"
+            height="4"
+            rx="2"
+            fill="rgba(244,241,234,0.12)"
+          />
+          <circle cx="150" cy="60" r="28" fill="rgba(61,158,255,0.12)" />
+          <circle cx="150" cy="60" r="16" fill="rgba(61,158,255,0.2)" />
+          <circle cx="150" cy="60" r="6" fill="#3d9eff" fillOpacity="0.5" />
+          <rect
+            x="20"
+            y="110"
+            width="76"
+            height="50"
+            rx="3"
+            fill="rgba(61,158,255,0.06)"
+          />
+          <rect
+            x="104"
+            y="110"
+            width="76"
+            height="50"
+            rx="3"
+            fill="rgba(212,90,78,0.06)"
+          />
+          <rect
+            x="30"
+            y="120"
+            width="56"
+            height="5"
+            rx="2"
+            fill="rgba(244,241,234,0.15)"
+          />
+          <rect
+            x="30"
+            y="130"
+            width="36"
+            height="4"
+            rx="2"
+            fill="rgba(244,241,234,0.08)"
+          />
+          <rect
+            x="114"
+            y="120"
+            width="56"
+            height="5"
+            rx="2"
+            fill="rgba(244,241,234,0.15)"
+          />
+          <rect
+            x="114"
+            y="130"
+            width="36"
+            height="4"
+            rx="2"
+            fill="rgba(244,241,234,0.08)"
+          />
+          <rect
+            x="20"
+            y="46"
+            width="60"
+            height="18"
+            rx="9"
+            fill="rgba(61,158,255,0.2)"
+          />
+          <rect
+            x="30"
+            y="52"
+            width="40"
+            height="6"
+            rx="3"
+            fill="rgba(244,241,234,0.2)"
           />
         </svg>
         <p className="mt-4 text-center font-mono text-[10px] tracking-[0.16em] text-electric uppercase">
-          Premium Campaign Asset
+          Campaign Creative
         </p>
       </div>
     </div>
@@ -184,10 +237,9 @@ export function CreativeShowcase() {
               campaigns.
             </p>
             <p className="mt-4 text-base leading-relaxed text-muted">
-              The value is not simply generating images. The value is knowing
-              what imagery should be created, why it should exist, where it
-              should be used, and how it contributes to the customer&apos;s
-              perception of the brand.
+              The value is not generating images. The value is knowing what
+              imagery should be created, why it should exist, and how it shapes
+              the customer&apos;s perception of the brand.
             </p>
             <div className="mt-8">
               <ButtonLink href="/#contact" variant="secondary">
@@ -220,9 +272,8 @@ export function CreativeShowcase() {
             </div>
 
             <p className="mt-4 text-[12px] leading-relaxed text-muted">
-              Give your brand the visual presence of a global company without
-              requiring a global production budget. All creative examples shown
-              are concept demonstrations unless otherwise noted.
+              All creative examples shown are concept demonstrations unless
+              otherwise noted.
             </p>
           </div>
         </div>

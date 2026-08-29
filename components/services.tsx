@@ -1,7 +1,8 @@
 import { Container } from "@/components/container";
-import { services } from "@/lib/site";
+import { serviceGroups } from "@/lib/site";
 
 export function Services() {
+  let counter = 0;
   return (
     <section
       id="services"
@@ -25,24 +26,36 @@ export function Services() {
             scale what already works.
           </p>
         </div>
-        <ul className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, index) => (
-            <li
-              key={service.title}
-              className="bg-navy-mid p-7 transition-colors duration-300 hover:bg-navy-lift sm:p-8"
-            >
-              <p className="font-mono text-[11px] tracking-[0.2em] text-electric">
-                {String(index + 1).padStart(2, "0")}
+        <div className="mt-14 space-y-10">
+          {serviceGroups.map((group) => (
+            <div key={group.label}>
+              <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
+                {group.label}
               </p>
-              <h3 className="mt-4 text-[15px] font-semibold leading-snug text-ink sm:text-base">
-                {service.title}
-              </h3>
-              <p className="mt-3 text-[13px] leading-relaxed text-muted sm:text-sm">
-                {service.body}
-              </p>
-            </li>
+              <ul className="mt-4 grid gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-3">
+                {group.services.map((service) => {
+                  counter++;
+                  return (
+                    <li
+                      key={service.title}
+                      className="bg-navy-mid p-7 transition-colors duration-300 hover:bg-navy-lift"
+                    >
+                      <p className="font-mono text-[11px] tracking-[0.2em] text-electric">
+                        {String(counter).padStart(2, "0")}
+                      </p>
+                      <h3 className="mt-4 text-[15px] font-semibold leading-snug text-ink">
+                        {service.title}
+                      </h3>
+                      <p className="mt-3 text-[13px] leading-relaxed text-muted">
+                        {service.body}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </Container>
     </section>
   );

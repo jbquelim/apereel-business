@@ -59,9 +59,16 @@ export function CaseStudies() {
                   <h3 className="font-display mt-3 text-2xl text-ink sm:text-3xl">
                     {study.title}
                   </h3>
-                  <p className="mt-4 text-sm leading-relaxed text-muted sm:text-base">
-                    {study.body}
-                  </p>
+                  <div className="mt-4 space-y-3">
+                    {study.body.map((paragraph) => (
+                      <p
+                        key={paragraph.slice(0, 40)}
+                        className="text-sm leading-relaxed text-muted sm:text-base"
+                      >
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </article>
             );

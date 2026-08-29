@@ -1,11 +1,10 @@
 import { Approach } from "@/components/approach";
-import { BusinessFirstSeo } from "@/components/business-first-seo";
 import { CaseStudies } from "@/components/case-studies";
 import { Contact } from "@/components/contact";
 import { CreativeShowcase } from "@/components/creative-showcase";
 import { Founder } from "@/components/founder";
 import { Hero } from "@/components/hero";
-import { Insights } from "@/components/insights";
+import { Perspectives } from "@/components/insights";
 import { Philosophy } from "@/components/philosophy";
 import { Principles } from "@/components/principles";
 import { Services } from "@/components/services";
@@ -15,14 +14,13 @@ export default function Home() {
     <main id="main">
       <Hero />
       <Philosophy />
-      <BusinessFirstSeo />
       <Approach />
       <Services />
       <CreativeShowcase />
       <CaseStudies />
       <Founder />
       <Principles />
-      <Insights />
+      <Perspectives />
       <Contact />
     </main>
   );

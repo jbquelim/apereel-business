@@ -10,19 +10,18 @@ export function Philosophy() {
     >
       <Container>
         <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
-          Our Philosophy
+          Business-First Growth
         </p>
         <h2
           id="philosophy-heading"
           className="font-display mt-4 max-w-3xl text-3xl text-ink text-balance sm:text-5xl"
         >
-          Most digital marketing works backward. We start with the business.
+          You can&apos;t cheat your way to becoming the best result.
         </h2>
         <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted">
-          Traditional agencies begin with keywords and content, hoping traffic
-          converts. Apereel begins with what makes the business genuinely
-          competitive — then translates that into digital experiences, visibility,
-          and revenue.
+          The strongest long-term strategy is often becoming a better answer for
+          the customer. Most digital marketing starts with keywords and tactics.
+          Apereel starts with the business.
         </p>
 
         <div className="mt-16 grid gap-6 lg:grid-cols-2">
@@ -67,12 +66,30 @@ export function Philosophy() {
           </div>
         </div>
 
-        <p className="mt-10 max-w-2xl text-sm leading-relaxed text-muted">
-          Technical SEO — metadata, headings, URLs, schema, site structure,
-          performance — is expected. It is not the strategy. The competitive
-          advantage comes from understanding what makes a business genuinely
-          better for customers, then translating that into a stronger digital
-          presence.
+        <div className="mt-14 grid gap-8 lg:grid-cols-12">
+          <div className="lg:col-span-6">
+            <p className="text-base leading-relaxed text-muted">
+              This philosophy came from observing e-commerce firsthand. Product
+              categories with stronger, more complete inventory consistently
+              outperformed in search — regardless of how much SEO content was
+              produced for weaker categories. Where competitors had better
+              assortments, they frequently outranked us.
+            </p>
+          </div>
+          <div className="lg:col-span-6">
+            <p className="text-base leading-relaxed text-muted">
+              The response was not more blog posts. The focus shifted to the
+              business itself — getting products online faster, improving
+              merchandising, strengthening the offer. As the business became more
+              competitive, both sales and organic visibility improved.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-8 text-sm leading-relaxed text-muted">
+          The technical work is expected. It is not the strategy. The advantage
+          comes from understanding why customers choose you, then making that
+          answer unmistakable.
         </p>
       </Container>
     </section>

@@ -18,7 +18,7 @@ export function Contact() {
             id="contact-heading"
             className="font-display mt-4 text-3xl text-ink text-balance sm:text-5xl"
           >
-            Let&apos;s talk about growth.
+            Let&apos;s grow what already makes your business strong.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-muted">
             Share the context. We will look at the business first — then the

@@ -42,9 +42,9 @@ export function Founder() {
           </p>
           <div className="mt-8 space-y-5 text-base leading-relaxed text-muted">
             {site.founder.bio.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
+              <p key={paragraph.slice(0, 40)}>{paragraph}</p>
             ))}
-            <p className="text-ink font-display text-xl italic">
+            <p className="font-display text-xl italic text-ink">
               &ldquo;{site.founder.philosophy}&rdquo;
             </p>
           </div>
