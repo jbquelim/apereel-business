@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #070e1c;
+  --navy-mid: #0c1730;
+  --navy-lift: #132240;
+  --ink: #f4f1ea;
+  --muted: #9aa4b8;
+  --electric: #3d9eff;
+  --electric-deep: #1d6fd4;
+  --signal: #d45a4e;
+  --line: rgba(244, 241, 234, 0.1);
+}
+
+@theme inline {
+  --color-navy: var(--navy);
+  --color-navy-mid: var(--navy-mid);
+  --color-navy-lift: var(--navy-lift);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-electric: var(--electric);
+  --color-electric-deep: var(--electric-deep);
+  --color-signal: var(--signal);
+  --color-line: var(--line);
+  --font-sans: var(--font-plus-jakarta);
+  --font-display: var(--font-instrument);
+  --font-mono: var(--font-ibm-plex);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem;
+}
+
+body {
+  background: var(--navy);
+  color: var(--ink);
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--electric) 40%, transparent);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--electric);
+  outline-offset: 3px;
+}
+
+.font-display {
+  font-family: var(--font-instrument), ui-serif, Georgia, serif;
+}
+
+.hairline {
+  border-color: var(--line);
+}
+
+.grid-overlay {
+  background-image:
+    linear-gradient(rgba(244, 241, 234, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 241, 234, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+.hero-glow {
+  background:
+    radial-gradient(ellipse 80% 50% at 85% -10%, rgba(61, 158, 255, 0.16), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 10% 20%, rgba(212, 90, 78, 0.08), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 110%, rgba(61, 158, 255, 0.07), transparent 55%);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes draw-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-rise {
+    animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-rise-delay-1 {
+    animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+
+  .animate-rise-delay-2 {
+    animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+  }
+
+  .animate-rise-delay-3 {
+    animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.36s both;
+  }
+
+  .animate-rise-delay-4 {
+    animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.48s both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-rise,
+  .animate-rise-delay-1,
+  .animate-rise-delay-2,
+  .animate-rise-delay-3,
+  .animate-rise-delay-4 {
+    animation: none;
+  }
+}
