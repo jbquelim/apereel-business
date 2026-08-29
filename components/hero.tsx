@@ -6,16 +6,21 @@ export function Hero() {
   return (
     <section
       id="top"
-      className="relative isolate overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28 lg:pt-40 lg:pb-32"
+      className="relative isolate overflow-hidden pt-28 pb-24 sm:pt-36 sm:pb-32 lg:pt-44 lg:pb-40"
     >
       <div className="hero-glow pointer-events-none absolute inset-0" />
       <div className="grid-overlay pointer-events-none absolute inset-0 opacity-70" />
       <Container className="relative">
-        <p className="animate-rise text-[11px] font-semibold tracking-[0.28em] text-electric uppercase">
+        <p className="animate-rise font-mono text-[11px] tracking-[0.28em] text-electric uppercase">
           {site.tagline}
         </p>
-        <h1 className="animate-rise-delay-1 font-display mt-6 max-w-4xl text-[2.35rem] leading-[1.12] text-ink text-balance sm:text-5xl md:text-6xl lg:text-[4.35rem]">
+        <p className="animate-rise-delay-1 mt-8 text-[13px] font-semibold tracking-[0.38em] text-ink/40 uppercase sm:text-[15px]">
+          APEREEL
+        </p>
+        <h1 className="animate-rise-delay-1 font-display mt-5 max-w-5xl text-[2.5rem] leading-[1.08] text-ink sm:text-5xl md:text-6xl lg:text-[4.75rem]">
           {site.headline}
+          <br />
+          <span className="text-electric">{site.headlineLine2}</span>
         </h1>
         <p className="animate-rise-delay-2 mt-8 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
           {site.supporting}
@@ -31,9 +36,9 @@ export function Hero() {
           ))}
         </ul>
         <div className="animate-rise-delay-4 mt-12 flex flex-col gap-3 sm:flex-row">
-          <ButtonLink href="/#approach">Our Approach</ButtonLink>
-          <ButtonLink href="/#contact" variant="secondary">
-            Work With Apereel
+          <ButtonLink href="/#contact">Let&apos;s Talk</ButtonLink>
+          <ButtonLink href="/#approach" variant="secondary">
+            Our Approach
           </ButtonLink>
         </div>
       </Container>

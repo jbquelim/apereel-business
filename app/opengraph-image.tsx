@@ -61,7 +61,7 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-            Digital marketing is about growing businesses, not chasing algorithms.
+            We don&apos;t chase algorithms. We build businesses worth finding.
           </div>
         </div>
       </div>

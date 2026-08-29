@@ -11,16 +11,16 @@ export function Approach() {
       <Container>
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
-            Our Approach
+            The Apereel Method
           </p>
           <h2
             id="approach-heading"
             className="font-display mt-4 text-3xl text-ink sm:text-5xl"
           >
-            Discover. Strengthen. Translate. Scale.
+            Discover. Strengthen. Translate. Amplify. Optimize.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-muted">
-            A simple operating system for digital growth. We do not start with
+            A repeatable system for digital growth. We do not start with
             tactics. We start with the business, then use marketing, technology,
             and experience to amplify what is already true.
           </p>

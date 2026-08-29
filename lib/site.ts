@@ -1,10 +1,10 @@
 export const site = {
   name: "Apereel",
   tagline: "Business-First Digital Growth",
-  headline:
-    "Digital marketing is about growing businesses, not chasing algorithms.",
+  headline: "We don't chase algorithms.",
+  headlineLine2: "We build businesses worth finding.",
   supporting:
-    "Apereel helps businesses identify their competitive strengths and turn them into stronger digital experiences, better visibility, and sustainable growth.",
+    "Apereel combines business strategy, e-commerce, SEO, advertising, UX, web development, and AI to turn real competitive advantages into sustainable digital growth.",
   secondary:
     "We identify what makes your business valuable and use digital strategy, technology, customer experience, and search visibility to amplify it.",
   email: "jbquelim@gmail.com",
@@ -19,24 +19,43 @@ export const site = {
     currentRole: "Digital Marketing Strategist at Raffi Jewellers Inc.",
     bio: [
       "I believe digital marketing is about growing businesses, not chasing algorithms.",
-      "My work combines e-commerce, SEO, digital advertising, web development, AI, and UX to create better customer experiences and sustainable growth.",
-      "I focus on understanding what makes a business valuable to its customers and translating those strengths into digital experiences that drive results.",
+      "My work sits at the intersection of business strategy, e-commerce, SEO, advertising, web development, UX, AI, and analytics.",
+      "I focus on identifying what makes a business valuable to its customers and turning those strengths into digital experiences that create measurable business growth.",
     ],
+    philosophy:
+      "SEO should reflect the strength of the business, not manufacture it.",
   },
   capabilities: [
     "Digital & E-commerce Growth",
     "Business-First SEO",
     "Digital Advertising",
-    "AI-Powered Web Development",
+    "AI-Powered Development",
+    "AI Creative Production",
   ],
   nav: [
     { href: "/#approach", label: "Approach" },
     { href: "/#services", label: "Services" },
     { href: "/#work", label: "Work" },
     { href: "/#founder", label: "About" },
+    { href: "/#insights", label: "Insights" },
     { href: "/#contact", label: "Contact" },
   ],
 } as const;
+
+export const traditionalChain = [
+  { title: "Keyword Research", color: "muted" },
+  { title: "Content Production", color: "muted" },
+  { title: "Traffic", color: "muted" },
+  { title: "Hope for Conversion", color: "signal" },
+] as const;
+
+export const apereelChain = [
+  { title: "Business Strength", color: "electric" },
+  { title: "Customer Value", color: "electric" },
+  { title: "Digital Experience", color: "electric" },
+  { title: "Visibility", color: "electric" },
+  { title: "Revenue", color: "signal" },
+] as const;
 
 export const seoChain = [
   {
@@ -94,35 +113,33 @@ export const services = [
     title: "Digital Transformation",
     body: "Replace fragile, slow, outsourced workflows with systems your team can run. From inventory publishing to brand-compliant experiences for global luxury partners.",
   },
+  {
+    title: "AI-Powered Creative Production",
+    body: "Produce premium visual content with the polish and production value of major global brands. AI-assisted creative workflows dramatically increase output and quality while reducing the cost and time of professional campaigns.",
+  },
 ] as const;
 
 export const approach = [
   {
     title: "Discover",
-    body: "Identify the real strengths, weaknesses, and opportunities within the business.",
+    body: "Understand the business, customers, competition, economics, and existing strengths.",
   },
   {
     title: "Strengthen",
-    body: "Improve the areas that directly affect customer value, conversion, and competitiveness.",
+    body: "Fix the constraints preventing the business from becoming more competitive.",
   },
   {
     title: "Translate",
-    body: "Turn those strengths into better digital experiences, stronger visibility, and more effective marketing.",
+    body: "Turn those advantages into better digital experiences, stronger visibility, and more effective marketing.",
   },
   {
-    title: "Scale",
-    body: "Use technology, advertising, SEO, and automation to grow what already works.",
+    title: "Amplify",
+    body: "Use SEO, paid media, technology, and distribution to scale what already works.",
   },
-] as const;
-
-export const experience = [
-  "Multi-year e-commerce growth",
-  "Major reduction in external development dependency",
-  "Improved product category sales through pricing and competitive analysis",
-  "Faster inventory-to-website workflows",
-  "Improved product discovery and navigation",
-  "AI-assisted development and digital transformation",
-  "Brand compliance and digital implementation for global luxury partners",
+  {
+    title: "Optimize",
+    body: "Continuously measure business results and improve. Growth is not a project — it is a system.",
+  },
 ] as const;
 
 export const caseStudies = [
@@ -150,6 +167,12 @@ export const caseStudies = [
     title: "The gap was in the market, not the traffic.",
     body: "Identifying a market pricing gap helped significantly improve performance in an underperforming product category. Competitive clarity changed the offer. Digital performance followed the stronger commercial position.",
   },
+  {
+    id: "luxury-compliance",
+    kicker: "Luxury Brand Compliance",
+    title: "Premium brands require premium execution.",
+    body: "Working within the strict digital requirements of major global luxury brands required balancing brand standards, UX guidelines, technical specifications, commercial objectives, and e-commerce execution — without compromising any of them.",
+  },
 ] as const;
 
 export const principles = [
@@ -158,6 +181,49 @@ export const principles = [
   "Customer experience before traffic.",
   "Technology should remove bottlenecks.",
   "SEO should amplify real competitive advantage.",
+  "Marketing should make the business stronger.",
+] as const;
+
+export const insights = [
+  {
+    title: "Why Inventory May Be Your Best E-commerce SEO Strategy",
+    category: "E-commerce",
+  },
+  {
+    title: "SEO Should Reflect the Strength of the Business",
+    category: "SEO",
+  },
+  {
+    title: "Why More Traffic Isn't Always Better Marketing",
+    category: "Strategy",
+  },
+  {
+    title: "The Problem With Content-First SEO",
+    category: "SEO",
+  },
+  {
+    title: "What Years of Tracking E-commerce Rankings Taught Me",
+    category: "Analytics",
+  },
+  {
+    title: "Why Your Best SEO Opportunity Might Be an Operations Problem",
+    category: "Operations",
+  },
+] as const;
+
+export const creativeCapabilities = [
+  "Product photography concepts",
+  "Lifestyle imagery",
+  "Advertising creatives",
+  "Campaign visuals",
+  "Website hero imagery",
+  "Social media creative",
+  "Commercial video concepts",
+  "Motion graphics",
+  "Brand storytelling",
+  "Image enhancement",
+  "Creative variations for advertising",
+  "Visual content for web, social, and paid media",
 ] as const;
 
 export function getSiteUrl() {

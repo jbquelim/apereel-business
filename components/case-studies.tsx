@@ -4,12 +4,14 @@ import { InventoryDiagram } from "@/components/diagrams/inventory-diagram";
 import { UxDiagram } from "@/components/diagrams/ux-diagram";
 import { DevelopmentDiagram } from "@/components/diagrams/development-diagram";
 import { PricingDiagram } from "@/components/diagrams/pricing-diagram";
+import { LuxuryDiagram } from "@/components/diagrams/luxury-diagram";
 
 const diagrams = [
   InventoryDiagram,
   UxDiagram,
   DevelopmentDiagram,
   PricingDiagram,
+  LuxuryDiagram,
 ];
 
 export function CaseStudies() {

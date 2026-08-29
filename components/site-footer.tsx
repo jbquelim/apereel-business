@@ -10,9 +10,9 @@ export function SiteFooter() {
         <div className="md:col-span-5">
           <Logo />
           <p className="mt-6 max-w-sm text-sm leading-relaxed text-muted">
-            Digital growth consultancy. Business-first SEO, e-commerce, advertising,
-            and AI-powered development — built around what already makes a
-            business strong.
+            Digital growth consultancy. Business-first SEO, e-commerce,
+            advertising, AI-powered development, and creative production —
+            built around what already makes a business strong.
           </p>
         </div>
         <div className="md:col-span-3">
@@ -67,8 +67,10 @@ export function SiteFooter() {
         </div>
       </Container>
       <Container className="flex flex-col gap-2 border-t border-white/10 py-6 text-[12px] text-muted sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} Apereel. All rights reserved.</p>
-        <p className="tracking-[0.12em] uppercase">Business before algorithms.</p>
+        <p>&copy; {new Date().getFullYear()} Apereel. All rights reserved.</p>
+        <p className="tracking-[0.12em] uppercase">
+          Business before algorithms.
+        </p>
       </Container>
     </footer>
   );

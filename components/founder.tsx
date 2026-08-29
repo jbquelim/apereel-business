@@ -21,29 +21,32 @@ export function Founder() {
                 {site.founder.name.split(" ")[1]}
               </p>
               <p className="mt-6 text-sm text-muted">{site.founder.title}</p>
+              <p className="mt-1 text-sm text-muted/80">
+                Also currently: {site.founder.currentRole}
+              </p>
             </div>
           </div>
         </div>
         <div className="lg:col-span-7 lg:pt-4">
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
-            Founder Section
+            About
           </p>
-          <h2 id="founder-heading" className="font-display mt-4 text-3xl text-ink sm:text-4xl">
+          <h2
+            id="founder-heading"
+            className="font-display mt-4 text-3xl text-ink sm:text-4xl"
+          >
             {site.founder.name}
           </h2>
           <p className="mt-2 text-sm tracking-wide text-muted">
             {site.founder.title}
           </p>
-          <p className="mt-1 text-sm text-ink/80">
-            {site.founder.roles.join(" · ")}
-          </p>
-          <p className="mt-4 text-sm text-muted">{site.founder.currentRole}</p>
           <div className="mt-8 space-y-5 text-base leading-relaxed text-muted">
             {site.founder.bio.map((paragraph) => (
-              <p key={paragraph} className="last:text-ink">
-                {paragraph}
-              </p>
+              <p key={paragraph}>{paragraph}</p>
             ))}
+            <p className="text-ink font-display text-xl italic">
+              &ldquo;{site.founder.philosophy}&rdquo;
+            </p>
           </div>
         </div>
       </Container>

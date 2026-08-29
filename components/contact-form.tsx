@@ -22,8 +22,9 @@ export function ContactForm() {
       name: String(formData.get("name") ?? ""),
       email: String(formData.get("email") ?? ""),
       company: String(formData.get("company") ?? ""),
-      message: String(formData.get("message") ?? ""),
       website: String(formData.get("website") ?? ""),
+      message: String(formData.get("message") ?? ""),
+      honeypot: String(formData.get("fax_number") ?? ""),
     };
 
     const result = validateContact(payload);
@@ -119,21 +120,34 @@ export function ContactForm() {
           ) : null}
         </label>
       </div>
+      <div className="mt-5 grid gap-5 sm:grid-cols-2">
+        <label className="block text-[12px] font-medium text-ink">
+          Company
+          <input
+            name="company"
+            autoComplete="organization"
+            className={fieldClass}
+            aria-invalid={Boolean(errors.company)}
+          />
+        </label>
+        <label className="block text-[12px] font-medium text-ink">
+          Website
+          <input
+            name="website"
+            type="url"
+            autoComplete="url"
+            placeholder="https://"
+            className={fieldClass}
+            aria-invalid={Boolean(errors.website)}
+          />
+        </label>
+      </div>
       <label className="mt-5 block text-[12px] font-medium text-ink">
-        Company
-        <input
-          name="company"
-          autoComplete="organization"
-          className={fieldClass}
-          aria-invalid={Boolean(errors.company)}
-        />
-      </label>
-      <label className="mt-5 block text-[12px] font-medium text-ink">
-        How can we help?
+        What are you trying to improve?
         <textarea
           name="message"
           required
-          rows={6}
+          rows={5}
           className={cn(fieldClass, "resize-y")}
           aria-invalid={Boolean(errors.message)}
           aria-describedby={errors.message ? "message-error" : undefined}
@@ -146,8 +160,8 @@ export function ContactForm() {
       </label>
       <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
         <label>
-          Website
-          <input name="website" tabIndex={-1} autoComplete="off" />
+          Fax
+          <input name="fax_number" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
       {status === "error" ? (
@@ -160,7 +174,7 @@ export function ContactForm() {
         disabled={status === "submitting"}
         className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
       >
-        {status === "submitting" ? "Sending…" : "Send message"}
+        {status === "submitting" ? "Sending…" : "Send Message"}
       </button>
     </form>
   );

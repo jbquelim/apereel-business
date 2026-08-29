@@ -28,6 +28,7 @@ async function deliver(payload: {
   name: string;
   email: string;
   company: string;
+  website: string;
   message: string;
 }) {
   const to = process.env.CONTACT_TO_EMAIL ?? site.email;
@@ -35,6 +36,7 @@ async function deliver(payload: {
     `Name: ${payload.name}`,
     `Email: ${payload.email}`,
     `Company: ${payload.company || "(not provided)"}`,
+    `Website: ${payload.website || "(not provided)"}`,
     "",
     payload.message,
   ].join("\n");
@@ -72,6 +74,7 @@ async function deliver(payload: {
         name: payload.name,
         email: payload.email,
         company: payload.company,
+        website: payload.website,
         message: payload.message,
         _subject: `Apereel inquiry from ${payload.name}`,
         _template: "table",
@@ -107,17 +110,18 @@ export async function POST(request: Request) {
     name?: string;
     email?: string;
     company?: string;
+    website?: string;
     message?: string;
     honeypot?: string;
-    website?: string;
   };
 
   const result = validateContact({
     name: input.name ?? "",
     email: input.email ?? "",
     company: input.company ?? "",
+    website: input.website ?? "",
     message: input.message ?? "",
-    website: input.honeypot ?? input.website ?? "",
+    honeypot: input.honeypot ?? "",
   });
 
   if (result.data.honeypot) {
@@ -136,6 +140,7 @@ export async function POST(request: Request) {
       name: result.data.name,
       email: result.data.email,
       company: result.data.company,
+      website: result.data.website,
       message: result.data.message,
     });
     return NextResponse.json({ ok: true });

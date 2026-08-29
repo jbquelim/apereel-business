@@ -1,4 +1,4 @@
-import { site, getSiteUrl } from "@/lib/site";
+import { site, services, getSiteUrl } from "@/lib/site";
 
 export function JsonLd() {
   const url = getSiteUrl();
@@ -12,7 +12,7 @@ export function JsonLd() {
         url,
         email: site.email,
         description: site.supporting,
-        slogan: site.headline,
+        slogan: `${site.headline} ${site.headlineLine2}`,
         founder: {
           "@type": "Person",
           name: site.founder.name,
@@ -20,16 +20,20 @@ export function JsonLd() {
           sameAs: [site.linkedin],
         },
         areaServed: "CA",
-        knowsAbout: [
-          "Digital marketing strategy",
-          "E-commerce growth",
-          "Business-first SEO",
-          "Digital advertising",
-          "AI-powered web development",
-          "Conversion optimization",
-          "User experience",
-          "Digital transformation",
-        ],
+        knowsAbout: services.map((s) => s.title),
+        hasOfferCatalog: {
+          "@type": "OfferCatalog",
+          name: "Digital Growth Services",
+          itemListElement: services.map((s, i) => ({
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Service",
+              name: s.title,
+              description: s.body,
+              position: i + 1,
+            },
+          })),
+        },
         sameAs: [site.linkedin],
       },
       {
