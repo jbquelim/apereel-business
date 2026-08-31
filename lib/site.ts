@@ -199,7 +199,7 @@ export const caseStudies = [
   },
   {
     id: "luxury-compliance",
-    kicker: "Luxury Brand E-commerce",
+    kicker: "Brand Compliance & E-commerce",
     title: "Brand standards and commercial performance are not opposing goals.",
     services: ["SEO", "Advertising", "Conversion Optimization"],
     body: [
