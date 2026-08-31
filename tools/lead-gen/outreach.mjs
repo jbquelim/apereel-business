@@ -68,11 +68,34 @@ function templateForStep(lead, step) {
   return step;
 }
 
-// ── SMTP ────────────────────────────────────────────────────────────
+// ── Resend API ─────────────────────────────────────────────────────
+async function sendViaResend(to, subject, html, lead) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `${config.outreach.from.name} <noreply@apereel.com>`,
+      to: [to.trim()],
+      reply_to: config.outreach.replyTo,
+      subject,
+      html,
+      headers: { "X-Lead-Id": lead.id },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Resend ${res.status}: ${err}`);
+  }
+}
+
+// ── SMTP (fallback) ────────────────────────────────────────────────
 function createMailer() {
   if (!config.outreach.smtp.auth.user || !config.outreach.smtp.auth.pass) {
     console.error(
-      "SMTP credentials not set. Copy .env.example to .env and fill in your details.",
+      "SMTP credentials not set and no RESEND_API_KEY found.\nSet RESEND_API_KEY in .env or fill in SMTP credentials.",
     );
     process.exit(1);
   }
@@ -80,6 +103,9 @@ function createMailer() {
 }
 
 async function sendEmail(mailer, to, subject, html, lead) {
+  if (process.env.RESEND_API_KEY) {
+    return sendViaResend(to, subject, html, lead);
+  }
   const msg = {
     from: `"${config.outreach.from.name}" <${config.outreach.from.email}>`,
     replyTo: config.outreach.replyTo,
@@ -132,7 +158,7 @@ async function cmdSend(dryRun = false) {
     return;
   }
 
-  const mailer = dryRun ? null : createMailer();
+  const mailer = dryRun ? null : (process.env.RESEND_API_KEY ? null : createMailer());
   let sentToday = sent.filter((s) => {
     const d = new Date(s.sentAt);
     const today = new Date();

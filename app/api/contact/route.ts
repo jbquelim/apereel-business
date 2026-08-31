@@ -46,8 +46,6 @@ async function deliver(payload: {
     payload.message,
   ].join("\n");
 
-  console.log("Sending to:", JSON.stringify(to), "from env:", JSON.stringify(process.env.CONTACT_TO_EMAIL));
-
   if (process.env.RESEND_API_KEY) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -66,7 +64,7 @@ async function deliver(payload: {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error("Resend error:", response.status, errorBody);
-      throw new Error(`Resend ${response.status}: ${errorBody}`);
+      throw new Error("Unable to send email.");
     }
     return;
   }
