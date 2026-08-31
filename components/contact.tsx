@@ -7,7 +7,7 @@ export function Contact() {
     <section
       id="contact"
       aria-labelledby="contact-heading"
-      className="border-t border-white/10 py-20 sm:py-28"
+      className="reveal-section py-24 sm:py-32"
     >
       <Container className="grid gap-14 lg:grid-cols-12">
         <div className="lg:col-span-5">
@@ -18,11 +18,17 @@ export function Contact() {
             id="contact-heading"
             className="font-display mt-4 text-3xl text-ink text-balance sm:text-5xl"
           >
-            Let&apos;s grow what already makes your business strong.
+            Your next agency should start with your business.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-muted">
-            Share the context. We will look at the business first — then the
-            digital work that can amplify it.
+            Tell us what you sell, who buys it, and what&apos;s not working. We
+            look at the business first, then the digital strategy that
+            amplifies it.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-muted/70">
+            We work with established businesses, retailers, and e-commerce
+            companies with real revenue that know their marketing should be
+            doing more.
           </p>
           <ul className="mt-10 space-y-4 text-sm">
             <li>

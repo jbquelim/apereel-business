@@ -3,23 +3,27 @@ import { CaseStudies } from "@/components/case-studies";
 import { Contact } from "@/components/contact";
 import { CreativeShowcase } from "@/components/creative-showcase";
 import { Founder } from "@/components/founder";
+import { GrowthProof } from "@/components/growth-proof";
 import { Hero } from "@/components/hero";
+import { KeywordPerformance } from "@/components/keyword-performance";
 import { Perspectives } from "@/components/insights";
-import { Philosophy } from "@/components/philosophy";
-import { Principles } from "@/components/principles";
+import { ProofSection } from "@/components/proof-section";
+import { RealityCheck } from "@/components/reality-check";
 import { Services } from "@/components/services";
 
 export default function Home() {
   return (
     <main id="main">
       <Hero />
-      <Philosophy />
+      <RealityCheck />
+      <CaseStudies />
       <Approach />
       <Services />
+      <ProofSection />
+      <KeywordPerformance />
+      <GrowthProof />
       <CreativeShowcase />
-      <CaseStudies />
       <Founder />
-      <Principles />
       <Perspectives />
       <Contact />
     </main>

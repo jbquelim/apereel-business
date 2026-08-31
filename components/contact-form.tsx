@@ -71,7 +71,7 @@ export function ContactForm() {
         <p className="font-display mt-4 text-2xl text-ink">
           Thank you. We will be in touch.
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
+        <p className="mt-3 text-sm leading-relaxed text-ink/60">
           Your note is with Apereel. If anything is time-sensitive, email
           directly and we will prioritize it.
         </p>
@@ -172,7 +172,7 @@ export function ContactForm() {
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+        className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-ink uppercase transition-colors hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
       >
         {status === "submitting" ? "Sending…" : "Send Message"}
       </button>

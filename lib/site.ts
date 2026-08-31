@@ -1,23 +1,23 @@
 export const site = {
   name: "Apereel",
   tagline: "Business-First Digital Growth",
-  headline: "We don't chase algorithms.",
-  headlineLine2: "We build businesses worth finding.",
+  headline: "The method behind",
+  headlineLine2: "20X revenue growth.",
   supporting:
-    "Apereel identifies what makes a business genuinely competitive, then uses strategy, technology, and digital experience to amplify it.",
-  email: "jbquelim@gmail.com",
+    "We grew an e-commerce business by 20X in four years. Not by doing more SEO, but by making the business worth ranking.",
+  email: "john@apereel.com",
   linkedin: "https://www.linkedin.com/in/jblim",
   founder: {
     name: "John Lim",
     title: "Founder, Apereel",
     currentRole: "Digital Marketing Strategist at Raffi Jewellers Inc.",
     bio: [
-      "My approach to digital marketing was shaped by managing e-commerce growth for a retailer. I noticed that the product categories with the strongest inventory consistently had the strongest search visibility. Where competitors had better assortments, they outranked us — regardless of our SEO efforts.",
-      "That observation changed everything. Instead of trying to overcome gaps with more blog posts or backlink campaigns, I focused on the business itself — getting products online faster, improving merchandising, fixing the customer experience. As the business became stronger, digital performance followed.",
-      "That is the foundation of everything Apereel does. We identify what makes a business genuinely valuable to its customers, then use strategy, technology, and digital experience to make that value visible.",
+      "In four years, I grew an e-commerce operation by 20X. Not by following the standard agency playbook, but by ignoring most of it. I did everything the agencies recommended first: content calendars, backlink campaigns, keyword strategies. Some of it worked. Most of it didn't move the needle.",
+      "Then I noticed something no agency had mentioned. The product categories with stronger, deeper inventory consistently outranked the competition, regardless of our SEO effort. Where competitors had better assortments, they won. The answer to our ranking problem was not more SEO. It was a better business.",
+      "I stopped taking agency advice at face value and started asking: what would actually make this business the better choice? That question drove 20X revenue growth in four years. Apereel exists to ask that question for every client.",
     ],
     philosophy:
-      "SEO should reflect the strength of the business, not manufacture it.",
+      "If your agency never asks why customers should choose you, they are answering the wrong question.",
   },
   capabilities: [
     "Digital & E-commerce Growth",
@@ -26,11 +26,11 @@ export const site = {
     "AI-Powered Development & Creative",
   ],
   nav: [
+    { href: "/#proof", label: "Proof" },
     { href: "/#approach", label: "Approach" },
     { href: "/#services", label: "Services" },
     { href: "/#work", label: "Work" },
     { href: "/#founder", label: "About" },
-    { href: "/#perspectives", label: "Perspectives" },
     { href: "/#contact", label: "Contact" },
   ],
 } as const;
@@ -55,79 +55,100 @@ export const serviceGroups = [
     label: "Growth Strategy",
     services: [
       {
-        title: "Digital & E-commerce Growth",
-        body: "Identify the commercial levers that actually move revenue — assortment, merchandising, pricing, channel mix, and the digital experience that turns demand into sales.",
+        tag: "Research & Competitive Analysis",
+        title: "Find out why customers aren't buying",
+        body: "Most agencies measure traffic. We measure why customers buy, and why they don't. We find the commercial levers that actually move revenue: assortment gaps, pricing, merchandising, channel mix, and the experience that turns browsers into buyers.",
       },
       {
-        title: "Business-First SEO",
-        body: "Rankings should follow from being the better choice for the customer. We strengthen the business case behind every page, then make that value unmistakable in search.",
+        tag: "SEO",
+        title: "Rank for the searches that drive revenue",
+        body: "Rankings follow from being the better choice for the customer, not from producing more content about topics no one searches. We strengthen the business case behind every page, then make that value unmistakable to search engines.",
       },
       {
-        title: "Digital Advertising",
-        body: "Paid media that compounds commercial strength — not spend that chases empty traffic. Campaigns aligned to the offers, audiences, and products that already deserve to win.",
-      },
-    ],
-  },
-  {
-    label: "Technology & Experience",
-    services: [
-      {
-        title: "AI-Powered Web Development",
-        body: "Technology should remove bottlenecks. We build digital platforms with AI-assisted development so teams ship faster, stay in control, and stop waiting on external queues.",
-      },
-      {
-        title: "Conversion Optimization",
-        body: "Improve the paths customers actually take — from discovery to purchase — so the business earns more from the demand it already has.",
-      },
-      {
-        title: "UX & Product Discovery",
-        body: "Help customers find the right product, faster. Navigation, filters, merchandising, and content architecture built around how people shop — not how the catalog is stored.",
+        tag: "Advertising",
+        title: "Turn ad spend into an investment",
+        body: "Ad spend that chases traffic is an expense. Ad spend that amplifies genuine competitive advantage is an investment. We build campaigns around the offers, audiences, and products that already deserve to win.",
       },
     ],
   },
   {
-    label: "Intelligence & Creative",
+    label: "Technology & Creative",
     services: [
       {
-        title: "Competitive Intelligence",
-        body: "Pricing, assortment, and positioning analysis that reveals where you can win — and where the current digital story is leaving value on the table.",
+        tag: "Web Development",
+        title: "Ship website changes in hours, not weeks",
+        body: "Your last agency charged you three weeks of development to change a banner. We build digital platforms with AI-assisted development so your team ships in hours, not weeks, and stops waiting in someone else's queue.",
       },
       {
-        title: "Digital Transformation",
-        body: "Replace fragile, slow, outsourced workflows with systems your team can run. From inventory publishing to brand-compliant experiences for global luxury partners.",
+        tag: "Conversion Optimization",
+        title: "Earn more from the traffic you already have",
+        body: "You already have demand. The question is how much of it you're wasting. We fix the paths customers actually take, from discovery to purchase, so the business earns more from every visitor it already has.",
       },
       {
-        title: "AI-Powered Creative Production",
-        body: "Produce premium visual content with the production value of major global brands. AI-assisted creative workflows dramatically increase output and quality at a fraction of traditional cost.",
+        tag: "Premium Creative",
+        title: "Compete visually without the six-figure budget",
+        body: "Premium creative at the production quality of global brands, without the six-figure budget. AI-assisted workflows dramatically increase output and quality, so you compete visually with companies ten times your size.",
       },
     ],
   },
 ] as const;
 
 export const services = serviceGroups.flatMap(
-  (g) => g.services as readonly { title: string; body: string }[],
+  (g) => g.services as readonly { tag: string; title: string; body: string }[],
 );
 
 export const approach = [
   {
-    title: "Discover",
-    body: "Map where the business actually wins customers — and where competitors are stronger. Analyze the product, pricing, customer experience, and digital presence before proposing a single tactic.",
+    title: "Research",
+    body: "Before we optimize anything, we study the market.\n\nWe analyze the companies already winning, the high-demand searches driving their visibility, and most importantly, why customers choose them.\n\nThe goal is not to copy the leader. It is to understand why they win, where customers are still underserved, and where your business has an opportunity to compete.",
+    services: [
+      {
+        tag: "Research & Competitive Analysis",
+        title: "Find out why customers aren't buying",
+      },
+    ],
   },
   {
-    title: "Strengthen",
-    body: "Address the gaps that prevent the business from being the better choice. That might mean inventory depth, pricing, product discovery, or operational speed — not more content.",
+    title: "Build the Advantage",
+    body: "Research reveals the gap. Then we build around it.\n\nMaybe the opportunity is better pricing, deeper selection, a more specialized product, faster availability, stronger service, or a better customer experience.\n\nIf there is a weakness that marketing cannot hide, we address it.\n\nBefore we ask Google to choose you, we give customers a reason to choose you.",
+    services: [],
   },
   {
     title: "Translate",
-    body: "Turn genuine competitive advantages into digital experiences that make those strengths obvious to customers and to search engines alike.",
+    body: "Once the competitive advantage is clear, we make it visible online.\n\nYour website, product pages, navigation, merchandising, creative, messaging, and customer journey should all communicate the same reason customers should choose you.\n\nThe goal is simple:\n\nMake the strength of the business impossible to miss.",
+    services: [
+      {
+        tag: "Web Development",
+        title: "Ship website changes in hours, not weeks",
+      },
+      {
+        tag: "Conversion Optimization",
+        title: "Earn more from the traffic you already have",
+      },
+      {
+        tag: "Premium Creative",
+        title: "Compete visually without the six-figure budget",
+      },
+    ],
   },
   {
     title: "Amplify",
-    body: "Use SEO, paid media, technology, and distribution to scale what the business has already proven it does well.",
+    body: "Now we use SEO, paid advertising, web development, AI, and creative content to scale what the business already does well.\n\nInstead of using marketing to cover weaknesses, we use it to make a strong business easier to find, easier to understand, and easier to choose.\n\nThat is where digital marketing becomes a real growth engine.",
+    services: [
+      {
+        tag: "SEO",
+        title: "Rank for the searches that drive revenue",
+      },
+      {
+        tag: "Advertising",
+        title: "Turn ad spend into an investment",
+      },
+    ],
   },
   {
-    title: "Optimize",
-    body: "Measure against business results — revenue, conversion, market position — not traffic or rankings alone. Then improve.",
+    title: "Measure & Improve",
+    body: "We measure what changed for the business.\n\nVisibility and traffic matter, but they are not the finish line.\n\nWe look at qualified traffic, leads, conversions, sales, revenue, margin, and competitive position, then use those results to decide what to improve next.\n\nIf marketing performance never reaches the business, it is not enough.",
+    services: [],
   },
 ] as const;
 
@@ -135,82 +156,83 @@ export const caseStudies = [
   {
     id: "inventory-seo",
     kicker: "Inventory & SEO",
-    title: "Depth and speed create visibility.",
+    title: "The SEO problem that SEO couldn't fix.",
+    services: ["Research & Competitive Analysis", "SEO"],
     body: [
-      "Search visibility was inconsistent across product categories. Some performed well organically; others struggled despite similar SEO effort. Competitive benchmarking revealed a pattern: the categories with stronger, more complete inventory consistently outperformed in search. Where competitors had better assortments, they frequently outranked us.",
-      "The response was not more blog content. The focus shifted to operational efficiency — getting products online faster, expanding depth in key categories, and restructuring the catalog around how customers actually shop. As inventory strengthened, search coverage and sales improved without additional content campaigns.",
+      "Search visibility was inconsistent across product categories. Some performed well; others struggled despite identical SEO effort. Every recommendation pointed to more content: more blog posts, more backlinks. Nobody looked at the product catalog.",
+      "We did. The categories with stronger, deeper inventory consistently outranked those with better SEO. The answer was not content. It was getting products online faster, expanding depth in key categories, and restructuring the catalog around how customers actually shop.",
+      "Categories with stronger inventory saw ranking improvements within weeks. Without a single content campaign.",
     ],
   },
   {
     id: "ecommerce-ux",
     kicker: "E-commerce UX",
-    title: "Discovery is a commercial system.",
+    title: "The business had the products. Customers couldn't find them.",
+    services: ["Conversion Optimization", "Web Development"],
     body: [
-      "The business had a strong product assortment, but customers had difficulty finding what they wanted. Navigation was flat, filters were generic, and product discovery relied too heavily on site search. The assortment was there — the digital experience was hiding it.",
-      "Product discovery was rebuilt around how people actually shop: colour swatches, sticky filtering, filter prioritization, collapsed filter groups, and a three-click navigation philosophy. Customers could find and choose faster, and the shopping experience became a closer reflection of the assortment's real strength.",
+      "Strong product assortment. Weak product discovery. Navigation was flat, filters were generic, and customers relied on site search to find what they wanted. The inventory was there. The digital experience was hiding it.",
+      "Product discovery was rebuilt around how people actually shop: color swatches, sticky filtering, three-click navigation.",
+      "Product discovery improved measurably. Customers found products faster, and the assortment performed at the level it deserved.",
     ],
   },
   {
     id: "digital-development",
     kicker: "Development Transformation",
-    title: "Control compounds faster than tickets.",
+    title: "Every improvement waited in someone else's queue.",
+    services: ["Web Development"],
     body: [
-      "The business relied on expensive external development for website changes. Simple UX improvements, merchandising updates, and feature requests sat in external queues for weeks. The constraint was not ideas or strategy — it was the ability to execute.",
-      "AI-assisted development enabled the team to build, test, and ship improvements internally. Development speed increased dramatically. The team could remove bottlenecks as the business needed them gone, rather than waiting for external capacity.",
+      "Simple UX fixes sat in an external development queue for weeks. Feature requests took months. The constraint was not ideas or strategy. It was the inability to execute without external dependency.",
+      "AI-assisted development gave the team the ability to build, test, and ship internally.",
+      "Development cycles dropped from weeks to hours. The team shipped more in one month than the previous agency delivered in six.",
     ],
   },
   {
     id: "pricing-intelligence",
     kicker: "Pricing Intelligence",
-    title: "The gap was in the market, not the traffic.",
+    title: "Everyone said it was a marketing problem. It wasn't.",
+    services: ["Research & Competitive Analysis"],
     body: [
-      "A product category was underperforming despite adequate traffic and visibility. The instinct was a marketing problem — perhaps the pages needed better content, or the category needed more advertising spend.",
-      "Competitive research told a different story: the business was pricing significantly above the market for this category. Customers were comparing and choosing competitors on price. A pricing recommendation was implemented, and category performance improved substantially. The answer to the marketing problem was not more marketing.",
+      "A product category was underperforming. The agency recommended more ad spend. The SEO team recommended more content. Everyone had a marketing solution for what turned out to be a pricing problem.",
+      "Competitive research revealed the business was priced significantly above market for this category. Customers were comparing and buying elsewhere.",
+      "A single pricing adjustment outperformed six months of marketing spend. The budget never changed.",
     ],
   },
   {
     id: "luxury-compliance",
     kicker: "Luxury Brand E-commerce",
-    title: "Premium brands require premium execution.",
+    title: "Brand standards and commercial performance are not opposing goals.",
+    services: ["SEO", "Advertising", "Conversion Optimization"],
     body: [
-      "Major global luxury brands impose strict digital requirements — imagery, typography, layout, content, and functionality must meet exacting standards. Many implementations either satisfy the brand at the expense of UX and commercial performance, or compromise standards to prioritize conversion.",
-      "The work demonstrated that these are not competing objectives. E-commerce experiences were developed that maintained full brand authorization while operating commercially effective digital storefronts — balancing brand standards, technical specifications, UX best practices, and commercial goals across multiple luxury partnerships.",
+      "Global luxury brands impose exacting digital requirements: imagery, typography, layout, and functionality must meet precise standards. Most implementations either satisfy the brand at the expense of commercial performance, or compromise standards to prioritize conversion.",
+      "We proved these are not competing objectives.",
+      "Full brand authorization maintained across multiple luxury partnerships, while operating as commercially effective digital storefronts.",
     ],
   },
 ] as const;
 
 export const principles = [
-  "Business before algorithms.",
-  "Revenue before vanity metrics.",
-  "Customer experience before traffic.",
-  "Technology should remove bottlenecks.",
-  "SEO should amplify real competitive advantage.",
-  "Marketing should make the business stronger.",
+  "If the business doesn't deserve to rank, no amount of SEO will fix it.",
+  "Traffic is a vanity metric. Revenue is the only one that matters.",
+  "A better customer experience will outperform a bigger ad budget.",
+  "If your team waits weeks for website changes, technology is the bottleneck.",
+  "SEO should amplify a real advantage, not manufacture one.",
+  "Marketing that doesn't make the business stronger is a waste of money.",
 ] as const;
 
 export const perspectives = [
   {
-    title: "Why Inventory May Be Your Best E-commerce SEO Strategy",
+    title: "Your Best SEO Strategy Might Be a Warehouse Problem",
+    answer: "If product categories with weak inventory never rank, no matter how much content you produce, then the SEO problem is an operations problem. Get the products online first.",
     category: "E-commerce",
   },
   {
-    title: "SEO Should Reflect the Strength of the Business",
-    category: "SEO",
-  },
-  {
-    title: "Why More Traffic Isn't Always Better Marketing",
+    title: "More Traffic Is Not the Answer.",
+    answer: "Traffic is easy to buy. The harder part is giving people a reason to stay, trust you, and choose your business.\n\nWithout that, more traffic only means more wasted spend.",
     category: "Strategy",
   },
   {
-    title: "The Problem With Content-First SEO",
-    category: "SEO",
-  },
-  {
-    title: "What Years of Tracking E-commerce Rankings Taught Me",
-    category: "Analytics",
-  },
-  {
-    title: "Why Your Best SEO Opportunity Might Be an Operations Problem",
+    title: "The SEO Opportunity Your Agency Will Never Recommend",
+    answer: "Fixing the business itself: pricing, assortment, merchandising, customer experience. No agency recommends this because they can't bill for it.",
     category: "Operations",
   },
 ] as const;

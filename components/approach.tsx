@@ -1,49 +1,109 @@
+"use client";
+
+import { useState } from "react";
 import { ButtonLink } from "@/components/button-link";
 import { Container } from "@/components/container";
 import { approach } from "@/lib/site";
+import { ApproachResearchDiagram } from "@/components/diagrams/approach-research-diagram";
+import { ApproachAdvantageDiagram } from "@/components/diagrams/approach-advantage-diagram";
+import { ApproachTranslateDiagram } from "@/components/diagrams/approach-translate-diagram";
+import { ApproachAmplifyDiagram } from "@/components/diagrams/approach-amplify-diagram";
+import { ApproachMeasureDiagram } from "@/components/diagrams/approach-measure-diagram";
+
+const diagrams = [
+  ApproachResearchDiagram,
+  ApproachAdvantageDiagram,
+  ApproachTranslateDiagram,
+  ApproachAmplifyDiagram,
+  ApproachMeasureDiagram,
+];
 
 export function Approach() {
+  const [active, setActive] = useState(0);
+  const step = approach[active];
+  const Diagram = diagrams[active];
+
   return (
     <section
       id="approach"
       aria-labelledby="approach-heading"
-      className="border-t border-white/10 py-20 sm:py-28"
+      className="reveal-section bg-ink py-24 sm:py-32"
     >
       <Container>
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
             The Apereel Method
           </p>
           <h2
             id="approach-heading"
-            className="font-display mt-4 text-3xl text-ink sm:text-5xl"
+            className="font-display mt-4 text-3xl text-navy sm:text-5xl"
           >
-            Discover. Strengthen. Translate. Amplify. Optimize.
+            A step-by-step approach to building sustainable digital growth.
           </h2>
-          <p className="mt-5 text-base leading-relaxed text-muted">
-            A repeatable system for digital growth. We do not start with
-            tactics. We start with the business, then use marketing, technology,
-            and experience to amplify what is already true.
-          </p>
         </div>
-        <ol className="mt-14 divide-y divide-white/10 border-y border-white/10">
-          {approach.map((step, index) => (
-            <li
-              key={step.title}
-              className="grid gap-4 py-10 sm:grid-cols-12 sm:items-baseline"
+
+        {/* Tab bar */}
+        <div className="mt-14 flex gap-1 overflow-x-auto border-b border-navy/10">
+          {approach.map((s, i) => (
+            <button
+              key={s.title}
+              onClick={() => setActive(i)}
+              className={`relative shrink-0 px-5 py-4 text-sm font-medium tracking-wide transition-colors ${
+                i === active
+                  ? "text-navy"
+                  : "text-navy/40 hover:text-navy/70"
+              }`}
             >
-              <p className="font-mono text-[12px] tracking-[0.22em] text-electric sm:col-span-2">
-                {String(index + 1).padStart(2, "0")}
-              </p>
-              <h3 className="font-display text-2xl text-ink sm:col-span-3 sm:text-3xl">
-                {step.title}
-              </h3>
-              <p className="text-base leading-relaxed text-muted sm:col-span-7">
-                {step.body}
-              </p>
-            </li>
+              <span className="mr-2 font-mono text-[11px] tracking-[0.22em] text-electric">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              {s.title}
+              {i === active && (
+                <span className="absolute bottom-0 left-0 h-[2px] w-full bg-electric" />
+              )}
+            </button>
           ))}
-        </ol>
+        </div>
+
+        {/* Active tab content */}
+        <article className="grid overflow-hidden rounded-2xl border border-navy/10 mt-10 lg:grid-cols-2">
+          <div className="hidden min-h-[280px] items-center justify-center bg-navy-mid p-8 lg:flex">
+            <Diagram />
+          </div>
+          <div className="flex flex-col justify-center p-8 sm:p-10">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              {step.title}
+            </p>
+            <div className="mt-4 space-y-4 text-base leading-relaxed text-navy/60">
+              {step.body.split("\n\n").map((paragraph, i) => (
+                <p key={i}>{paragraph}</p>
+              ))}
+            </div>
+            {step.services.length > 0 && (
+              <div className="mt-6 border-t border-navy/10 pt-5">
+                <p className="font-mono text-[11px] tracking-[0.2em] text-navy/40 uppercase">
+                  Services Deployed
+                </p>
+                <ul className="mt-3 grid gap-2">
+                  {step.services.map((service) => (
+                    <li
+                      key={service.tag}
+                      className="rounded-lg border border-navy/10 bg-navy/5 px-4 py-3"
+                    >
+                      <p className="text-[11px] font-medium tracking-wide text-electric uppercase">
+                        {service.tag}
+                      </p>
+                      <p className="mt-1 text-[14px] font-semibold leading-snug text-navy">
+                        {service.title}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </article>
+
         <div className="mt-10">
           <ButtonLink href="/#contact" variant="secondary">
             Find Your Growth Opportunity

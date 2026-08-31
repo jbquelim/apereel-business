@@ -6,7 +6,7 @@ export function Philosophy() {
     <section
       id="philosophy"
       aria-labelledby="philosophy-heading"
-      className="border-t border-white/10 py-20 sm:py-28"
+      className="reveal-section py-24 sm:py-32"
     >
       <Container>
         <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
@@ -16,12 +16,12 @@ export function Philosophy() {
           id="philosophy-heading"
           className="font-display mt-4 max-w-3xl text-3xl text-ink text-balance sm:text-5xl"
         >
-          You can&apos;t cheat your way to becoming the best result.
+          Most agencies are solving the wrong problem.
         </h2>
         <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted">
-          The strongest long-term strategy is often becoming a better answer for
-          the customer. Most digital marketing starts with keywords and tactics.
-          Apereel starts with the business.
+          They start with keywords and content calendars. They report on traffic
+          and impressions. Somewhere between the kickoff meeting and the monthly
+          report, the actual business gets ignored.
         </p>
 
         <div className="mt-16 grid gap-6 lg:grid-cols-2">
@@ -69,27 +69,25 @@ export function Philosophy() {
         <div className="mt-14 grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-6">
             <p className="text-base leading-relaxed text-muted">
-              This philosophy came from observing e-commerce firsthand. Product
-              categories with stronger, more complete inventory consistently
-              outperformed in search — regardless of how much SEO content was
-              produced for weaker categories. Where competitors had better
-              assortments, they frequently outranked us.
+              We discovered this by watching SEO fail. Product categories with
+              weak inventory never ranked well — no matter how much content we
+              produced. Categories with strong, deep inventory outranked the
+              competition without a single content campaign.
             </p>
           </div>
           <div className="lg:col-span-6">
             <p className="text-base leading-relaxed text-muted">
-              The response was not more blog posts. The focus shifted to the
-              business itself — getting products online faster, improving
-              merchandising, strengthening the offer. As the business became more
-              competitive, both sales and organic visibility improved.
+              The answer was never more blog posts. It was more products. Faster
+              merchandising. A stronger offer. When the business improved, the
+              rankings followed. No agency would have recommended that.
             </p>
           </div>
         </div>
 
         <p className="mt-8 text-sm leading-relaxed text-muted">
-          The technical work is expected. It is not the strategy. The advantage
-          comes from understanding why customers choose you, then making that
-          answer unmistakable.
+          The technical work is table stakes. The advantage comes from one
+          question: why should a customer choose you instead of the
+          competition?
         </p>
       </Container>
     </section>

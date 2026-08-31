@@ -26,12 +26,24 @@ export function ButtonLink({
     <Link
       href={href}
       className={cn(
-        "inline-flex h-12 items-center justify-center rounded-full border px-6 text-[13px] font-semibold tracking-[0.08em] uppercase transition-colors duration-200",
+        "group inline-flex h-12 items-center justify-center gap-2 rounded-full border px-6 text-[13px] font-semibold tracking-[0.08em] uppercase transition-all duration-300",
         styles[variant],
         className,
       )}
     >
       {children}
+      <svg
+        className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+        viewBox="0 0 20 20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M5 10h11M11 5l5 5-5 5" />
+      </svg>
     </Link>
   );
 }

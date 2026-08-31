@@ -6,7 +6,7 @@ export function Principles() {
     <section
       id="principles"
       aria-labelledby="principles-heading"
-      className="border-t border-white/10 py-20 sm:py-28"
+      className="reveal-section py-24 sm:py-32"
     >
       <Container>
         <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
@@ -16,7 +16,7 @@ export function Principles() {
           id="principles-heading"
           className="font-display mt-4 max-w-xl text-3xl text-ink sm:text-4xl"
         >
-          How the work is judged.
+          Six rules. Zero exceptions.
         </h2>
         <ol className="mt-12 divide-y divide-white/10 border-y border-white/10">
           {principles.map((principle, index) => (

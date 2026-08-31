@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Lead gen sensitive data
+tools/lead-gen/.env
+tools/lead-gen/data/*.json
+tools/lead-gen/data/*.csv
+tools/lead-gen/node_modules/

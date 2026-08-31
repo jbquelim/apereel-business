@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ButtonLink } from "@/components/button-link";
 import { Container } from "@/components/container";
 import { site } from "@/lib/site";
@@ -6,34 +7,51 @@ export function Hero() {
   return (
     <section
       id="top"
-      className="relative isolate overflow-hidden pt-28 pb-24 sm:pt-36 sm:pb-32 lg:pt-44 lg:pb-40"
+      className="relative isolate flex min-h-screen flex-col justify-end overflow-hidden pt-28 pb-16 sm:pb-20 lg:pb-24"
     >
+      <Image
+        src="/images/hero-bg.png"
+        alt=""
+        fill
+        priority
+        className="pointer-events-none object-cover object-right-bottom"
+        sizes="100vw"
+      />
       <div className="hero-glow pointer-events-none absolute inset-0" />
-      <div className="grid-overlay pointer-events-none absolute inset-0 opacity-70" />
       <Container className="relative">
-        <p className="animate-rise font-mono text-[11px] tracking-[0.28em] text-electric uppercase">
-          {site.tagline}
-        </p>
-        <h1 className="animate-rise-delay-1 font-display mt-8 max-w-5xl text-[2.5rem] leading-[1.08] text-ink sm:text-5xl md:text-6xl lg:text-[4.75rem]">
+        <h1 className="animate-rise font-display max-w-5xl text-[2.75rem] leading-[1.05] text-ink sm:text-6xl md:text-7xl lg:text-[5.25rem]">
           {site.headline}
           <br />
           <span className="text-electric">{site.headlineLine2}</span>
         </h1>
-        <p className="animate-rise-delay-2 mt-8 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
+        <p className="animate-rise-delay-1 mt-8 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl whitespace-pre-line">
           {site.supporting}
         </p>
-        <ul className="animate-rise-delay-3 mt-10 flex flex-wrap gap-2">
-          {site.capabilities.map((item) => (
-            <li
-              key={item}
-              className="rounded-full border border-white/12 bg-white/[0.03] px-3.5 py-1.5 text-[11px] tracking-[0.08em] text-ink/85 uppercase"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-        <div className="animate-rise-delay-4 mt-12 flex flex-col gap-3 sm:flex-row">
-          <ButtonLink href="/#contact">Let&apos;s Talk</ButtonLink>
+        <p className="animate-rise-delay-1 mt-4 text-sm tracking-wide text-electric/80">
+          For established e-commerce businesses ready for real growth.
+        </p>
+        <div className="animate-rise-delay-2 mt-12 flex flex-wrap gap-8 border-t border-white/10 pt-8 sm:gap-14">
+          <div>
+            <p className="font-display text-3xl text-ink sm:text-4xl">12+</p>
+            <p className="mt-1 text-[12px] tracking-[0.1em] text-muted uppercase">
+              Years Digital Marketing
+            </p>
+          </div>
+          <div>
+            <p className="font-display text-3xl text-ink sm:text-4xl">1,000+</p>
+            <p className="mt-1 text-[12px] tracking-[0.1em] text-muted uppercase">
+              Keywords Ranked Top 5
+            </p>
+          </div>
+          <div>
+            <p className="font-display text-3xl text-ink sm:text-4xl">20X</p>
+            <p className="mt-1 text-[12px] tracking-[0.1em] text-muted uppercase">
+              Revenue Growth
+            </p>
+          </div>
+        </div>
+        <div className="animate-rise-delay-3 mt-12 flex flex-col gap-3 sm:flex-row">
+          <ButtonLink href="/#contact">Tell Us About Your Business</ButtonLink>
           <ButtonLink href="/#approach" variant="secondary">
             Our Approach
           </ButtonLink>

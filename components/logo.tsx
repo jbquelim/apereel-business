@@ -2,37 +2,30 @@ import { cn } from "@/lib/cn";
 
 type LogoProps = {
   className?: string;
-  markClassName?: string;
-  showWordmark?: boolean;
 };
 
-export function Logo({
-  className,
-  markClassName,
-  showWordmark = true,
-}: LogoProps) {
+export function Logo({ className }: LogoProps) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <svg
-        viewBox="0 0 32 32"
-        aria-hidden="true"
-        className={cn("h-7 w-7 text-ink", markClassName)}
-      >
-        <circle
-          cx="16"
-          cy="16"
-          r="12.25"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.25"
-        />
-        <circle cx="16" cy="16" r="4.4" fill="#3d9eff" />
-      </svg>
-      {showWordmark ? (
-        <span className="text-[13px] font-semibold tracking-[0.28em] text-ink">
-          APEREEL
-        </span>
-      ) : null}
-    </span>
+    <svg
+      viewBox="0 0 1080 207.81"
+      aria-label="Apereel"
+      className={cn("h-6 w-auto", className)}
+    >
+      <path
+        d="M130.52,19.62c-20.39,54.96-55.19,123.15-92.04,165.42l92.04-33.29,92.02,33.29c-36.86-42.27-71.65-110.46-92.02-165.42Z"
+        className="fill-ink"
+      />
+      <polygon
+        points="114.87 121.04 130.51 93.96 146.14 121.04 114.87 121.04"
+        className="fill-navy"
+      />
+      <path d="M331.36,142.68l-11.29-22.93h-42.46l4.3-8.96h34.04l-25.08-51.6-40.49,83.48h-10.75l45.15-92.44h12.18l45.15,92.44h-10.75Z" className="fill-ink" />
+      <path d="M382.6,59.56v83.13h-9.85V50.24h56.43c7.76,0,14.15,2.54,19.17,7.61,5.02,5.08,7.52,11.56,7.52,19.44s-2.57,14.66-7.7,19.97c-5.14,5.32-11.46,7.97-18.99,7.97h-31.53v-9.14h30.1c5.49,0,9.94-1.73,13.35-5.2,3.4-3.46,5.11-8.06,5.11-13.79,0-11.7-6.15-17.56-18.45-17.56h-45.15Z" className="fill-ink" />
+      <path d="M502.63,133.37h68.44v9.32h-78.29V50.24h77.57v9.32h-67.72v73.81ZM559.78,90.91v8.96h-42.1v-8.96h42.1Z" className="fill-ink" />
+      <path d="M664.04,50.24c8,0,14.48,2.51,19.44,7.52,4.95,5.02,7.43,11.41,7.43,19.17,0,7.17-2.09,13.26-6.27,18.27-4.18,5.02-9.67,8.42-16.48,10.21l27.23,37.26h-12l-27.05-37.08h-23.47v-9.14h28.84c5.49,0,10.09-1.76,13.79-5.29,3.7-3.52,5.55-8.33,5.55-14.42,0-5.13-1.52-9.28-4.57-12.45-3.05-3.16-7.97-4.75-14.78-4.75h-44.07v83.13h-9.85V50.24h56.25Z" className="fill-ink" />
+      <path d="M740.72,133.37h68.44v9.32h-78.29V50.24h77.57v9.32h-67.72v73.81ZM797.87,90.91v8.96h-42.1v-8.96h42.1Z" className="fill-ink" />
+      <path d="M855.73,133.37h68.44v9.32h-78.29V50.24h77.57v9.32h-67.72v73.81ZM912.88,90.91v8.96h-42.1v-8.96h42.1Z" className="fill-ink" />
+      <path d="M970.57,50.24v83.13h64.85v9.32h-74.71V50.24h9.85Z" className="fill-ink" />
+    </svg>
   );
 }

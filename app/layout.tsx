@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Instrument_Serif, Plus_Jakarta_Sans } from "next/font/google";
 import { JsonLd } from "@/components/json-ld";
 import { SiteFooter } from "@/components/site-footer";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { SiteHeader } from "@/components/site-header";
 import { SkipLink } from "@/components/skip-link";
 import { getSiteUrl, site } from "@/lib/site";
@@ -83,10 +84,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en-CA"
       className={`${plusJakarta.variable} ${instrument.variable} ${ibmPlex.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-navy font-sans text-ink">
+      <body className="min-h-full overflow-x-hidden bg-navy font-sans text-ink">
         <JsonLd />
         <SkipLink />
         <SiteHeader />
+        <ScrollReveal />
         {children}
         <SiteFooter />
       </body>

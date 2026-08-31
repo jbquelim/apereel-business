@@ -1,0 +1,15 @@
+{
+  "name": "apereel-lead-gen",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "node scrape.mjs",
+    "enrich": "node enrich.mjs",
+    "outreach": "node outreach.mjs",
+    "status": "node status.mjs"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "nodemailer": "^6.9.0"
+  }
+}

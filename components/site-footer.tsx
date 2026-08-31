@@ -11,7 +11,7 @@ export function SiteFooter() {
           <Logo />
           <p className="mt-6 max-w-sm text-sm leading-relaxed text-muted">
             Digital growth consultancy. Business-first SEO, e-commerce,
-            advertising, AI-powered development, and creative production —
+            advertising, AI-powered development, and creative production,
             built around what already makes a business strong.
           </p>
         </div>

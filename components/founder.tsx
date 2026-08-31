@@ -1,29 +1,31 @@
+import Image from "next/image";
 import { Container } from "@/components/container";
-import { site } from "@/lib/site";
+import { site, principles } from "@/lib/site";
 
 export function Founder() {
   return (
     <section
       id="founder"
       aria-labelledby="founder-heading"
-      className="border-t border-white/10 py-20 sm:py-28"
+      className="reveal-section py-24 sm:py-32"
     >
       <Container className="grid gap-12 lg:grid-cols-12">
         <div className="lg:col-span-5">
-          <div className="flex aspect-[4/5] max-w-sm flex-col justify-between rounded-2xl border border-white/10 bg-navy-mid p-8">
-            <p className="text-[11px] tracking-[0.22em] text-electric uppercase">
-              Founder
-            </p>
-            <div>
-              <p className="font-display text-5xl text-ink sm:text-6xl">
-                {site.founder.name.split(" ")[0]}
-                <br />
-                {site.founder.name.split(" ")[1]}
+          <div className="relative max-w-sm overflow-hidden rounded-2xl border border-white/10">
+            <Image
+              src="/images/john-lim.png"
+              alt={site.founder.name}
+              width={1254}
+              height={1254}
+              sizes="(min-width: 1024px) 420px, 100vw"
+              className="aspect-square w-full object-contain"
+              priority={false}
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy/80 via-navy/40 to-transparent px-8 pt-16 pb-8">
+              <p className="font-display text-3xl text-ink sm:text-4xl">
+                {site.founder.name}
               </p>
-              <p className="mt-6 text-sm text-muted">{site.founder.title}</p>
-              <p className="mt-1 text-sm text-muted/80">
-                Also currently: {site.founder.currentRole}
-              </p>
+              <p className="mt-2 text-sm text-ink/70">{site.founder.title}</p>
             </div>
           </div>
         </div>
@@ -48,6 +50,29 @@ export function Founder() {
               &ldquo;{site.founder.philosophy}&rdquo;
             </p>
           </div>
+
+        </div>
+
+        {/* Principles */}
+        <div className="lg:col-span-12 mt-12 border-t border-white/10 pt-10">
+          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+            Principles
+          </p>
+          <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {principles.map((principle, index) => (
+              <li
+                key={principle}
+                className="flex items-baseline gap-4"
+              >
+                <span className="font-mono text-[11px] tracking-[0.22em] text-signal">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <p className="text-base text-ink">
+                  {principle}
+                </p>
+              </li>
+            ))}
+          </ol>
         </div>
       </Container>
     </section>
