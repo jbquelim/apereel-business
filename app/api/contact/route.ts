@@ -62,6 +62,8 @@ async function deliver(payload: {
       }),
     });
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("Resend error:", response.status, errorBody);
       throw new Error("Unable to send email.");
     }
     return;

@@ -49,7 +49,7 @@ export function validateContact(input: ContactInput): {
   if (phone && !phonePattern.test(phone)) errors.phone = "Please enter a valid phone number.";
   if (company.length > 160) errors.company = "Company name is too long.";
   if (website.length > 300) errors.website = "URL is too long.";
-  if (message.length < 12) errors.message = "Please share a little more context.";
+  if (message.length < 1) errors.message = "Please enter a message.";
   if (message.length > 4000) errors.message = "Message is too long.";
   if (!acceptTerms) errors.acceptTerms = "Please accept the terms to continue.";
 
