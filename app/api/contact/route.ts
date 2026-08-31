@@ -34,7 +34,7 @@ async function deliver(payload: {
   acceptTerms: boolean;
   marketingOptIn: boolean;
 }) {
-  const to = process.env.CONTACT_TO_EMAIL ?? site.email;
+  const to = (process.env.CONTACT_TO_EMAIL || site.email).trim();
   const text = [
     `Name: ${payload.name}`,
     `Email: ${payload.email}`,
@@ -45,6 +45,8 @@ async function deliver(payload: {
     "",
     payload.message,
   ].join("\n");
+
+  console.log("Sending to:", JSON.stringify(to), "from env:", JSON.stringify(process.env.CONTACT_TO_EMAIL));
 
   if (process.env.RESEND_API_KEY) {
     const response = await fetch("https://api.resend.com/emails", {
@@ -64,7 +66,7 @@ async function deliver(payload: {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error("Resend error:", response.status, errorBody);
-      throw new Error("Unable to send email.");
+      throw new Error(`Resend ${response.status}: ${errorBody}`);
     }
     return;
   }
