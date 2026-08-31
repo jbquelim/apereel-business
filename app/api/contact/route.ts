@@ -54,7 +54,7 @@ async function deliver(payload: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.CONTACT_FROM_EMAIL ?? "Apereel <onboarding@resend.dev>",
+        from: "Apereel <noreply@apereel.com>",
         to: [to],
         reply_to: payload.email,
         subject: `Apereel inquiry from ${payload.name}`,
