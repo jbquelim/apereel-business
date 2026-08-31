@@ -66,6 +66,33 @@ async function deliver(payload: {
       console.error("Resend error:", response.status, errorBody);
       throw new Error("Unable to send email.");
     }
+
+    // Auto-reply to the person who submitted
+    const firstName = payload.name.split(" ")[0];
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Apereel <noreply@apereel.com>",
+        to: [payload.email.trim()],
+        reply_to: site.email,
+        subject: `Thanks for reaching out, ${firstName}`,
+        html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.6; color: #1a1a1a; max-width: 560px;">
+<p>Hi ${firstName},</p>
+<p>Thank you for getting in touch with Apereel. We've received your message and will get back to you within one business day.</p>
+<p>In the meantime, if anything is time-sensitive, feel free to reply directly to this email.</p>
+<p>
+John Lim<br>
+Founder, Apereel<br>
+<a href="https://apereel.com" style="color: #3d9eff;">apereel.com</a>
+</p>
+</div>`,
+      }),
+    }).catch((err) => console.error("Auto-reply failed:", err));
+
     return;
   }
 
