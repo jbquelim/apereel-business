@@ -27,16 +27,21 @@ function rateLimited(ip: string) {
 async function deliver(payload: {
   name: string;
   email: string;
+  phone: string;
   company: string;
   website: string;
   message: string;
+  acceptTerms: boolean;
+  marketingOptIn: boolean;
 }) {
   const to = process.env.CONTACT_TO_EMAIL ?? site.email;
   const text = [
     `Name: ${payload.name}`,
     `Email: ${payload.email}`,
+    `Phone: ${payload.phone || "(not provided)"}`,
     `Company: ${payload.company || "(not provided)"}`,
     `Website: ${payload.website || "(not provided)"}`,
+    `Marketing opt-in: ${payload.marketingOptIn ? "Yes" : "No"}`,
     "",
     payload.message,
   ].join("\n");
@@ -73,9 +78,11 @@ async function deliver(payload: {
       body: JSON.stringify({
         name: payload.name,
         email: payload.email,
+        phone: payload.phone,
         company: payload.company,
         website: payload.website,
         message: payload.message,
+        marketing_opt_in: payload.marketingOptIn ? "Yes" : "No",
         _subject: `Apereel inquiry from ${payload.name}`,
         _template: "table",
         _captcha: "false",
@@ -109,18 +116,24 @@ export async function POST(request: Request) {
   const input = body as {
     name?: string;
     email?: string;
+    phone?: string;
     company?: string;
     website?: string;
     message?: string;
+    acceptTerms?: boolean;
+    marketingOptIn?: boolean;
     honeypot?: string;
   };
 
   const result = validateContact({
     name: input.name ?? "",
     email: input.email ?? "",
+    phone: input.phone ?? "",
     company: input.company ?? "",
     website: input.website ?? "",
     message: input.message ?? "",
+    acceptTerms: input.acceptTerms ?? false,
+    marketingOptIn: input.marketingOptIn ?? false,
     honeypot: input.honeypot ?? "",
   });
 
@@ -139,9 +152,12 @@ export async function POST(request: Request) {
     await deliver({
       name: result.data.name,
       email: result.data.email,
+      phone: result.data.phone,
       company: result.data.company,
       website: result.data.website,
       message: result.data.message,
+      acceptTerms: result.data.acceptTerms,
+      marketingOptIn: result.data.marketingOptIn,
     });
     return NextResponse.json({ ok: true });
   } catch {

@@ -21,9 +21,12 @@ export function ContactForm() {
     const payload = {
       name: String(formData.get("name") ?? ""),
       email: String(formData.get("email") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
       company: String(formData.get("company") ?? ""),
       website: String(formData.get("website") ?? ""),
       message: String(formData.get("message") ?? ""),
+      acceptTerms: formData.get("acceptTerms") === "on",
+      marketingOptIn: formData.get("marketingOptIn") === "on",
       honeypot: String(formData.get("fax_number") ?? ""),
     };
 
@@ -120,6 +123,22 @@ export function ContactForm() {
           ) : null}
         </label>
       </div>
+      <label className="mt-5 block text-[12px] font-medium text-ink">
+        Phone
+        <input
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          className={fieldClass}
+          aria-invalid={Boolean(errors.phone)}
+          aria-describedby={errors.phone ? "phone-error" : undefined}
+        />
+        {errors.phone ? (
+          <span id="phone-error" className="mt-1 block text-[12px] text-signal">
+            {errors.phone}
+          </span>
+        ) : null}
+      </label>
       <div className="mt-5 grid gap-5 sm:grid-cols-2">
         <label className="block text-[12px] font-medium text-ink">
           Company
@@ -158,6 +177,36 @@ export function ContactForm() {
           </span>
         ) : null}
       </label>
+      <div className="mt-6 space-y-3">
+        <label className="flex items-start gap-3 text-[12px] text-ink/70 cursor-pointer">
+          <input
+            name="acceptTerms"
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border border-white/20 bg-navy accent-electric"
+            aria-invalid={Boolean(errors.acceptTerms)}
+          />
+          <span>
+            I agree to the{" "}
+            <a href="/privacy" className="text-electric underline underline-offset-2">
+              privacy policy
+            </a>{" "}
+            and consent to Apereel processing my information to respond to this inquiry.
+          </span>
+        </label>
+        {errors.acceptTerms ? (
+          <p className="ml-7 text-[12px] text-signal">{errors.acceptTerms}</p>
+        ) : null}
+        <label className="flex items-start gap-3 text-[12px] text-ink/70 cursor-pointer">
+          <input
+            name="marketingOptIn"
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border border-white/20 bg-navy accent-electric"
+          />
+          <span>
+            I'd like to receive occasional insights on digital growth and e-commerce strategy. Unsubscribe anytime.
+          </span>
+        </label>
+      </div>
       <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
         <label>
           Fax
