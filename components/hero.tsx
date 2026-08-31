@@ -11,7 +11,7 @@ export function Hero() {
     >
       <Image
         src="/images/hero-bg.png"
-        alt=""
+        alt="Digital growth strategy visualization representing e-commerce SEO and business optimization"
         fill
         priority
         className="pointer-events-none object-cover object-right-bottom"

@@ -4,7 +4,7 @@ export const site = {
   headline: "The method behind",
   headlineLine2: "20X revenue growth.",
   supporting:
-    "We grew an e-commerce business by 20X in four years. Not by doing more SEO, but by making the business worth ranking.",
+    "Digital growth consultancy that drove 20X e-commerce revenue growth in four years. We fix what's actually limiting your business — pricing, inventory, product discovery — then amplify it with SEO, advertising, and conversion optimization.",
   email: "john@apereel.com",
   linkedin: "https://www.linkedin.com/in/jblim",
   founder: {
