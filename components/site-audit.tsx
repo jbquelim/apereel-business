@@ -582,15 +582,28 @@ function AuditResults({ data }: { data: AuditData }) {
 }
 
 export function SiteAudit() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<
     "idle" | "loading" | "done" | "error"
   >("idle");
   const [data, setData] = useState<AuditData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string }>({});
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const errors: { name?: string; email?: string } = {};
+    if (!name.trim()) errors.name = "Name is required";
+    if (!email.trim()) errors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      errors.email = "Enter a valid email";
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
     if (!url.trim()) return;
 
     setStatus("loading");
@@ -601,7 +614,11 @@ export function SiteAudit() {
       const res = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({
+          url: url.trim(),
+          name: name.trim(),
+          email: email.trim(),
+        }),
       });
       const body = await res.json();
       if (!res.ok || !body.ok) {
@@ -641,45 +658,77 @@ export function SiteAudit() {
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="mt-10 flex flex-col gap-3 sm:flex-row">
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Enter your website URL"
-            className="h-12 flex-1 rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
-            aria-label="Website URL"
-          />
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="press-scale inline-flex h-12 items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors duration-200 hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {status === "loading" ? (
-              <span className="flex items-center gap-2">
-                <svg
-                  className="h-4 w-4 animate-spin"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeDasharray="60"
-                    strokeDashoffset="15"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Analyzing…
-              </span>
-            ) : (
-              "Analyze Site"
-            )}
-          </button>
+        <form onSubmit={onSubmit} className="mt-10 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="h-12 w-full rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+                aria-label="Your name"
+                aria-invalid={Boolean(fieldErrors.name)}
+              />
+              {fieldErrors.name && (
+                <p className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.name}</p>
+              )}
+            </div>
+            <div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Your email"
+                className="h-12 w-full rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+                aria-label="Your email"
+                aria-invalid={Boolean(fieldErrors.email)}
+              />
+              {fieldErrors.email && (
+                <p className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.email}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="Enter your website URL"
+              className="h-12 flex-1 rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+              aria-label="Website URL"
+            />
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="press-scale inline-flex h-12 items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors duration-200 hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {status === "loading" ? (
+                <span className="flex items-center gap-2">
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeDasharray="60"
+                      strokeDashoffset="15"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  Analyzing…
+                </span>
+              ) : (
+                "Analyze Site"
+              )}
+            </button>
+          </div>
         </form>
 
         {status === "loading" && (

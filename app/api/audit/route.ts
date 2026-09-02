@@ -454,7 +454,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const { url: rawUrl } = body as { url?: string };
+  const { url: rawUrl, name, email } = body as {
+    url?: string;
+    name?: string;
+    email?: string;
+  };
   const url = normalizeUrl(rawUrl ?? "");
 
   if (!url) {
@@ -536,6 +540,37 @@ export async function POST(request: Request) {
     industry,
     trends,
   };
+
+  if (name && email && process.env.RESEND_API_KEY) {
+    const to = process.env.CONTACT_TO_EMAIL || "john@apereel.com";
+    fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Apereel <noreply@apereel.com>",
+        to: [to],
+        subject: `Audit lead: ${name} — ${url}`,
+        text: [
+          `New audit lead`,
+          ``,
+          `Name: ${name}`,
+          `Email: ${email}`,
+          `Website: ${url}`,
+          ``,
+          `Industry: ${industry?.industry ?? "N/A"}`,
+          `Sub-industry: ${industry?.subIndustry ?? "N/A"}`,
+          `Top competitor: ${industry?.topPlayer ?? "N/A"}`,
+          ``,
+          `Performance: ${scores.performance ?? "N/A"}`,
+          `SEO: ${scores.seo ?? "N/A"}`,
+          `Accessibility: ${scores.accessibility ?? "N/A"}`,
+        ].join("\n"),
+      }),
+    }).catch((err) => console.error("Audit notification email failed:", err));
+  }
 
   return NextResponse.json({ ok: true, data: result });
 }

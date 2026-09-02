@@ -28,6 +28,32 @@ export function Founder() {
               <p className="mt-2 text-sm text-ink/70">{site.founder.title}</p>
             </div>
           </div>
+          <ul className="mt-6 space-y-4 text-sm">
+            <li>
+              <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+                Email
+              </p>
+              <a
+                href={`mailto:${site.email}`}
+                className="mt-1 inline-block text-ink transition-colors hover:text-electric"
+              >
+                {site.email}
+              </a>
+            </li>
+            <li>
+              <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+                LinkedIn
+              </p>
+              <a
+                href={site.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-ink transition-colors hover:text-electric"
+              >
+                linkedin.com/in/jblim
+              </a>
+            </li>
+          </ul>
         </div>
         <div className="lg:col-span-7 lg:pt-4">
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
