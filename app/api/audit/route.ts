@@ -35,16 +35,17 @@ function normalizeUrl(input: string): string | null {
   }
 }
 
-type IndustryLeader = {
+type Competitor = {
   name: string;
   domain: string;
-  description: string;
+  strength: string;
 };
 
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
-  leaders: IndustryLeader[];
+  competitors: Competitor[];
+  insight: string;
 } | null;
 
 type AuditResult = {
@@ -247,25 +248,36 @@ async function fetchIndustryAnalysis(
     "claude-3-haiku-20240307",
   ];
 
-  const prompt = `Analyze this website and identify its industry. Then list the top 5 industry leaders (largest/most dominant companies) in that specific industry.
+  const prompt = `Analyze this website and identify its industry, then list its top 5 direct competitors and provide a competitive insight.
 
 Website signals:
 ${signals}
+
+CRITICAL: Competitors must be DIRECT competitors — businesses of the same type that compete for the same customers. NOT brands, suppliers, or parent companies they may carry.
+
+Examples of correct competitor identification:
+- A jewelry RETAILER's competitors are other jewelry RETAILERS (e.g. Birks, Knar Jewellery, Mejuri), NOT jewelry brands they sell (NOT Cartier, Rolex, Tiffany)
+- A shoe STORE's competitors are other shoe STORES, NOT shoe manufacturers
+- A restaurant's competitors are other restaurants, NOT food suppliers
+- A clothing BOUTIQUE's competitors are other boutiques, NOT fashion brands like Gucci
 
 Respond with ONLY valid JSON, no markdown formatting:
 {
   "industry": "broad industry name",
   "subIndustry": "specific niche or sub-category",
-  "leaders": [
-    { "name": "Company Name", "domain": "example.com", "description": "One sentence on why they lead" }
-  ]
+  "competitors": [
+    { "name": "Company Name", "domain": "example.com", "strength": "What they do well that makes them a strong competitor" }
+  ],
+  "insight": "2-3 sentences analyzing the competitive landscape. What do the top competitors have in common? Where are customers potentially underserved? Where does this business have an opportunity to differentiate and win?"
 }
 
 Rules:
-- Do NOT include the analyzed website in the leaders list
-- Leaders should be the biggest, most recognized companies globally in this specific industry
-- Be specific with the sub-industry (e.g. "Athletic Footwear" not just "Retail")
-- Keep descriptions under 15 words`;
+- Do NOT include the analyzed website itself in the competitors list
+- Competitors must be the same TYPE of business (retailer vs retailer, service vs service)
+- Prefer competitors in the same geographic market when the business is local/regional
+- Be specific with the sub-industry (e.g. "Fine Jewelry Retail" not just "Retail")
+- Keep each "strength" under 15 words
+- The "insight" should read like strategic consulting advice, not generic filler`;
 
   try {
     let res: Response | null = null;
@@ -307,16 +319,17 @@ Rules:
     }
     const parsed = JSON.parse(jsonMatch[0]);
 
-    if (!parsed.industry || !Array.isArray(parsed.leaders)) return null;
+    if (!parsed.industry || !Array.isArray(parsed.competitors)) return null;
 
     return {
       industry: parsed.industry,
       subIndustry: parsed.subIndustry ?? parsed.industry,
-      leaders: parsed.leaders.slice(0, 5).map((l: { name: string; domain: string; description: string }) => ({
-        name: l.name,
-        domain: l.domain,
-        description: l.description,
+      competitors: parsed.competitors.slice(0, 5).map((c: { name: string; domain: string; strength: string }) => ({
+        name: c.name,
+        domain: c.domain,
+        strength: c.strength,
       })),
+      insight: parsed.insight ?? "",
     };
   } catch (err) {
     console.error("Industry analysis failed:", err);

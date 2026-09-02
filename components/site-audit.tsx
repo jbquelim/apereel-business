@@ -41,16 +41,17 @@ type Meta = {
 
 type Finding = { type: "pass" | "warn" | "fail"; message: string };
 
-type IndustryLeader = {
+type Competitor = {
   name: string;
   domain: string;
-  description: string;
+  strength: string;
 };
 
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
-  leaders: IndustryLeader[];
+  competitors: Competitor[];
+  insight: string;
 } | null;
 
 type AuditData = {
@@ -226,11 +227,9 @@ function AuditResults({ data }: { data: AuditData }) {
 
       {data.industry && (
         <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
-          <div className="flex items-baseline justify-between">
-            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
-              Industry Analysis
-            </p>
-          </div>
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+            Competitive Analysis
+          </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <span className="rounded-full border border-electric/30 bg-electric/10 px-4 py-1.5 text-sm font-medium text-electric">
               {data.industry.industry}
@@ -242,12 +241,20 @@ function AuditResults({ data }: { data: AuditData }) {
             )}
           </div>
 
+          {data.industry.insight && (
+            <div className="mt-6 rounded-lg border border-electric/10 bg-electric/5 px-5 py-4">
+              <p className="text-sm leading-relaxed text-ink/80">
+                {data.industry.insight}
+              </p>
+            </div>
+          )}
+
           <div className="mt-6">
             <p className="mb-3 text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
-              Top 5 Industry Leaders
+              Top 5 Direct Competitors
             </p>
             <div className="space-y-2">
-              {data.industry.leaders.map((leader, i) => (
+              {data.industry.competitors.map((competitor, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-4 rounded-lg border border-white/5 bg-navy px-4 py-3"
@@ -257,13 +264,13 @@ function AuditResults({ data }: { data: AuditData }) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-ink">{leader.name}</p>
+                      <p className="font-medium text-ink">{competitor.name}</p>
                       <span className="hidden font-mono text-[12px] text-muted/60 sm:inline">
-                        {leader.domain}
+                        {competitor.domain}
                       </span>
                     </div>
                     <p className="mt-0.5 text-[13px] text-muted line-clamp-1">
-                      {leader.description}
+                      {competitor.strength}
                     </p>
                   </div>
                 </div>
