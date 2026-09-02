@@ -16,6 +16,7 @@ export default function Home() {
   return (
     <main id="main">
       <Hero />
+      <SiteAudit />
       <RealityCheck />
       <CaseStudies />
       <Approach />
@@ -26,7 +27,6 @@ export default function Home() {
       <CreativeShowcase />
       <Founder />
       <Perspectives />
-      <SiteAudit />
       <Contact />
     </main>
   );
