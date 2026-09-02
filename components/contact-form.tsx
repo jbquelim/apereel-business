@@ -5,7 +5,7 @@ import { validateContact, type ContactErrors } from "@/lib/contact";
 import { cn } from "@/lib/cn";
 
 const fieldClass =
-  "mt-2 w-full rounded-lg border border-navy/10 bg-white px-4 py-3 text-sm text-navy outline-none transition-colors placeholder:text-navy/40 focus:border-electric";
+  "mt-2 w-full rounded-lg border border-white/12 bg-navy px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-electric";
 
 export function ContactForm() {
   const [errors, setErrors] = useState<ContactErrors>({});
@@ -65,16 +65,16 @@ export function ContactForm() {
   if (status === "success") {
     return (
       <div
-        className="success-fade rounded-2xl border border-navy/10 bg-ink p-8 sm:p-10"
+        className="success-fade rounded-2xl border border-white/10 bg-navy-mid p-8 sm:p-10"
         role="status"
       >
         <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
           Received
         </p>
-        <p className="font-display mt-4 text-2xl text-navy">
+        <p className="font-display mt-4 text-2xl text-ink">
           Thank you. We will be in touch.
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-navy/60">
+        <p className="mt-3 text-sm leading-relaxed text-ink/60">
           Your note is with Apereel. If anything is time-sensitive, email
           directly and we will prioritize it.
         </p>
@@ -85,11 +85,11 @@ export function ContactForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="relative rounded-2xl border border-navy/10 bg-ink p-8 sm:p-10"
+      className="relative rounded-2xl border border-white/10 bg-navy-mid p-8 sm:p-10"
       noValidate
     >
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="block text-[12px] font-medium text-navy">
+        <label className="block text-[12px] font-medium text-ink">
           Name
           <input
             name="name"
@@ -105,7 +105,7 @@ export function ContactForm() {
             </span>
           ) : null}
         </label>
-        <label className="block text-[12px] font-medium text-navy">
+        <label className="block text-[12px] font-medium text-ink">
           Email
           <input
             name="email"
@@ -123,7 +123,7 @@ export function ContactForm() {
           ) : null}
         </label>
       </div>
-      <label className="mt-5 block text-[12px] font-medium text-navy">
+      <label className="mt-5 block text-[12px] font-medium text-ink">
         Phone
         <input
           name="phone"
@@ -140,7 +140,7 @@ export function ContactForm() {
         ) : null}
       </label>
       <div className="mt-5 grid gap-5 sm:grid-cols-2">
-        <label className="block text-[12px] font-medium text-navy">
+        <label className="block text-[12px] font-medium text-ink">
           Company
           <input
             name="company"
@@ -149,7 +149,7 @@ export function ContactForm() {
             aria-invalid={Boolean(errors.company)}
           />
         </label>
-        <label className="block text-[12px] font-medium text-navy">
+        <label className="block text-[12px] font-medium text-ink">
           Website
           <input
             name="website"
@@ -161,7 +161,7 @@ export function ContactForm() {
           />
         </label>
       </div>
-      <label className="mt-5 block text-[12px] font-medium text-navy">
+      <label className="mt-5 block text-[12px] font-medium text-ink">
         What are you trying to improve?
         <textarea
           name="message"
@@ -178,11 +178,11 @@ export function ContactForm() {
         ) : null}
       </label>
       <div className="mt-6 space-y-3">
-        <label className="flex items-start gap-3 text-[12px] text-navy/60 cursor-pointer">
+        <label className="flex items-start gap-3 text-[12px] text-ink/70 cursor-pointer">
           <input
             name="acceptTerms"
             type="checkbox"
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border border-navy/20 bg-white accent-electric"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border border-white/20 bg-navy accent-electric"
             aria-invalid={Boolean(errors.acceptTerms)}
           />
           <span>
@@ -196,11 +196,11 @@ export function ContactForm() {
         {errors.acceptTerms ? (
           <p className="ml-7 text-[12px] text-signal">{errors.acceptTerms}</p>
         ) : null}
-        <label className="flex items-start gap-3 text-[12px] text-navy/60 cursor-pointer">
+        <label className="flex items-start gap-3 text-[12px] text-ink/70 cursor-pointer">
           <input
             name="marketingOptIn"
             type="checkbox"
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border border-navy/20 bg-white accent-electric"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border border-white/20 bg-navy accent-electric"
           />
           <span>
             I'd like to receive occasional insights on digital growth and e-commerce strategy. Unsubscribe anytime.
@@ -221,7 +221,7 @@ export function ContactForm() {
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="press-scale mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors duration-200 hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+        className="press-scale mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-ink uppercase transition-colors duration-200 hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
       >
         {status === "submitting" ? "Sending…" : "Send Message"}
       </button>

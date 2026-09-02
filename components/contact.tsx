@@ -7,7 +7,7 @@ export function Contact() {
     <section
       id="contact"
       aria-labelledby="contact-heading"
-      className="reveal-section py-24 sm:py-32"
+      className="reveal-section bg-ink py-24 sm:py-32"
     >
       <Container className="grid gap-14 lg:grid-cols-12">
         <div className="lg:col-span-5">
@@ -16,41 +16,41 @@ export function Contact() {
           </p>
           <h2
             id="contact-heading"
-            className="font-display mt-4 text-3xl text-ink text-balance sm:text-5xl"
+            className="font-display mt-4 text-3xl text-navy text-balance sm:text-5xl"
           >
             Your next agency should start with your business.
           </h2>
-          <p className="mt-5 text-base leading-relaxed text-muted">
+          <p className="mt-5 text-base leading-relaxed text-navy/60">
             Tell us what you sell, who buys it, and what&apos;s not working. We
             look at the business first, then the digital strategy that
             amplifies it.
           </p>
-          <p className="mt-3 text-sm leading-relaxed text-muted/70">
+          <p className="mt-3 text-sm leading-relaxed text-navy/40">
             We work with established businesses, retailers, and e-commerce
             companies with real revenue that know their marketing should be
             doing more.
           </p>
           <ul className="mt-10 space-y-4 text-sm">
             <li>
-              <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+              <p className="text-[11px] tracking-[0.18em] text-navy/40 uppercase">
                 Email
               </p>
               <a
                 href={`mailto:${site.email}`}
-                className="mt-1 inline-block text-ink transition-colors hover:text-electric"
+                className="mt-1 inline-block text-navy transition-colors hover:text-electric"
               >
                 {site.email}
               </a>
             </li>
             <li>
-              <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+              <p className="text-[11px] tracking-[0.18em] text-navy/40 uppercase">
                 LinkedIn
               </p>
               <a
                 href={site.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-block text-ink transition-colors hover:text-electric"
+                className="mt-1 inline-block text-navy transition-colors hover:text-electric"
               >
                 linkedin.com/in/jblim
               </a>
