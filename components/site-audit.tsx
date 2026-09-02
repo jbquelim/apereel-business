@@ -331,31 +331,6 @@ function AuditResults({ data }: { data: AuditData }) {
             </p>
           )}
         </div>
-
-        {hasScores && (
-          <div className="mt-8 flex flex-wrap justify-center gap-6 sm:gap-10">
-            <ScoreRing score={data.scores.performance} label="Performance" />
-            <ScoreRing score={data.scores.seo} label="SEO" />
-            <ScoreRing score={data.scores.accessibility} label="Accessibility" />
-            <ScoreRing score={data.scores.bestPractices} label="Best Practices" />
-          </div>
-        )}
-
-        {hasVitals && (
-          <div className="mt-8">
-            <p className="mb-3 text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
-              Core Web Vitals
-            </p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <VitalCard label="Largest Contentful Paint" value={data.vitals.lcp} />
-              <VitalCard label="Cumulative Layout Shift" value={data.vitals.cls} />
-              <VitalCard label="Total Blocking Time" value={data.vitals.tbt} />
-              <VitalCard label="First Contentful Paint" value={data.vitals.fcp} />
-              <VitalCard label="Speed Index" value={data.vitals.si} />
-              <VitalCard label="Time to Interactive" value={data.vitals.tti} />
-            </div>
-          </div>
-        )}
       </div>
 
       {data.industry && (
@@ -539,6 +514,37 @@ function AuditResults({ data }: { data: AuditData }) {
         </div>
       )}
 
+      {(hasScores || hasVitals) && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+            Technical Performance
+          </p>
+          {hasScores && (
+            <div className="mt-6 flex flex-wrap justify-center gap-6 sm:gap-10">
+              <ScoreRing score={data.scores.performance} label="Performance" />
+              <ScoreRing score={data.scores.seo} label="SEO" />
+              <ScoreRing score={data.scores.accessibility} label="Accessibility" />
+              <ScoreRing score={data.scores.bestPractices} label="Best Practices" />
+            </div>
+          )}
+          {hasVitals && (
+            <div className="mt-8">
+              <p className="mb-3 text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
+                Core Web Vitals
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <VitalCard label="Largest Contentful Paint" value={data.vitals.lcp} />
+                <VitalCard label="Cumulative Layout Shift" value={data.vitals.cls} />
+                <VitalCard label="Total Blocking Time" value={data.vitals.tbt} />
+                <VitalCard label="First Contentful Paint" value={data.vitals.fcp} />
+                <VitalCard label="Speed Index" value={data.vitals.si} />
+                <VitalCard label="Time to Interactive" value={data.vitals.tti} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {data.meta.title && (
         <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
           <p className="mb-4 text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
@@ -650,12 +656,12 @@ export function SiteAudit() {
             id="audit-heading"
             className="font-display mt-4 text-3xl text-ink sm:text-5xl"
           >
-            See how your website really performs.
+            Find out what&apos;s actually limiting your website&apos;s revenue.
           </h2>
           <p className="mt-4 text-base leading-relaxed text-muted">
-            Enter your URL for an instant analysis of your site&apos;s SEO
-            health, performance, and technical foundation. No sign-up
-            required.
+            Enter your URL for an instant competitive analysis — see where
+            you stand in your market, what channels drive your industry, and
+            where the real growth opportunities are. No account needed.
           </p>
         </div>
 
