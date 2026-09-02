@@ -61,6 +61,16 @@ type IndustryAnalysis = {
   topPlayer: string;
 } | null;
 
+type TrendPoint = {
+  date: string;
+  values: number[];
+};
+
+type TrendsData = {
+  keywords: string[];
+  timeline: TrendPoint[];
+} | null;
+
 type AuditData = {
   url: string;
   scores: Scores;
@@ -68,6 +78,7 @@ type AuditData = {
   meta: Meta;
   findings: Finding[];
   industry: IndustryAnalysis;
+  trends: TrendsData;
 };
 
 function ScoreRing({ score, label }: { score: number | null; label: string }) {
@@ -172,6 +183,109 @@ function ChannelBar({ channel, maxPct }: { channel: Channel; maxPct: number }) {
             transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
           }}
         />
+      </div>
+    </div>
+  );
+}
+
+const TREND_COLORS = [
+  "#3d9eff",
+  "#a78bfa",
+  "#f472b6",
+  "#34d399",
+];
+
+function TrendChart({ trends }: { trends: TrendsData }) {
+  if (!trends || trends.timeline.length < 2) return null;
+
+  const { keywords, timeline } = trends;
+  const W = 600;
+  const H = 200;
+  const PAD_X = 0;
+  const PAD_Y = 10;
+
+  const allValues = timeline.flatMap((p) => p.values);
+  const maxVal = Math.max(...allValues, 1);
+
+  function buildPath(seriesIdx: number): string {
+    const points = timeline.map((p, i) => {
+      const x = PAD_X + (i / (timeline.length - 1)) * (W - PAD_X * 2);
+      const y = PAD_Y + (1 - p.values[seriesIdx] / maxVal) * (H - PAD_Y * 2);
+      return `${x},${y}`;
+    });
+    return `M${points.join("L")}`;
+  }
+
+  const dateLabels = [
+    timeline[0].date,
+    timeline[Math.floor(timeline.length / 2)].date,
+    timeline[timeline.length - 1].date,
+  ];
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap gap-4">
+        {keywords.map((kw, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: TREND_COLORS[i % TREND_COLORS.length] }}
+            />
+            <span className="text-[12px] text-muted">{kw}</span>
+          </div>
+        ))}
+      </div>
+      <div className="overflow-x-auto">
+        <svg
+          viewBox={`0 0 ${W} ${H + 24}`}
+          className="w-full"
+          preserveAspectRatio="none"
+          aria-label="Search interest trend chart"
+        >
+          {[0, 25, 50, 75, 100].map((pct) => {
+            const y = PAD_Y + (1 - pct / 100) * (H - PAD_Y * 2);
+            return (
+              <line
+                key={pct}
+                x1={PAD_X}
+                y1={y}
+                x2={W - PAD_X}
+                y2={y}
+                stroke="white"
+                strokeOpacity={0.05}
+              />
+            );
+          })}
+          {keywords.map((_, i) => (
+            <path
+              key={i}
+              d={buildPath(i)}
+              fill="none"
+              stroke={TREND_COLORS[i % TREND_COLORS.length]}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.9}
+            />
+          ))}
+          {dateLabels.map((label, i) => {
+            const x =
+              i === 0 ? PAD_X + 4 : i === 1 ? W / 2 : W - PAD_X - 4;
+            return (
+              <text
+                key={i}
+                x={x}
+                y={H + 18}
+                fill="white"
+                fillOpacity={0.3}
+                fontSize="11"
+                textAnchor={i === 0 ? "start" : i === 1 ? "middle" : "end"}
+              >
+                {label}
+              </text>
+            );
+          })}
+        </svg>
       </div>
     </div>
   );
@@ -326,11 +440,16 @@ function AuditResults({ data }: { data: AuditData }) {
       {data.industry && data.industry.channels.length > 0 && (
         <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
-              Market Trends & Channels
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+                Market Trends & Channels
+              </p>
+              <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-[10px] tracking-wide text-muted/60 uppercase">
+                Industry Estimate
+              </span>
+            </div>
             {data.industry.topPlayer && (
-              <p className="text-[12px] text-muted">
+              <p className="hidden text-[12px] text-muted sm:block">
                 Top market player:{" "}
                 <span className="font-medium text-ink">{data.industry.topPlayer}</span>
               </p>
@@ -346,6 +465,25 @@ function AuditResults({ data }: { data: AuditData }) {
                   maxPct={Math.max(...data.industry!.channels.map((c) => c.percentage))}
                 />
               ))}
+          </div>
+        </div>
+      )}
+
+      {data.trends && data.trends.timeline.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Search Interest — 90 Day Trend
+            </p>
+            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] tracking-wide text-emerald-400 uppercase">
+              Google Trends
+            </span>
+          </div>
+          <p className="mt-2 text-[12px] text-muted">
+            Relative search interest (0–100) comparing your brand against top competitors
+          </p>
+          <div className="mt-5">
+            <TrendChart trends={data.trends} />
           </div>
         </div>
       )}

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const googleTrends = require("google-trends-api");
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS = 10;
@@ -55,6 +57,16 @@ type IndustryAnalysis = {
   topPlayer: string;
 } | null;
 
+type TrendPoint = {
+  date: string;
+  values: number[];
+};
+
+type TrendsData = {
+  keywords: string[];
+  timeline: TrendPoint[];
+} | null;
+
 type AuditResult = {
   url: string;
   scores: {
@@ -91,6 +103,7 @@ type AuditResult = {
   };
   findings: { type: "pass" | "warn" | "fail"; message: string }[];
   industry: IndustryAnalysis;
+  trends: TrendsData;
 };
 
 async function fetchPageMeta(url: string) {
@@ -363,6 +376,39 @@ Rules:
   }
 }
 
+async function fetchGoogleTrends(
+  brandName: string,
+  competitors: Competitor[],
+): Promise<TrendsData> {
+  try {
+    const topCompetitors = competitors.slice(0, 3).map((c) => c.name);
+    const keywords = [brandName, ...topCompetitors];
+
+    const raw = await googleTrends.interestOverTime({
+      keyword: keywords,
+      startTime: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+      geo: "",
+    });
+
+    const data = JSON.parse(raw);
+    const timelineData = data.default?.timelineData ?? [];
+
+    if (timelineData.length === 0) return null;
+
+    const timeline: TrendPoint[] = timelineData.map(
+      (point: { formattedTime: string; value: number[] }) => ({
+        date: point.formattedTime,
+        values: point.value,
+      }),
+    );
+
+    return { keywords, timeline };
+  } catch (err) {
+    console.error("Google Trends failed:", err);
+    return null;
+  }
+}
+
 function generateFindings(meta: AuditResult["meta"], scores: AuditResult["scores"]): AuditResult["findings"] {
   const findings: AuditResult["findings"] = [];
 
@@ -541,6 +587,15 @@ export async function POST(request: Request) {
     ? await fetchIndustryAnalysis(url, meta.title, meta.description, meta.h1)
     : null;
 
+  const brandName =
+    meta?.title?.split(/[|\-–—]/)[0]?.trim() ??
+    new URL(url).hostname.replace(/^www\./, "").split(".")[0];
+
+  const trends =
+    industry && industry.competitors.length > 0
+      ? await fetchGoogleTrends(brandName, industry.competitors)
+      : null;
+
   const result: AuditResult = {
     url,
     scores,
@@ -548,6 +603,7 @@ export async function POST(request: Request) {
     meta: metaData,
     findings,
     industry,
+    trends,
   };
 
   return NextResponse.json({ ok: true, data: result });
