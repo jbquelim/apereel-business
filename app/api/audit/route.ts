@@ -41,11 +41,18 @@ type Competitor = {
   strength: string;
 };
 
+type Channel = {
+  name: string;
+  percentage: number;
+};
+
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
   competitors: Competitor[];
   insight: string;
+  channels: Channel[];
+  topPlayer: string;
 } | null;
 
 type AuditResult = {
@@ -248,7 +255,7 @@ async function fetchIndustryAnalysis(
     "claude-3-haiku-20240307",
   ];
 
-  const prompt = `Analyze this website and identify its industry, then list its top 5 direct competitors and provide a competitive insight.
+  const prompt = `Analyze this website and identify its industry, then provide competitive intelligence including top 5 direct competitors and market traffic channel estimates.
 
 Website signals:
 ${signals}
@@ -268,7 +275,17 @@ Respond with ONLY valid JSON, no markdown formatting:
   "competitors": [
     { "name": "Company Name", "domain": "example.com", "strength": "What they do well that makes them a strong competitor" }
   ],
-  "insight": "2-3 sentences analyzing the competitive landscape. What do the top competitors have in common? Where are customers potentially underserved? Where does this business have an opportunity to differentiate and win?"
+  "insight": "2-3 sentences analyzing the competitive landscape. What do the top competitors have in common? Where are customers potentially underserved? Where does this business have an opportunity to differentiate and win?",
+  "channels": [
+    { "name": "Direct", "percentage": 40 },
+    { "name": "Organic Search", "percentage": 25 },
+    { "name": "Paid Search", "percentage": 15 },
+    { "name": "Social", "percentage": 10 },
+    { "name": "Referral", "percentage": 5 },
+    { "name": "Email", "percentage": 3 },
+    { "name": "Display", "percentage": 2 }
+  ],
+  "topPlayer": "Name of the dominant competitor in this market"
 }
 
 Rules:
@@ -277,7 +294,9 @@ Rules:
 - Prefer competitors in the same geographic market when the business is local/regional
 - Be specific with the sub-industry (e.g. "Fine Jewelry Retail" not just "Retail")
 - Keep each "strength" under 15 words
-- The "insight" should read like strategic consulting advice, not generic filler`;
+- The "insight" should read like strategic consulting advice, not generic filler
+- For "channels": estimate the typical traffic channel distribution for this specific industry/niche. Percentages must sum to 100. Use your knowledge of how businesses in this industry typically acquire traffic. Include channels like Direct, Organic Search, Paid Search, Social, Referral, Email, Display, AI Traffic as relevant. Only include channels with >= 2%.
+- "topPlayer": name the single strongest competitor (the market leader) in this space`;
 
   try {
     let res: Response | null = null;
@@ -292,7 +311,7 @@ Rules:
         },
         body: JSON.stringify({
           model,
-          max_tokens: 600,
+          max_tokens: 900,
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -330,6 +349,13 @@ Rules:
         strength: c.strength,
       })),
       insight: parsed.insight ?? "",
+      channels: Array.isArray(parsed.channels)
+        ? parsed.channels.map((ch: { name: string; percentage: number }) => ({
+            name: ch.name,
+            percentage: ch.percentage,
+          }))
+        : [],
+      topPlayer: parsed.topPlayer ?? "",
     };
   } catch (err) {
     console.error("Industry analysis failed:", err);

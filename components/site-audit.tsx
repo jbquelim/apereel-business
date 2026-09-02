@@ -47,11 +47,18 @@ type Competitor = {
   strength: string;
 };
 
+type Channel = {
+  name: string;
+  percentage: number;
+};
+
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
   competitors: Competitor[];
   insight: string;
+  channels: Channel[];
+  topPlayer: string;
 } | null;
 
 type AuditData = {
@@ -130,6 +137,42 @@ function VitalCard({ label, value }: { label: string; value: string | null }) {
         {label}
       </p>
       <p className="mt-1 font-display text-lg text-ink">{value}</p>
+    </div>
+  );
+}
+
+const CHANNEL_COLORS: Record<string, string> = {
+  "Direct": "bg-indigo-500",
+  "AI Traffic": "bg-purple-400",
+  "Referral": "bg-emerald-400",
+  "Organic Search": "bg-red-400",
+  "Google AI Mode": "bg-amber-400",
+  "Paid Search": "bg-pink-400",
+  "Social": "bg-sky-400",
+  "Email": "bg-orange-400",
+  "Display": "bg-gray-400",
+  "Other": "bg-gray-500",
+};
+
+function ChannelBar({ channel, maxPct }: { channel: Channel; maxPct: number }) {
+  const barColor = CHANNEL_COLORS[channel.name] ?? "bg-gray-400";
+  const widthPct = (channel.percentage / maxPct) * 100;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm font-medium text-ink">{channel.name}</span>
+        <span className="font-mono text-[13px] font-bold text-ink">{channel.percentage}%</span>
+      </div>
+      <div className="h-2.5 w-full rounded-full bg-white/5">
+        <div
+          className={cn("h-2.5 rounded-full transition-all duration-1000", barColor)}
+          style={{
+            width: `${widthPct}%`,
+            transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -276,6 +319,33 @@ function AuditResults({ data }: { data: AuditData }) {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {data.industry && data.industry.channels.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Market Trends & Channels
+            </p>
+            {data.industry.topPlayer && (
+              <p className="text-[12px] text-muted">
+                Top market player:{" "}
+                <span className="font-medium text-ink">{data.industry.topPlayer}</span>
+              </p>
+            )}
+          </div>
+          <div className="mt-6 space-y-4">
+            {data.industry.channels
+              .sort((a, b) => b.percentage - a.percentage)
+              .map((channel, i) => (
+                <ChannelBar
+                  key={i}
+                  channel={channel}
+                  maxPct={Math.max(...data.industry!.channels.map((c) => c.percentage))}
+                />
+              ))}
           </div>
         </div>
       )}
