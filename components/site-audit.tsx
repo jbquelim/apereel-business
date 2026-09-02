@@ -665,7 +665,7 @@ export function SiteAudit() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder="Your name *"
                 className="h-12 w-full rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
                 aria-label="Your name"
                 aria-invalid={Boolean(fieldErrors.name)}
@@ -679,7 +679,7 @@ export function SiteAudit() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Your email"
+                placeholder="Your email *"
                 className="h-12 w-full rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
                 aria-label="Your email"
                 aria-invalid={Boolean(fieldErrors.email)}
@@ -729,6 +729,7 @@ export function SiteAudit() {
               )}
             </button>
           </div>
+          <p className="pl-5 text-[11px] text-muted/50">* Required</p>
         </form>
 
         {status === "loading" && (
