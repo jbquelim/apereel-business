@@ -62,7 +62,7 @@ export function Founder() {
             {principles.map((principle, index) => (
               <li
                 key={principle}
-                className="flex items-baseline gap-4"
+                className="stagger-item flex items-baseline gap-4"
               >
                 <span className="font-mono text-[11px] tracking-[0.22em] text-signal">
                   {String(index + 1).padStart(2, "0")}

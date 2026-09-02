@@ -10,6 +10,9 @@
   --electric-deep: #1d6fd4;
   --signal: #d45a4e;
   --line: rgba(244, 241, 234, 0.1);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 @theme inline {
@@ -155,8 +158,8 @@ body {
   opacity: 0;
   transform: translateY(32px);
   transition:
-    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.7s var(--ease-out),
+    transform 0.7s var(--ease-out);
 }
 
 .reveal-section.is-visible {
@@ -212,5 +215,133 @@ body {
   .growth-chart-dot {
     opacity: 1;
     transition: none;
+  }
+}
+
+/* ── Button press feedback ─────────────────────────────────── */
+.press-scale {
+  transition: transform 160ms var(--ease-out);
+}
+
+.press-scale:active {
+  transform: scale(0.97);
+}
+
+/* ── Tab content crossfade ─────────────────────────────────── */
+.tab-content {
+  animation: tab-fade 250ms var(--ease-out);
+}
+
+@keyframes tab-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Mobile menu ───────────────────────────────────────────── */
+.mobile-menu {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 250ms var(--ease-out),
+    transform 250ms var(--ease-out),
+    visibility 250ms;
+  visibility: hidden;
+}
+
+.mobile-menu.is-open {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+}
+
+.mobile-menu-link {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.mobile-menu.is-open .mobile-menu-link {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 300ms var(--ease-out),
+    transform 300ms var(--ease-out);
+}
+
+.mobile-menu.is-open .mobile-menu-link:nth-child(1) { transition-delay: 60ms; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(2) { transition-delay: 110ms; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(3) { transition-delay: 160ms; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(4) { transition-delay: 210ms; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(5) { transition-delay: 260ms; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(6) { transition-delay: 310ms; }
+
+/* ── Stagger for principles grid ───────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .stagger-item {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: fadeIn 300ms var(--ease-out) forwards;
+  }
+
+  .stagger-item:nth-child(1) { animation-delay: 0ms; }
+  .stagger-item:nth-child(2) { animation-delay: 50ms; }
+  .stagger-item:nth-child(3) { animation-delay: 100ms; }
+  .stagger-item:nth-child(4) { animation-delay: 150ms; }
+  .stagger-item:nth-child(5) { animation-delay: 200ms; }
+  .stagger-item:nth-child(6) { animation-delay: 250ms; }
+
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* ── Form success fade-in ──────────────────────────────────── */
+.success-fade {
+  animation: success-enter 400ms var(--ease-out);
+}
+
+@keyframes success-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Hover gating for touch devices ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .tab-content {
+    animation: none;
+  }
+
+  .mobile-menu {
+    transition: none;
+  }
+
+  .mobile-menu.is-open .mobile-menu-link {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .stagger-item {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .success-fade {
+    animation: none;
   }
 }

@@ -48,7 +48,7 @@ export function Approach() {
             <button
               key={s.title}
               onClick={() => setActive(i)}
-              className={`relative shrink-0 px-5 py-4 text-sm font-medium tracking-wide transition-colors ${
+              className={`press-scale relative shrink-0 px-5 py-4 text-sm font-medium tracking-wide transition-colors ${
                 i === active
                   ? "text-navy"
                   : "text-navy/40 hover:text-navy/70"
@@ -66,7 +66,7 @@ export function Approach() {
         </div>
 
         {/* Active tab content */}
-        <article className="grid overflow-hidden rounded-2xl border border-navy/10 mt-10 lg:grid-cols-2">
+        <article key={active} className="tab-content grid overflow-hidden rounded-2xl border border-navy/10 mt-10 lg:grid-cols-2">
           <div className="hidden min-h-[280px] items-center justify-center bg-navy-mid p-8 lg:flex">
             <Diagram />
           </div>

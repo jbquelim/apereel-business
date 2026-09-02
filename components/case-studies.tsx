@@ -47,7 +47,7 @@ export function CaseStudies() {
             <button
               key={s.id}
               onClick={() => setActive(i)}
-              className={`relative shrink-0 px-5 py-4 text-sm font-medium tracking-wide transition-colors ${
+              className={`press-scale relative shrink-0 px-5 py-4 text-sm font-medium tracking-wide transition-colors ${
                 i === active
                   ? "text-ink"
                   : "text-muted hover:text-ink/70"
@@ -62,7 +62,7 @@ export function CaseStudies() {
         </div>
 
         {/* Active case study */}
-        <article className="grid overflow-hidden rounded-2xl border border-white/10 mt-10 lg:grid-cols-2">
+        <article key={active} className="tab-content grid overflow-hidden rounded-2xl border border-white/10 mt-10 lg:grid-cols-2">
           <div className="hidden min-h-[280px] items-center justify-center bg-navy p-8 lg:flex">
             <Diagram />
           </div>

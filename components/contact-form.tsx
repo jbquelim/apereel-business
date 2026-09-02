@@ -65,7 +65,7 @@ export function ContactForm() {
   if (status === "success") {
     return (
       <div
-        className="rounded-2xl border border-white/10 bg-navy-mid p-8 sm:p-10"
+        className="success-fade rounded-2xl border border-white/10 bg-navy-mid p-8 sm:p-10"
         role="status"
       >
         <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
@@ -221,7 +221,7 @@ export function ContactForm() {
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-ink uppercase transition-colors hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+        className="press-scale mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-ink uppercase transition-colors duration-200 hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
       >
         {status === "submitting" ? "Sending…" : "Send Message"}
       </button>

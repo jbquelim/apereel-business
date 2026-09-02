@@ -26,14 +26,14 @@ export function ButtonLink({
     <Link
       href={href}
       className={cn(
-        "group inline-flex h-12 items-center justify-center gap-2 rounded-full border px-6 text-[13px] font-semibold tracking-[0.08em] uppercase transition-all duration-300",
+        "press-scale group inline-flex h-12 items-center justify-center gap-2 rounded-full border px-6 text-[13px] font-semibold tracking-[0.08em] uppercase transition-colors duration-200",
         styles[variant],
         className,
       )}
     >
       {children}
       <svg
-        className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
         viewBox="0 0 20 20"
         fill="none"
         stroke="currentColor"

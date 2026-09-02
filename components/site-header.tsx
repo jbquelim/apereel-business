@@ -59,7 +59,7 @@ export function SiteHeader() {
 
         <Link
           href="/#contact"
-          className="hidden h-10 items-center rounded-full border border-electric/40 px-4 text-[11px] font-semibold tracking-[0.14em] text-electric uppercase transition-colors hover:border-electric hover:bg-electric hover:text-navy lg:inline-flex"
+          className="press-scale hidden h-10 items-center rounded-full border border-electric/40 px-4 text-[11px] font-semibold tracking-[0.14em] text-electric uppercase transition-colors duration-200 hover:border-electric hover:bg-electric hover:text-navy lg:inline-flex"
         >
           Work With Apereel
         </Link>
@@ -96,8 +96,11 @@ export function SiteHeader() {
 
       <div
         id={menuId}
-        hidden={!open}
-        className="fixed inset-0 z-40 bg-navy lg:hidden"
+        className={cn(
+          "mobile-menu fixed inset-0 z-40 bg-navy lg:hidden",
+          open && "is-open",
+        )}
+        aria-hidden={!open}
       >
         <nav
           className="flex h-full flex-col justify-center gap-6 px-8"
@@ -108,7 +111,8 @@ export function SiteHeader() {
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              className="font-display text-4xl text-ink sm:text-5xl"
+              tabIndex={open ? 0 : -1}
+              className="mobile-menu-link font-display text-4xl text-ink sm:text-5xl"
             >
               {item.label}
             </Link>
@@ -116,7 +120,8 @@ export function SiteHeader() {
           <Link
             href="/#contact"
             onClick={() => setOpen(false)}
-            className="pt-4 text-[12px] tracking-[0.18em] text-electric uppercase"
+            tabIndex={open ? 0 : -1}
+            className="mobile-menu-link pt-4 text-[12px] tracking-[0.18em] text-electric uppercase"
           >
             Work With Apereel
           </Link>
