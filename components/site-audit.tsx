@@ -638,9 +638,10 @@ export function SiteAudit() {
     <section
       id="audit"
       aria-labelledby="audit-heading"
-      className="reveal-section py-24 sm:py-32"
+      className="reveal-section bg-ink pt-12 pb-16 sm:pt-16 sm:pb-20"
     >
-      <Container>
+      <div className="mx-auto max-w-[1400px] px-6 sm:px-8">
+        <div className="rounded-3xl bg-navy p-8 sm:p-10 lg:p-14">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
             Free Website Audit
@@ -666,7 +667,7 @@ export function SiteAudit() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name *"
-                className="h-12 w-full rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+                className="h-12 w-full rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
                 aria-label="Your name"
                 aria-invalid={Boolean(fieldErrors.name)}
               />
@@ -680,7 +681,7 @@ export function SiteAudit() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Your email *"
-                className="h-12 w-full rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+                className="h-12 w-full rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
                 aria-label="Your email"
                 aria-invalid={Boolean(fieldErrors.email)}
               />
@@ -695,7 +696,7 @@ export function SiteAudit() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="Enter your website URL"
-              className="h-12 flex-1 rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+              className="h-12 flex-1 rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
               aria-label="Website URL"
             />
             <button
@@ -748,7 +749,8 @@ export function SiteAudit() {
         )}
 
         {status === "done" && data && <AuditResults data={data} />}
-      </Container>
+        </div>
+      </div>
     </section>
   );
 }

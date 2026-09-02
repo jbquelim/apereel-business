@@ -5,10 +5,10 @@ import { CreativeShowcase } from "@/components/creative-showcase";
 import { Founder } from "@/components/founder";
 import { GrowthProof } from "@/components/growth-proof";
 import { Hero } from "@/components/hero";
+import { RealityCheck } from "@/components/reality-check";
 import { KeywordPerformance } from "@/components/keyword-performance";
 import { Perspectives } from "@/components/insights";
 import { ProofSection } from "@/components/proof-section";
-import { RealityCheck } from "@/components/reality-check";
 import { Services } from "@/components/services";
 import { SiteAudit } from "@/components/site-audit";
 

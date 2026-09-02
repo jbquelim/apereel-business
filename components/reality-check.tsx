@@ -4,24 +4,8 @@ import Image from "next/image";
 export function RealityCheck() {
   return (
     <>
-      {/* --- Full-width white banner --- */}
-      <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
-        <Container className="text-center">
-          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
-            Tired of Traditional SEO?
-          </p>
-          <h2 className="font-display mx-auto mt-4 max-w-4xl text-3xl text-navy sm:text-5xl lg:text-6xl">
-            Have you ever wondered
-            <br />
-            if the SEO you&apos;re paying for
-            <br />
-            is actually doing anything?
-          </h2>
-        </Container>
-      </div>
-
       {/* --- Main content --- */}
-      <section
+<section
         id="reality-check"
         aria-labelledby="reality-check-heading"
         className="reveal-section"
