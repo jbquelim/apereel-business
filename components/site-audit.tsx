@@ -1,0 +1,392 @@
+"use client";
+
+import { useState } from "react";
+import { Container } from "@/components/container";
+import { cn } from "@/lib/cn";
+
+type Scores = {
+  performance: number | null;
+  seo: number | null;
+  accessibility: number | null;
+  bestPractices: number | null;
+};
+
+type Vitals = {
+  lcp: string | null;
+  cls: string | null;
+  fcp: string | null;
+  si: string | null;
+  tbt: string | null;
+  tti: string | null;
+};
+
+type Meta = {
+  title: string | null;
+  titleLength: number;
+  description: string | null;
+  descriptionLength: number;
+  h1: string | null;
+  h1Count: number;
+  hasCanonical: boolean;
+  hasOgTags: boolean;
+  hasTwitterCards: boolean;
+  hasSchemaMarkup: boolean;
+  hasViewport: boolean;
+  isHttps: boolean;
+  robotsMeta: string | null;
+  imageCount: number;
+  imagesWithAlt: number;
+  imagesWithoutAlt: number;
+};
+
+type Finding = { type: "pass" | "warn" | "fail"; message: string };
+
+type AuditData = {
+  url: string;
+  scores: Scores;
+  vitals: Vitals;
+  meta: Meta;
+  findings: Finding[];
+};
+
+function ScoreRing({ score, label }: { score: number | null; label: string }) {
+  if (score === null) return null;
+  const color =
+    score >= 90
+      ? "text-emerald-400"
+      : score >= 50
+        ? "text-amber-400"
+        : "text-red-400";
+  const strokeColor =
+    score >= 90
+      ? "stroke-emerald-400"
+      : score >= 50
+        ? "stroke-amber-400"
+        : "stroke-red-400";
+  const circumference = 2 * Math.PI * 36;
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative h-20 w-20">
+        <svg className="h-20 w-20 -rotate-90" viewBox="0 0 80 80">
+          <circle
+            cx="40"
+            cy="40"
+            r="36"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="4"
+            className="text-white/10"
+          />
+          <circle
+            cx="40"
+            cy="40"
+            r="36"
+            fill="none"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className={cn("transition-all duration-1000", strokeColor)}
+            style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
+          />
+        </svg>
+        <span
+          className={cn(
+            "absolute inset-0 flex items-center justify-center font-display text-xl font-bold",
+            color,
+          )}
+        >
+          {score}
+        </span>
+      </div>
+      <span className="text-[11px] tracking-[0.12em] text-muted uppercase">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function VitalCard({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <div className="rounded-lg border border-white/10 bg-navy px-4 py-3">
+      <p className="text-[11px] tracking-[0.12em] text-muted uppercase">
+        {label}
+      </p>
+      <p className="mt-1 font-display text-lg text-ink">{value}</p>
+    </div>
+  );
+}
+
+function FindingRow({ finding }: { finding: Finding }) {
+  const icon =
+    finding.type === "pass"
+      ? "✓"
+      : finding.type === "warn"
+        ? "!"
+        : "✕";
+  const color =
+    finding.type === "pass"
+      ? "text-emerald-400"
+      : finding.type === "warn"
+        ? "text-amber-400"
+        : "text-red-400";
+  const bg =
+    finding.type === "pass"
+      ? "bg-emerald-400/10"
+      : finding.type === "warn"
+        ? "bg-amber-400/10"
+        : "bg-red-400/10";
+
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-white/5 px-4 py-3">
+      <span
+        className={cn(
+          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+          bg,
+          color,
+        )}
+      >
+        {icon}
+      </span>
+      <p className="text-sm text-ink/80">{finding.message}</p>
+    </div>
+  );
+}
+
+function AuditResults({ data }: { data: AuditData }) {
+  const passes = data.findings.filter((f) => f.type === "pass").length;
+  const warnings = data.findings.filter((f) => f.type === "warn").length;
+  const fails = data.findings.filter((f) => f.type === "fail").length;
+
+  const hasScores = Object.values(data.scores).some((s) => s !== null);
+  const hasVitals = Object.values(data.vitals).some((v) => v !== null);
+
+  return (
+    <div className="tab-content mt-10 space-y-8">
+      <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Audit Results
+            </p>
+            <p className="mt-1 font-mono text-sm text-muted break-all">
+              {data.url}
+            </p>
+          </div>
+          <div className="hidden items-center gap-4 text-[12px] sm:flex">
+            <span className="text-emerald-400">{passes} passed</span>
+            <span className="text-amber-400">{warnings} warnings</span>
+            {fails > 0 && (
+              <span className="text-red-400">{fails} issues</span>
+            )}
+          </div>
+        </div>
+
+        {hasScores && (
+          <div className="mt-8 flex flex-wrap justify-center gap-6 sm:gap-10">
+            <ScoreRing score={data.scores.performance} label="Performance" />
+            <ScoreRing score={data.scores.seo} label="SEO" />
+            <ScoreRing score={data.scores.accessibility} label="Accessibility" />
+            <ScoreRing score={data.scores.bestPractices} label="Best Practices" />
+          </div>
+        )}
+
+        {hasVitals && (
+          <div className="mt-8">
+            <p className="mb-3 text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
+              Core Web Vitals
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <VitalCard label="Largest Contentful Paint" value={data.vitals.lcp} />
+              <VitalCard label="Cumulative Layout Shift" value={data.vitals.cls} />
+              <VitalCard label="Total Blocking Time" value={data.vitals.tbt} />
+              <VitalCard label="First Contentful Paint" value={data.vitals.fcp} />
+              <VitalCard label="Speed Index" value={data.vitals.si} />
+              <VitalCard label="Time to Interactive" value={data.vitals.tti} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+        <p className="mb-4 text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+          SEO & Technical Findings
+        </p>
+        <div className="space-y-2">
+          {data.findings
+            .sort((a, b) => {
+              const order = { fail: 0, warn: 1, pass: 2 };
+              return order[a.type] - order[b.type];
+            })
+            .map((finding, i) => (
+              <FindingRow key={i} finding={finding} />
+            ))}
+        </div>
+      </div>
+
+      {data.meta.title && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <p className="mb-4 text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+            Search Preview
+          </p>
+          <div className="max-w-xl rounded-lg border border-white/5 bg-navy p-5">
+            <p className="text-base text-[#8ab4f8] line-clamp-1">
+              {data.meta.title}
+            </p>
+            <p className="mt-1 font-mono text-[13px] text-emerald-400/70 line-clamp-1">
+              {data.url}
+            </p>
+            {data.meta.description && (
+              <p className="mt-1 text-sm text-muted line-clamp-2">
+                {data.meta.description}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-electric/20 bg-electric/5 p-6 sm:p-8">
+        <p className="font-display text-xl text-ink">
+          Want a deeper analysis?
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          This is a surface-level scan. A full Apereel audit covers keyword
+          gaps, competitor positioning, conversion bottlenecks, and a
+          prioritized action plan. Tell us about your business and we&apos;ll
+          show you what&apos;s limiting your growth.
+        </p>
+        <a
+          href="#contact"
+          className="press-scale mt-4 inline-flex h-10 items-center rounded-full bg-electric px-5 text-[12px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors duration-200 hover:bg-electric-deep"
+        >
+          Get a Full Audit
+        </a>
+      </div>
+    </div>
+  );
+}
+
+export function SiteAudit() {
+  const [url, setUrl] = useState("");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "done" | "error"
+  >("idle");
+  const [data, setData] = useState<AuditData | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!url.trim()) return;
+
+    setStatus("loading");
+    setData(null);
+    setErrorMessage("");
+
+    try {
+      const res = await fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) {
+        throw new Error(body.error || "Unable to analyze this website.");
+      }
+      setData(body.data);
+      setStatus("done");
+    } catch (err) {
+      setStatus("error");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Something went wrong.",
+      );
+    }
+  }
+
+  return (
+    <section
+      id="audit"
+      aria-labelledby="audit-heading"
+      className="reveal-section py-24 sm:py-32"
+    >
+      <Container>
+        <div className="max-w-2xl">
+          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+            Free Website Audit
+          </p>
+          <h2
+            id="audit-heading"
+            className="font-display mt-4 text-3xl text-ink sm:text-5xl"
+          >
+            See how your website really performs.
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-muted">
+            Enter your URL for an instant analysis of your site&apos;s SEO
+            health, performance, and technical foundation. No sign-up
+            required.
+          </p>
+        </div>
+
+        <form onSubmit={onSubmit} className="mt-10 flex flex-col gap-3 sm:flex-row">
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="Enter your website URL"
+            className="h-12 flex-1 rounded-full border border-white/12 bg-navy-mid px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+            aria-label="Website URL"
+          />
+          <button
+            type="submit"
+            disabled={status === "loading"}
+            className="press-scale inline-flex h-12 items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors duration-200 hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {status === "loading" ? (
+              <span className="flex items-center gap-2">
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray="60"
+                    strokeDashoffset="15"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Analyzing…
+              </span>
+            ) : (
+              "Analyze Site"
+            )}
+          </button>
+        </form>
+
+        {status === "loading" && (
+          <div className="mt-10 flex flex-col items-center gap-4 py-12">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-electric/30 border-t-electric" />
+            <p className="text-sm text-muted">
+              Running performance and SEO analysis — this takes 15-30 seconds…
+            </p>
+          </div>
+        )}
+
+        {status === "error" && (
+          <p className="mt-6 text-sm text-signal" role="alert">
+            {errorMessage}
+          </p>
+        )}
+
+        {status === "done" && data && <AuditResults data={data} />}
+      </Container>
+    </section>
+  );
+}

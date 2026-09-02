@@ -10,6 +10,7 @@ import { Perspectives } from "@/components/insights";
 import { ProofSection } from "@/components/proof-section";
 import { RealityCheck } from "@/components/reality-check";
 import { Services } from "@/components/services";
+import { SiteAudit } from "@/components/site-audit";
 
 export default function Home() {
   return (
@@ -25,6 +26,7 @@ export default function Home() {
       <CreativeShowcase />
       <Founder />
       <Perspectives />
+      <SiteAudit />
       <Contact />
     </main>
   );
