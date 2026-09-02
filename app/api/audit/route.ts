@@ -240,21 +240,14 @@ async function fetchIndustryAnalysis(
     .filter(Boolean)
     .join("\n");
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 600,
-        messages: [
-          {
-            role: "user",
-            content: `Analyze this website and identify its industry. Then list the top 5 industry leaders (largest/most dominant companies) in that specific industry.
+  const models = [
+    "claude-sonnet-4-20250514",
+    "claude-haiku-4-5-20251001",
+    "claude-3-5-haiku-20241022",
+    "claude-3-haiku-20240307",
+  ];
+
+  const prompt = `Analyze this website and identify its industry. Then list the top 5 industry leaders (largest/most dominant companies) in that specific industry.
 
 Website signals:
 ${signals}
@@ -272,17 +265,38 @@ Rules:
 - Do NOT include the analyzed website in the leaders list
 - Leaders should be the biggest, most recognized companies globally in this specific industry
 - Be specific with the sub-industry (e.g. "Athletic Footwear" not just "Retail")
-- Keep descriptions under 15 words`,
-          },
-        ],
-      }),
-    });
+- Keep descriptions under 15 words`;
 
-    if (!res.ok) {
+  try {
+    let res: Response | null = null;
+
+    for (const model of models) {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 600,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (res.ok) {
+        console.log("Anthropic model used:", model);
+        break;
+      }
+
       const errText = await res.text().catch(() => "");
-      console.error("Anthropic API error:", res.status, errText);
-      return null;
+      console.error(`Anthropic model ${model} failed:`, res.status, errText.slice(0, 200));
+
+      if (res.status !== 404) break;
     }
+
+    if (!res || !res.ok) return null;
 
     const data = await res.json();
     const text = data.content?.[0]?.text ?? "";
