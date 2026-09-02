@@ -48,6 +48,15 @@ type Channel = {
   percentage: number;
 };
 
+type Keyword = {
+  keyword: string;
+  intent: "N" | "C" | "I" | "T";
+  position: number;
+  volume: string;
+  cpc: number;
+  traffic: number;
+};
+
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
@@ -55,6 +64,8 @@ type IndustryAnalysis = {
   insight: string;
   channels: Channel[];
   topPlayer: string;
+  keywords: Keyword[];
+  totalKeywords: number;
 } | null;
 
 type TrendPoint = {
@@ -101,7 +112,6 @@ type AuditResult = {
     imagesWithAlt: number;
     imagesWithoutAlt: number;
   };
-  findings: { type: "pass" | "warn" | "fail"; message: string }[];
   industry: IndustryAnalysis;
   trends: TrendsData;
 };
@@ -298,7 +308,11 @@ Respond with ONLY valid JSON, no markdown formatting:
     { "name": "Email", "percentage": 3 },
     { "name": "Display", "percentage": 2 }
   ],
-  "topPlayer": "Name of the dominant competitor in this market"
+  "topPlayer": "Name of the dominant competitor in this market",
+  "keywords": [
+    { "keyword": "example keyword", "intent": "C", "position": 1, "volume": "3.6K", "cpc": 0.28, "traffic": 5.16 }
+  ],
+  "totalKeywords": 8311
 }
 
 Rules:
@@ -309,7 +323,9 @@ Rules:
 - Keep each "strength" under 15 words
 - The "insight" should read like strategic consulting advice, not generic filler
 - For "channels": estimate the typical traffic channel distribution for this specific industry/niche. Percentages must sum to 100. Use your knowledge of how businesses in this industry typically acquire traffic. Include channels like Direct, Organic Search, Paid Search, Social, Referral, Email, Display, AI Traffic as relevant. Only include channels with >= 2%.
-- "topPlayer": name the single strongest competitor (the market leader) in this space`;
+- "topPlayer": name the single strongest competitor (the market leader) in this space
+- For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
+- "totalKeywords": estimate the total number of organic keywords this domain likely ranks for`;
 
   try {
     let res: Response | null = null;
@@ -324,7 +340,7 @@ Rules:
         },
         body: JSON.stringify({
           model,
-          max_tokens: 900,
+          max_tokens: 1500,
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -369,6 +385,17 @@ Rules:
           }))
         : [],
       topPlayer: parsed.topPlayer ?? "",
+      keywords: Array.isArray(parsed.keywords)
+        ? parsed.keywords.slice(0, 8).map((kw: Keyword) => ({
+            keyword: kw.keyword,
+            intent: kw.intent,
+            position: kw.position,
+            volume: kw.volume,
+            cpc: kw.cpc,
+            traffic: kw.traffic,
+          }))
+        : [],
+      totalKeywords: parsed.totalKeywords ?? 0,
     };
   } catch (err) {
     console.error("Industry analysis failed:", err);
@@ -407,99 +434,6 @@ async function fetchGoogleTrends(
     console.error("Google Trends failed:", err);
     return null;
   }
-}
-
-function generateFindings(meta: AuditResult["meta"], scores: AuditResult["scores"]): AuditResult["findings"] {
-  const findings: AuditResult["findings"] = [];
-
-  if (meta.isHttps) {
-    findings.push({ type: "pass", message: "Site uses HTTPS" });
-  } else {
-    findings.push({ type: "fail", message: "Site does not use HTTPS — critical for SEO and trust" });
-  }
-
-  if (meta.title) {
-    if (meta.titleLength >= 30 && meta.titleLength <= 60) {
-      findings.push({ type: "pass", message: `Title tag is well-optimized (${meta.titleLength} chars)` });
-    } else if (meta.titleLength < 30) {
-      findings.push({ type: "warn", message: `Title tag is too short (${meta.titleLength} chars) — aim for 30-60` });
-    } else {
-      findings.push({ type: "warn", message: `Title tag is too long (${meta.titleLength} chars) — may be truncated in search results` });
-    }
-  } else {
-    findings.push({ type: "fail", message: "Missing title tag — critical for search rankings" });
-  }
-
-  if (meta.description) {
-    if (meta.descriptionLength >= 120 && meta.descriptionLength <= 160) {
-      findings.push({ type: "pass", message: `Meta description is well-optimized (${meta.descriptionLength} chars)` });
-    } else if (meta.descriptionLength < 120) {
-      findings.push({ type: "warn", message: `Meta description is short (${meta.descriptionLength} chars) — aim for 120-160` });
-    } else {
-      findings.push({ type: "warn", message: `Meta description is long (${meta.descriptionLength} chars) — may be truncated` });
-    }
-  } else {
-    findings.push({ type: "fail", message: "Missing meta description — hurts click-through rates from search" });
-  }
-
-  if (meta.h1Count === 1) {
-    findings.push({ type: "pass", message: "Page has exactly one H1 tag" });
-  } else if (meta.h1Count === 0) {
-    findings.push({ type: "fail", message: "Missing H1 tag — important for page structure and SEO" });
-  } else {
-    findings.push({ type: "warn", message: `Page has ${meta.h1Count} H1 tags — best practice is exactly one` });
-  }
-
-  if (meta.hasCanonical) {
-    findings.push({ type: "pass", message: "Canonical URL is set" });
-  } else {
-    findings.push({ type: "warn", message: "Missing canonical tag — risk of duplicate content issues" });
-  }
-
-  if (meta.hasViewport) {
-    findings.push({ type: "pass", message: "Viewport meta tag is set (mobile-friendly)" });
-  } else {
-    findings.push({ type: "fail", message: "Missing viewport meta tag — site may not be mobile-friendly" });
-  }
-
-  if (meta.hasOgTags) {
-    findings.push({ type: "pass", message: "Open Graph tags found (social sharing optimized)" });
-  } else {
-    findings.push({ type: "warn", message: "Missing Open Graph tags — social shares will look plain" });
-  }
-
-  if (meta.hasSchemaMarkup) {
-    findings.push({ type: "pass", message: "Structured data (Schema.org) detected" });
-  } else {
-    findings.push({ type: "warn", message: "No structured data found — missing rich snippet opportunities" });
-  }
-
-  if (meta.imageCount > 0) {
-    if (meta.imagesWithoutAlt === 0) {
-      findings.push({ type: "pass", message: `All ${meta.imageCount} images have alt text` });
-    } else {
-      findings.push({
-        type: "warn",
-        message: `${meta.imagesWithoutAlt} of ${meta.imageCount} images missing alt text — hurts accessibility and image SEO`,
-      });
-    }
-  }
-
-  if (meta.robotsMeta && /noindex/i.test(meta.robotsMeta)) {
-    findings.push({ type: "fail", message: "Page is set to noindex — it will not appear in search results" });
-  }
-
-  if (scores.performance !== null) {
-    if (scores.performance >= 90) {
-      findings.push({ type: "pass", message: `Performance score: ${scores.performance}/100` });
-    } else if (scores.performance >= 50) {
-      findings.push({ type: "warn", message: `Performance score: ${scores.performance}/100 — room for improvement` });
-    } else {
-      findings.push({ type: "fail", message: `Performance score: ${scores.performance}/100 — significantly impacting user experience` });
-    }
-  }
-
-  return findings;
 }
 
 export async function POST(request: Request) {
@@ -581,8 +515,6 @@ export async function POST(request: Request) {
     imagesWithoutAlt: 0,
   };
 
-  const findings = generateFindings(metaData, scores);
-
   const industry = meta
     ? await fetchIndustryAnalysis(url, meta.title, meta.description, meta.h1)
     : null;
@@ -601,7 +533,6 @@ export async function POST(request: Request) {
     scores,
     vitals,
     meta: metaData,
-    findings,
     industry,
     trends,
   };

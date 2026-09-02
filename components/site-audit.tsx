@@ -39,7 +39,14 @@ type Meta = {
   imagesWithoutAlt: number;
 };
 
-type Finding = { type: "pass" | "warn" | "fail"; message: string };
+type Keyword = {
+  keyword: string;
+  intent: "N" | "C" | "I" | "T";
+  position: number;
+  volume: string;
+  cpc: number;
+  traffic: number;
+};
 
 type Competitor = {
   name: string;
@@ -59,6 +66,8 @@ type IndustryAnalysis = {
   insight: string;
   channels: Channel[];
   topPlayer: string;
+  keywords: Keyword[];
+  totalKeywords: number;
 } | null;
 
 type TrendPoint = {
@@ -76,7 +85,6 @@ type AuditData = {
   scores: Scores;
   vitals: Vitals;
   meta: Meta;
-  findings: Finding[];
   industry: IndustryAnalysis;
   trends: TrendsData;
 };
@@ -291,47 +299,14 @@ function TrendChart({ trends }: { trends: TrendsData }) {
   );
 }
 
-function FindingRow({ finding }: { finding: Finding }) {
-  const icon =
-    finding.type === "pass"
-      ? "✓"
-      : finding.type === "warn"
-        ? "!"
-        : "✕";
-  const color =
-    finding.type === "pass"
-      ? "text-emerald-400"
-      : finding.type === "warn"
-        ? "text-amber-400"
-        : "text-red-400";
-  const bg =
-    finding.type === "pass"
-      ? "bg-emerald-400/10"
-      : finding.type === "warn"
-        ? "bg-amber-400/10"
-        : "bg-red-400/10";
-
-  return (
-    <div className="flex items-start gap-3 rounded-lg border border-white/5 px-4 py-3">
-      <span
-        className={cn(
-          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
-          bg,
-          color,
-        )}
-      >
-        {icon}
-      </span>
-      <p className="text-sm text-ink/80">{finding.message}</p>
-    </div>
-  );
-}
+const INTENT_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  N: { label: "N", color: "text-purple-300", bg: "bg-purple-400/20" },
+  C: { label: "C", color: "text-amber-300", bg: "bg-amber-400/20" },
+  I: { label: "I", color: "text-sky-300", bg: "bg-sky-400/20" },
+  T: { label: "T", color: "text-emerald-300", bg: "bg-emerald-400/20" },
+};
 
 function AuditResults({ data }: { data: AuditData }) {
-  const passes = data.findings.filter((f) => f.type === "pass").length;
-  const warnings = data.findings.filter((f) => f.type === "warn").length;
-  const fails = data.findings.filter((f) => f.type === "fail").length;
-
   const hasScores = Object.values(data.scores).some((s) => s !== null);
   const hasVitals = Object.values(data.vitals).some((v) => v !== null);
 
@@ -347,13 +322,14 @@ function AuditResults({ data }: { data: AuditData }) {
               {data.url}
             </p>
           </div>
-          <div className="hidden items-center gap-4 text-[12px] sm:flex">
-            <span className="text-emerald-400">{passes} passed</span>
-            <span className="text-amber-400">{warnings} warnings</span>
-            {fails > 0 && (
-              <span className="text-red-400">{fails} issues</span>
-            )}
-          </div>
+          {data.industry && data.industry.totalKeywords > 0 && (
+            <p className="hidden text-[12px] text-muted sm:block">
+              <span className="font-medium text-ink">
+                {data.industry.totalKeywords.toLocaleString()}
+              </span>{" "}
+              organic keywords
+            </p>
+          )}
         </div>
 
         {hasScores && (
@@ -488,21 +464,80 @@ function AuditResults({ data }: { data: AuditData }) {
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
-        <p className="mb-4 text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
-          SEO & Technical Findings
-        </p>
-        <div className="space-y-2">
-          {data.findings
-            .sort((a, b) => {
-              const order = { fail: 0, warn: 1, pass: 2 };
-              return order[a.type] - order[b.type];
-            })
-            .map((finding, i) => (
-              <FindingRow key={i} finding={finding} />
-            ))}
+      {data.industry && data.industry.keywords.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+                Organic Research
+              </p>
+              <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-[10px] tracking-wide text-muted/60 uppercase">
+                AI Estimate
+              </span>
+            </div>
+            {data.industry.totalKeywords > 0 && (
+              <p className="text-[12px] text-muted">
+                Top Organic Keywords{" "}
+                <span className="font-medium text-ink">
+                  {data.industry.totalKeywords.toLocaleString()}
+                </span>
+              </p>
+            )}
+          </div>
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[500px] text-sm">
+              <thead>
+                <tr className="border-b border-white/10 text-left text-[11px] tracking-[0.1em] text-muted uppercase">
+                  <th className="pb-3 pr-4 font-medium">Keyword</th>
+                  <th className="pb-3 px-3 font-medium text-center">Intent</th>
+                  <th className="pb-3 px-3 font-medium text-right">Pos.</th>
+                  <th className="pb-3 px-3 font-medium text-right">Volume</th>
+                  <th className="pb-3 px-3 font-medium text-right">CPC</th>
+                  <th className="pb-3 pl-3 font-medium text-right">Traffic</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.industry.keywords.map((kw, i) => {
+                  const intent = INTENT_LABELS[kw.intent] ?? INTENT_LABELS.I;
+                  return (
+                    <tr
+                      key={i}
+                      className="border-b border-white/5 last:border-0"
+                    >
+                      <td className="py-3 pr-4 font-medium text-electric">
+                        {kw.keyword}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <span
+                          className={cn(
+                            "inline-flex h-6 w-6 items-center justify-center rounded text-[11px] font-bold",
+                            intent.bg,
+                            intent.color,
+                          )}
+                        >
+                          {intent.label}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-ink">
+                        {kw.position}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-ink">
+                        {kw.volume}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-muted">
+                        {kw.cpc.toFixed(2)}
+                      </td>
+                      <td className="py-3 pl-3 text-right font-mono text-ink">
+                        {kw.traffic.toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {data.meta.title && (
         <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
