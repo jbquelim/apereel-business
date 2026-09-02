@@ -191,7 +191,10 @@ async function fetchPageSpeed(url: string) {
 
   try {
     const res = await fetch(apiUrl, { next: { revalidate: 0 } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error("PageSpeed API error:", res.status, await res.text().catch(() => ""));
+      return null;
+    }
     const data = await res.json();
 
     const cats = data.lighthouseResult?.categories ?? {};
@@ -246,7 +249,7 @@ async function fetchIndustryAnalysis(
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: "claude-3-5-haiku-20241022",
         max_tokens: 600,
         messages: [
           {
@@ -275,11 +278,20 @@ Rules:
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error("Anthropic API error:", res.status, errText);
+      return null;
+    }
 
     const data = await res.json();
     const text = data.content?.[0]?.text ?? "";
-    const parsed = JSON.parse(text);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("Anthropic response not JSON:", text.slice(0, 200));
+      return null;
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
 
     if (!parsed.industry || !Array.isArray(parsed.leaders)) return null;
 
@@ -292,7 +304,8 @@ Rules:
         description: l.description,
       })),
     };
-  } catch {
+  } catch (err) {
+    console.error("Industry analysis failed:", err);
     return null;
   }
 }
@@ -471,12 +484,9 @@ export async function POST(request: Request) {
 
   const findings = generateFindings(metaData, scores);
 
-  const industry = await fetchIndustryAnalysis(
-    url,
-    metaData.title,
-    metaData.description,
-    metaData.h1,
-  );
+  const industry = meta
+    ? await fetchIndustryAnalysis(url, meta.title, meta.description, meta.h1)
+    : null;
 
   const result: AuditResult = {
     url,
