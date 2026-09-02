@@ -35,6 +35,18 @@ function normalizeUrl(input: string): string | null {
   }
 }
 
+type IndustryLeader = {
+  name: string;
+  domain: string;
+  description: string;
+};
+
+type IndustryAnalysis = {
+  industry: string;
+  subIndustry: string;
+  leaders: IndustryLeader[];
+} | null;
+
 type AuditResult = {
   url: string;
   scores: {
@@ -70,6 +82,7 @@ type AuditResult = {
     imagesWithoutAlt: number;
   };
   findings: { type: "pass" | "warn" | "fail"; message: string }[];
+  industry: IndustryAnalysis;
 };
 
 async function fetchPageMeta(url: string) {
@@ -199,6 +212,85 @@ async function fetchPageSpeed(url: string) {
         tbt: audits["total-blocking-time"]?.displayValue ?? null,
         tti: audits["interactive"]?.displayValue ?? null,
       },
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchIndustryAnalysis(
+  url: string,
+  title: string | null,
+  description: string | null,
+  h1: string | null,
+): Promise<IndustryAnalysis> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const domain = new URL(url).hostname;
+  const signals = [
+    title && `Title: ${title}`,
+    description && `Description: ${description}`,
+    h1 && `H1: ${h1}`,
+    `Domain: ${domain}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 600,
+        messages: [
+          {
+            role: "user",
+            content: `Analyze this website and identify its industry. Then list the top 5 industry leaders (largest/most dominant companies) in that specific industry.
+
+Website signals:
+${signals}
+
+Respond with ONLY valid JSON, no markdown formatting:
+{
+  "industry": "broad industry name",
+  "subIndustry": "specific niche or sub-category",
+  "leaders": [
+    { "name": "Company Name", "domain": "example.com", "description": "One sentence on why they lead" }
+  ]
+}
+
+Rules:
+- Do NOT include the analyzed website in the leaders list
+- Leaders should be the biggest, most recognized companies globally in this specific industry
+- Be specific with the sub-industry (e.g. "Athletic Footwear" not just "Retail")
+- Keep descriptions under 15 words`,
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text ?? "";
+    const parsed = JSON.parse(text);
+
+    if (!parsed.industry || !Array.isArray(parsed.leaders)) return null;
+
+    return {
+      industry: parsed.industry,
+      subIndustry: parsed.subIndustry ?? parsed.industry,
+      leaders: parsed.leaders.slice(0, 5).map((l: { name: string; domain: string; description: string }) => ({
+        name: l.name,
+        domain: l.domain,
+        description: l.description,
+      })),
     };
   } catch {
     return null;
@@ -379,12 +471,20 @@ export async function POST(request: Request) {
 
   const findings = generateFindings(metaData, scores);
 
+  const industry = await fetchIndustryAnalysis(
+    url,
+    metaData.title,
+    metaData.description,
+    metaData.h1,
+  );
+
   const result: AuditResult = {
     url,
     scores,
     vitals,
     meta: metaData,
     findings,
+    industry,
   };
 
   return NextResponse.json({ ok: true, data: result });

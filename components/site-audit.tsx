@@ -41,12 +41,25 @@ type Meta = {
 
 type Finding = { type: "pass" | "warn" | "fail"; message: string };
 
+type IndustryLeader = {
+  name: string;
+  domain: string;
+  description: string;
+};
+
+type IndustryAnalysis = {
+  industry: string;
+  subIndustry: string;
+  leaders: IndustryLeader[];
+} | null;
+
 type AuditData = {
   url: string;
   scores: Scores;
   vitals: Vitals;
   meta: Meta;
   findings: Finding[];
+  industry: IndustryAnalysis;
 };
 
 function ScoreRing({ score, label }: { score: number | null; label: string }) {
@@ -210,6 +223,55 @@ function AuditResults({ data }: { data: AuditData }) {
           </div>
         )}
       </div>
+
+      {data.industry && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-baseline justify-between">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Industry Analysis
+            </p>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="rounded-full border border-electric/30 bg-electric/10 px-4 py-1.5 text-sm font-medium text-electric">
+              {data.industry.industry}
+            </span>
+            {data.industry.subIndustry !== data.industry.industry && (
+              <span className="rounded-full border border-white/10 px-4 py-1.5 text-sm text-muted">
+                {data.industry.subIndustry}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <p className="mb-3 text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
+              Top 5 Industry Leaders
+            </p>
+            <div className="space-y-2">
+              {data.industry.leaders.map((leader, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 rounded-lg border border-white/5 bg-navy px-4 py-3"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-electric/10 font-mono text-[12px] font-bold text-electric">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-ink">{leader.name}</p>
+                      <span className="hidden font-mono text-[12px] text-muted/60 sm:inline">
+                        {leader.domain}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[13px] text-muted line-clamp-1">
+                      {leader.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
         <p className="mb-4 text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
