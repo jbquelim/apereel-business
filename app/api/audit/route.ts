@@ -285,6 +285,27 @@ async function fetchViaWaybackMachine(url: string): Promise<string | null> {
   }
 }
 
+async function fetchSiteClues(url: string): Promise<string | null> {
+  const origin = new URL(url).origin;
+  const targets = [`${origin}/sitemap.xml`, `${origin}/robots.txt`];
+  const results: string[] = [];
+
+  for (const target of targets) {
+    try {
+      const res = await fetch(target, {
+        signal: AbortSignal.timeout(8000),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+      });
+      if (res.ok) {
+        const text = await res.text();
+        results.push(`--- ${target} ---\n${text.slice(0, 4000)}`);
+      }
+    } catch {}
+  }
+
+  return results.length > 0 ? results.join("\n\n") : null;
+}
+
 async function fetchPageSpeed(url: string) {
   const categories = [
     "performance",
@@ -366,14 +387,16 @@ async function fetchIndustryAnalysis(
 
 Website signals:
 ${pageSignals.join("\n")}
-${!hasPageContent ? `\nIMPORTANT: No page content could be retrieved directly from this website (likely blocked by CAPTCHA or firewall).
+${!hasPageContent ? `\nIMPORTANT: The main page content could not be retrieved (likely blocked by CAPTCHA or firewall). You may have received sitemap, robots.txt, or cached content above. Use ALL available signals.
 
-Use your training knowledge to identify this business:
-- Search your knowledge for "${domain}" and the company name that appears in the domain
-- If you can identify the business with reasonable confidence, provide full analysis and note in the insight that it is based on publicly available information rather than a live page scan
-- Include real competitors you know exist in their market
-- If you genuinely have no knowledge of this company, set industry to "Unknown" and explain in the insight
-- Do NOT guess the industry from the domain name pattern alone (e.g. do not assume a name that sounds like a person's name is a law firm)` : ""}
+You MUST still provide a complete analysis. An informed estimate is far more useful than "Unable to Determine":
+- Use your training knowledge about "${domain}" and the company name
+- Use any sitemap URLs, robots.txt content, or cached page data provided above to understand what the business does
+- Look at URL patterns in sitemaps (e.g. /practice-areas/ = law, /products/ = retail, /services/ = services)
+- Provide your best assessment of the industry and competitors
+- Note in the insight that the analysis is based on limited data and recommend verifying
+- NEVER return "Unknown" or "Unable to Determine" as the industry. Always provide your best estimate
+- Do NOT default to "law firm" just because a domain contains person names` : ""}
 
 CRITICAL: Competitors must be DIRECT competitors — businesses of the same type that compete for the same customers. NOT brands, suppliers, or parent companies they may carry.
 
@@ -568,12 +591,13 @@ export async function POST(request: Request) {
   let fallbackContent: string | null = null;
   if (!meta) {
     console.log("Direct fetch failed, trying fallbacks for", url);
-    const [jina, wayback] = await Promise.all([
+    const [jina, wayback, siteClues] = await Promise.all([
       fetchViaJinaReader(url),
       fetchViaWaybackMachine(url),
+      fetchSiteClues(url),
     ]);
-    fallbackContent = jina ?? wayback;
-    if (fallbackContent) console.log("Fallback succeeded, got", fallbackContent.length, "chars via", jina ? "Jina" : "Wayback");
+    fallbackContent = jina ?? wayback ?? siteClues;
+    if (fallbackContent) console.log("Fallback succeeded, got", fallbackContent.length, "chars");
   }
 
   const hasAnyData = meta || pageSpeed || fallbackContent;
