@@ -280,14 +280,14 @@ async function fetchIndustryAnalysis(
   if (!apiKey) return null;
 
   const domain = new URL(url).hostname;
-  const signals = [
+  const pageSignals = [
     title && `Title: ${title}`,
     description && `Description: ${description}`,
     h1 && `H1: ${h1}`,
     `Domain: ${domain}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ].filter(Boolean);
+
+  const hasPageContent = !!(title || description || h1);
 
   const models = [
     "claude-sonnet-4-20250514",
@@ -299,7 +299,8 @@ async function fetchIndustryAnalysis(
   const prompt = `Analyze this website and identify its industry, then provide competitive intelligence including top 5 direct competitors and market traffic channel estimates.
 
 Website signals:
-${signals}
+${pageSignals.join("\n")}
+${!hasPageContent ? `\nIMPORTANT: The page content could not be fetched (likely blocked by a firewall). You MUST use your training knowledge about the domain "${domain}" to identify what this business actually does. Search your knowledge for any information about this company — their actual industry, services, products, and real competitors. Do NOT guess based on the domain name alone. If you truly have no knowledge of this business, set the industry based on the most likely interpretation of the company name and domain, but be conservative and avoid defaulting to common industries like jewelry retail.` : ""}
 
 CRITICAL: Competitors must be DIRECT competitors — businesses of the same type that compete for the same customers. NOT brands, suppliers, or parent companies they may carry.
 
