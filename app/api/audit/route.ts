@@ -285,6 +285,39 @@ async function fetchViaWaybackMachine(url: string): Promise<string | null> {
   }
 }
 
+async function fetchGoogleSearchResults(domain: string): Promise<string | null> {
+  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_CX;
+  if (!apiKey || !cx) return null;
+
+  try {
+    const query = encodeURIComponent(domain);
+    const res = await fetch(
+      `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&num=10`,
+      { signal: AbortSignal.timeout(10000) },
+    );
+    if (!res.ok) {
+      console.error("Google Custom Search error:", res.status);
+      return null;
+    }
+    const data = await res.json();
+    const items = data.items ?? [];
+    if (items.length === 0) return null;
+
+    const results = items
+      .map(
+        (item: { title?: string; snippet?: string; link?: string }) =>
+          `Title: ${item.title ?? ""}\nSnippet: ${item.snippet ?? ""}\nURL: ${item.link ?? ""}`,
+      )
+      .join("\n\n");
+
+    return `Google search results for "${domain}":\n\n${results}`;
+  } catch (err) {
+    console.error("Google Custom Search failed:", err);
+    return null;
+  }
+}
+
 async function fetchSiteClues(url: string): Promise<string | null> {
   const origin = new URL(url).origin;
   const targets = [`${origin}/sitemap.xml`, `${origin}/robots.txt`];
@@ -360,6 +393,7 @@ async function fetchIndustryAnalysis(
   h1: string | null,
   bodyText?: string | null,
   structuredData?: string | null,
+  googleSearchData?: string | null,
 ): Promise<IndustryAnalysis> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
@@ -372,6 +406,7 @@ async function fetchIndustryAnalysis(
     `Domain: ${domain}`,
     bodyText && `Page content (excerpt):\n${bodyText}`,
     structuredData && `Structured data (JSON-LD):\n${structuredData}`,
+    googleSearchData && `\nVERIFIED DATA FROM GOOGLE SEARCH (use this as factual information):\n${googleSearchData}`,
   ].filter(Boolean);
 
   const hasPageContent = !!(title || description || h1 || bodyText);
@@ -387,16 +422,16 @@ async function fetchIndustryAnalysis(
 
 Website signals:
 ${pageSignals.join("\n")}
-${!hasPageContent ? `\nIMPORTANT: The main page content could not be retrieved (likely blocked by CAPTCHA or firewall). You may have received sitemap, robots.txt, or cached content above. Use ALL available signals.
+${!hasPageContent ? `\nIMPORTANT: The main page content could not be retrieved directly. However, you may have received VERIFIED DATA FROM GOOGLE SEARCH above. If Google search results are present, treat them as FACTUAL information about this business. Base your industry classification, competitors, and analysis on these verified results.
 
-You MUST still provide a complete analysis. An informed estimate is far more useful than "Unable to Determine":
-- Use your training knowledge about "${domain}" and the company name
-- Use any sitemap URLs, robots.txt content, or cached page data provided above to understand what the business does
-- Look at URL patterns in sitemaps (e.g. /practice-areas/ = law, /products/ = retail, /services/ = services)
-- Provide your best assessment of the industry and competitors
-- Note in the insight that the analysis is based on limited data and recommend verifying
-- NEVER return "Unknown" or "Unable to Determine" as the industry. Always provide your best estimate
-- Do NOT default to "law firm" just because a domain contains person names` : ""}
+If Google search data IS available above:
+- Use the search result titles and snippets to determine what this business actually does
+- Identify real competitors mentioned in or implied by the search results
+- Base your analysis on facts from the search results, not guesses
+
+If NO verified data is available at all:
+- State clearly that the website could not be accessed and no external data was available
+- Do not fabricate an analysis` : ""}
 
 CRITICAL: Competitors must be DIRECT competitors — businesses of the same type that compete for the same customers. NOT brands, suppliers, or parent companies they may carry.
 
@@ -588,16 +623,21 @@ export async function POST(request: Request) {
     fetchPageSpeed(url),
   ]);
 
+  const domain = new URL(url).hostname;
   let fallbackContent: string | null = null;
+  let googleSearchData: string | null = null;
   if (!meta) {
     console.log("Direct fetch failed, trying fallbacks for", url);
-    const [jina, wayback, siteClues] = await Promise.all([
+    const [jina, wayback, siteClues, googleResults] = await Promise.all([
       fetchViaJinaReader(url),
       fetchViaWaybackMachine(url),
       fetchSiteClues(url),
+      fetchGoogleSearchResults(domain),
     ]);
     fallbackContent = jina ?? wayback ?? siteClues;
-    if (fallbackContent) console.log("Fallback succeeded, got", fallbackContent.length, "chars");
+    googleSearchData = googleResults;
+    if (fallbackContent) console.log("Fallback content:", fallbackContent.length, "chars");
+    if (googleSearchData) console.log("Google Search data:", googleSearchData.length, "chars");
   }
 
   const hasAnyData = meta || pageSpeed || fallbackContent;
@@ -656,6 +696,7 @@ export async function POST(request: Request) {
     meta?.h1 ?? null,
     meta?.bodyText ?? fallbackContent,
     meta?.structuredData ?? null,
+    googleSearchData,
   );
 
   const brandName =
