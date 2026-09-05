@@ -81,17 +81,13 @@ export function CreativeShowcase() {
               id="creative-heading"
               className="font-display mt-4 text-3xl text-navy sm:text-4xl"
             >
-              Creative production without the six-figure budget.
+              Once we know your competitive advantage, we make it visible.
             </h2>
             <p className="mt-5 text-base leading-relaxed text-navy/60">
               AI-assisted creative workflows produce campaign-quality visuals
-              at a fraction of traditional cost, so you compete visually with
-              companies that outspend you ten to one.
-            </p>
-            <p className="mt-4 text-base leading-relaxed text-navy/60">
-              The value is not generating images. The value is knowing what
-              imagery should be created, why it should exist, and how it shapes
-              the customer&apos;s perception of the brand.
+              at a fraction of traditional cost. The value is not generating
+              images — it&apos;s knowing what imagery should exist, and how it
+              communicates why customers should choose your business.
             </p>
             <div className="mt-8">
               <ButtonLink href="/#contact" variant="secondary">

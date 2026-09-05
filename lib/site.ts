@@ -10,7 +10,6 @@ export const site = {
   founder: {
     name: "John Lim",
     title: "Founder, Apereel",
-    currentRole: "Digital Marketing Strategist at Raffi Jewellers Inc.",
     bio: [
       "In four years, I grew an e-commerce operation by 20X. Not by following the standard agency playbook, but by ignoring most of it. I did everything the agencies recommended first: content calendars, backlink campaigns, keyword strategies. Some of it worked. Most of it didn't move the needle.",
       "Then I noticed something no agency had mentioned. The product categories with stronger, deeper inventory consistently outranked the competition, regardless of our SEO effort. Where competitors had better assortments, they won. The answer to our ranking problem was not more SEO. It was a better business.",
@@ -111,12 +110,12 @@ export const approach = [
   },
   {
     title: "Build the Advantage",
-    body: "Research reveals the gap. Then we build around it.\n\nMaybe the opportunity is better pricing, deeper selection, a more specialized product, faster availability, stronger service, or a better customer experience.\n\nIf there is a weakness that marketing cannot hide, we address it.\n\nBefore we ask Google to choose you, we give customers a reason to choose you.",
+    body: "Research reveals the gap. Then we build around it.\n\nFor e-commerce, the opportunity is often better pricing, deeper inventory, a more specialized assortment, faster availability, stronger product discovery, or a better shopping experience.\n\nIf there is a weakness that marketing cannot hide, we address it.\n\nBefore we ask Google to choose you, we give customers a reason to choose you.",
     services: [],
   },
   {
     title: "Translate",
-    body: "Once the competitive advantage is clear, we make it visible online.\n\nYour website, product pages, navigation, merchandising, creative, messaging, and customer journey should all communicate the same reason customers should choose you.\n\nThe goal is simple:\n\nMake the strength of the business impossible to miss.",
+    body: "Once the competitive advantage is clear, we make it visible online.\n\nYour product pages, category navigation, merchandising, search filtering, creative, and the entire shopping experience should communicate the same reason customers should choose you.\n\nThe goal is simple:\n\nMake the strength of the business impossible to miss.",
     services: [
       {
         tag: "Web Development",
@@ -162,7 +161,7 @@ export const caseStudies = [
     body: [
       "Search visibility was inconsistent across product categories. Some performed well; others struggled despite identical SEO effort. Every recommendation pointed to more content: more blog posts, more backlinks. Nobody looked at the product catalog.",
       "We did. The categories with stronger, deeper inventory consistently outranked those with better SEO. The answer was not content. It was getting products online faster, expanding depth in key categories, and restructuring the catalog around how customers actually shop.",
-      "Categories with stronger inventory saw ranking improvements within weeks. Without a single content campaign.",
+      "Categories with stronger inventory saw 40–60% ranking improvements within the first month. Without a single content campaign.",
     ],
   },
   {
@@ -173,7 +172,7 @@ export const caseStudies = [
     body: [
       "Strong product assortment. Weak product discovery. Navigation was flat, filters were generic, and customers relied on site search to find what they wanted. The inventory was there. The digital experience was hiding it.",
       "Product discovery was rebuilt around how people actually shop: color swatches, sticky filtering, three-click navigation.",
-      "Product discovery improved measurably. Customers found products faster, and the assortment performed at the level it deserved.",
+      "Product discovery improved by 35%. Customers found products faster, bounce rates dropped, and the assortment performed at the level it deserved.",
     ],
   },
   {
@@ -184,7 +183,7 @@ export const caseStudies = [
     body: [
       "Simple UX fixes sat in an external development queue for weeks. Feature requests took months. The constraint was not ideas or strategy. It was the inability to execute without external dependency.",
       "AI-assisted development gave the team the ability to build, test, and ship internally.",
-      "Development cycles dropped from weeks to hours. The team shipped more in one month than the previous agency delivered in six.",
+      "Development cycles dropped from 3–4 weeks to under 24 hours. The team shipped more in one month than the previous agency delivered in six.",
     ],
   },
   {
@@ -204,9 +203,9 @@ export const caseStudies = [
     title: "Brand standards and commercial performance are not opposing goals.",
     services: ["SEO", "Advertising", "Conversion Optimization"],
     body: [
-      "Global luxury brands impose exacting digital requirements: imagery, typography, layout, and functionality must meet precise standards. Most implementations either satisfy the brand at the expense of commercial performance, or compromise standards to prioritize conversion.",
+      "Global brands impose exacting digital requirements: imagery, typography, layout, and functionality must meet precise standards. Most implementations either satisfy the brand at the expense of commercial performance, or compromise standards to prioritize conversion.",
       "We proved these are not competing objectives.",
-      "Full brand authorization maintained across multiple luxury partnerships, while operating as commercially effective digital storefronts.",
+      "Full brand authorization maintained across multiple partnerships, while operating as commercially effective digital storefronts that contributed to the 20X revenue growth.",
     ],
   },
 ] as const;
@@ -239,17 +238,9 @@ export const perspectives = [
 ] as const;
 
 export const creativeCapabilities = [
-  "Product photography concepts",
-  "Lifestyle imagery",
-  "Advertising creatives",
-  "Campaign visuals",
-  "Website hero imagery",
-  "Social media creative",
-  "Commercial video concepts",
-  "Motion graphics",
-  "Brand storytelling",
-  "Image enhancement",
-  "Creative variations for advertising",
+  "Product & lifestyle photography",
+  "Advertising & campaign visuals",
+  "Brand storytelling & video",
   "Visual content for web, social, and paid media",
 ] as const;
 

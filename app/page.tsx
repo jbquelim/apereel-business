@@ -18,15 +18,15 @@ export default function Home() {
       <Hero />
       <SiteAudit />
       <RealityCheck />
+      <ProofSection />
       <CaseStudies />
+      <Perspectives />
       <Approach />
       <Services />
-      <ProofSection />
       <KeywordPerformance />
       <GrowthProof />
       <CreativeShowcase />
       <Founder />
-      <Perspectives />
       <Contact />
     </main>
   );

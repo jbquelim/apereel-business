@@ -1,10 +1,10 @@
 import { Container } from "@/components/container";
 import Image from "next/image";
 
-const metrics = [
+const metrics: { value: string; label: string; sublabel?: string }[] = [
   { value: "8.6K", label: "Organic Search Visibility" },
   { value: "58.6K", label: "Estimated Organic Traffic" },
-  { value: "87%", label: "Non-Branded Discovery" },
+  { value: "87%", label: "Non-Branded Discovery", sublabel: "Customers finding the business through what it sells, not its name" },
   { value: "Top 5", label: "Across High-Demand Commercial Searches" },
 ];
 
@@ -56,6 +56,11 @@ export function ProofSection() {
                     <p className="mt-1 text-[12px] tracking-[0.1em] text-navy/60 uppercase">
                       {m.label}
                     </p>
+                    {m.sublabel && (
+                      <p className="mt-1 text-[11px] leading-snug text-navy/40 normal-case">
+                        {m.sublabel}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>

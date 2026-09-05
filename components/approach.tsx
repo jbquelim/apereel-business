@@ -38,7 +38,7 @@ export function Approach() {
             id="approach-heading"
             className="font-display mt-4 text-3xl text-navy sm:text-5xl"
           >
-            A step-by-step approach to building sustainable digital growth.
+            Fix the business first. Then amplify it with digital.
           </h2>
         </div>
 
