@@ -6,20 +6,15 @@ import { creativeCapabilities } from "@/lib/site";
 function TransformationVisual() {
   return (
     <div className="grid gap-6 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-      <div>
-        <div className="overflow-hidden rounded-xl">
-          <Image
-            src="/images/standard-product-photo.png"
-            alt="A standard e-commerce product photograph"
-            width={1024}
-            height={1024}
-            className="h-auto w-full"
-            sizes="(min-width: 640px) 40vw, 100vw"
-          />
-        </div>
-        <p className="mt-3 text-center font-mono text-[11px] tracking-[0.18em] text-muted uppercase">
-          Standard Product Photo
-        </p>
+      <div className="overflow-hidden rounded-xl">
+        <Image
+          src="/images/standard-product-photo.png"
+          alt="A standard e-commerce product photograph"
+          width={1024}
+          height={1024}
+          className="h-auto w-full"
+          sizes="(min-width: 640px) 40vw, 100vw"
+        />
       </div>
 
       <div className="flex justify-center">
@@ -55,20 +50,15 @@ function TransformationVisual() {
         </div>
       </div>
 
-      <div>
-        <div className="overflow-hidden rounded-xl">
-          <Image
-            src="/images/enhanced-creative.png"
-            alt="Enhanced campaign creative with lifestyle photography"
-            width={1024}
-            height={1024}
-            className="h-auto w-full"
-            sizes="(min-width: 640px) 40vw, 100vw"
-          />
-        </div>
-        <p className="mt-3 text-center font-mono text-[11px] tracking-[0.18em] text-muted uppercase">
-          Enhanced Creative
-        </p>
+      <div className="overflow-hidden rounded-xl">
+        <Image
+          src="/images/enhanced-creative.png"
+          alt="Enhanced campaign creative with lifestyle photography"
+          width={1024}
+          height={1024}
+          className="h-auto w-full"
+          sizes="(min-width: 640px) 40vw, 100vw"
+        />
       </div>
     </div>
   );
