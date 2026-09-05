@@ -89,7 +89,7 @@ export function KeywordPerformance() {
                 >
                   <div className="flex items-start justify-between">
                     <p
-                      className={`font-display text-3xl ${r.position === 1 ? "text-electric" : "text-ink"}`}
+                      className="font-display text-3xl text-electric"
                     >
                       #{r.position}
                     </p>
