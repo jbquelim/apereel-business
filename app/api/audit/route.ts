@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const googleTrends = require("google-trends-api");
 
+export const maxDuration = 60;
+
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS = 10;
 const hits = new Map<string, number[]>();
@@ -501,7 +503,7 @@ Rules:
         },
         body: JSON.stringify({
           model,
-          max_tokens: 1500,
+          max_tokens: 4000,
           messages: [{ role: "user", content: prompt }],
         }),
       });
