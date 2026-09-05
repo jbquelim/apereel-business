@@ -18,12 +18,11 @@ export function Contact() {
             id="contact-heading"
             className="font-display mt-4 text-3xl text-ink text-balance sm:text-5xl"
           >
-            Your next agency should start with your business.
+            Tell us what&apos;s not working.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-muted">
-            Tell us what you sell, who buys it, and what&apos;s not working. We
-            look at the business first, then the digital strategy that
-            amplifies it.
+            Tell us what you sell, who buys it, and what&apos;s not working.
+            That&apos;s where every engagement starts.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-muted/60">
             We work with established businesses, retailers, and e-commerce

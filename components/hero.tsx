@@ -28,7 +28,7 @@ export function Hero() {
           {site.supporting}
         </p>
         <p className="animate-rise-delay-1 mt-4 text-sm tracking-wide text-electric/80">
-          A digital growth consultancy.
+          A digital growth consultancy for e-commerce businesses.
         </p>
         <div className="animate-rise-delay-2 mt-12 flex flex-wrap gap-8 border-t border-white/10 pt-8 sm:gap-14">
           <div>

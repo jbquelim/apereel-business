@@ -4,7 +4,7 @@ export const site = {
   headline: "The method behind",
   headlineLine2: "20X revenue growth.",
   supporting:
-    "Digital growth consultancy that drove 20X e-commerce revenue growth in four years. We fix what's actually limiting your business — pricing, inventory, product discovery — then amplify it with SEO, advertising, and conversion optimization.",
+    "Digital growth consultancy that drove 20X e-commerce revenue growth in four years. We fix what's actually limiting your business: pricing, inventory, product discovery. Then amplify it with SEO, advertising, and conversion optimization.",
   email: "john@apereel.com",
   linkedin: "https://www.linkedin.com/in/jblim",
   founder: {
@@ -161,7 +161,7 @@ export const caseStudies = [
     body: [
       "Search visibility was inconsistent across product categories. Some performed well; others struggled despite identical SEO effort. Every recommendation pointed to more content: more blog posts, more backlinks. Nobody looked at the product catalog.",
       "We did. The categories with stronger, deeper inventory consistently outranked those with better SEO. The answer was not content. It was getting products online faster, expanding depth in key categories, and restructuring the catalog around how customers actually shop.",
-      "Categories with stronger inventory saw 40–60% ranking improvements within the first month. Without a single content campaign.",
+      "Categories with stronger inventory saw 40 to 60% ranking improvements within the first month. Without a single content campaign.",
     ],
   },
   {
@@ -183,7 +183,7 @@ export const caseStudies = [
     body: [
       "Simple UX fixes sat in an external development queue for weeks. Feature requests took months. The constraint was not ideas or strategy. It was the inability to execute without external dependency.",
       "AI-assisted development gave the team the ability to build, test, and ship internally.",
-      "Development cycles dropped from 3–4 weeks to under 24 hours. The team shipped more in one month than the previous agency delivered in six.",
+      "Development cycles dropped from 3 to 4 weeks to under 24 hours. The team shipped more in one month than the previous agency delivered in six.",
     ],
   },
   {

@@ -41,7 +41,7 @@ export function Services() {
             id="services-heading"
             className="font-display mt-4 text-3xl text-navy sm:text-5xl"
           >
-            Every service starts with the same question: what&apos;s actually limiting growth?
+            Each capability solves a specific growth constraint.
           </h2>
         </div>
 

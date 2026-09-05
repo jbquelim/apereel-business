@@ -37,7 +37,7 @@ export function CaseStudies() {
             id="work-heading"
             className="font-display mt-4 text-3xl text-ink sm:text-5xl"
           >
-            What we found — and what we changed.
+            What we found. And what we changed.
           </h2>
         </div>
 

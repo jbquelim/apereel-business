@@ -29,7 +29,7 @@ export function ProofSection() {
                 Proof, Not Promises.
               </h2>
               <div className="mt-8 max-w-xl space-y-4 text-base leading-relaxed text-muted">
-                <p>SEO should be measurable.</p>
+                <p>Four years of sustained growth for one e-commerce business.</p>
                 <p>
                   This is what sustained organic growth looks like over time.
                   Stronger search visibility, increasing non-branded discovery,

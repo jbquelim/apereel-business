@@ -27,7 +27,7 @@ export function RealityCheck() {
               </p>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-muted/70">
                 Whether you&apos;ve been relying on an agency, managing it
-                in-house, or not doing digital marketing at all — the starting
+                in-house, or not doing digital marketing at all, the starting
                 question is the same: what&apos;s actually limiting the business?
               </p>
             </div>

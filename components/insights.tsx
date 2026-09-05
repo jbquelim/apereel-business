@@ -22,10 +22,10 @@ export function Perspectives() {
             id="perspectives-heading"
             className="font-display mt-4 text-3xl text-navy sm:text-4xl"
           >
-            Questions we ask before writing a single line of strategy.
+            The questions your current agency isn&apos;t asking.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-navy/60">
-            These are the starting points behind every engagement.
+            These should come up before any marketing plan.
           </p>
         </div>
         <ul className="mt-12 divide-y divide-navy/10 border-y border-navy/10">

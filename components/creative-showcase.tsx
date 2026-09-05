@@ -75,7 +75,7 @@ export function CreativeShowcase() {
         <div className="grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
-              AI-Powered Creative Production
+              Visual Strategy
             </p>
             <h2
               id="creative-heading"
