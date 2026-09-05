@@ -72,7 +72,7 @@ export function CreativeShowcase() {
       className="reveal-section py-24 sm:py-32"
     >
       <Container>
-        <div className="max-w-2xl">
+        <div>
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
             AI-Powered Creative Production
           </p>
