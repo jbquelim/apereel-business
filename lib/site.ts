@@ -238,9 +238,17 @@ export const perspectives = [
 ] as const;
 
 export const creativeCapabilities = [
-  "Product & lifestyle photography",
-  "Advertising & campaign visuals",
-  "Brand storytelling & video",
+  "Product photography concepts",
+  "Lifestyle imagery",
+  "Advertising creatives",
+  "Campaign visuals",
+  "Website hero imagery",
+  "Social media creative",
+  "Commercial video concepts",
+  "Motion graphics",
+  "Brand storytelling",
+  "Image enhancement",
+  "Creative variations for advertising",
   "Visual content for web, social, and paid media",
 ] as const;
 

@@ -74,20 +74,26 @@ export function CreativeShowcase() {
       <Container>
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
-            Visual Strategy
+            AI-Powered Creative Production
           </p>
           <h2
             id="creative-heading"
             className="font-display mt-4 text-3xl text-ink sm:text-4xl"
           >
-            Once we know your competitive advantage, we make it visible.
+            Creative production without the six-figure budget.
           </h2>
-          <p className="mt-5 text-base leading-relaxed text-muted">
-            AI-assisted creative workflows produce campaign-quality visuals
-            at a fraction of traditional cost. The value is not generating
-            images &mdash; it&apos;s knowing what imagery should exist, and how it
-            communicates why customers should choose your business.
-          </p>
+          <div className="mt-5 space-y-4 text-base leading-relaxed text-muted">
+            <p>
+              AI-assisted creative workflows produce campaign-quality visuals
+              at a fraction of traditional cost, so you compete visually with
+              companies that outspend you ten to one.
+            </p>
+            <p>
+              The value is not generating images. The value is knowing what
+              imagery should be created, why it should exist, and how it shapes
+              the customer&apos;s perception of the brand.
+            </p>
+          </div>
         </div>
 
         <div className="mt-14">
@@ -99,7 +105,7 @@ export function CreativeShowcase() {
             <p className="text-[11px] font-semibold tracking-[0.18em] text-muted uppercase">
               Capabilities
             </p>
-            <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-4">
+            <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-3">
               {creativeCapabilities.map((item) => (
                 <li
                   key={item}
