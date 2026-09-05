@@ -93,13 +93,13 @@ export function ProofSection() {
       </section>
 
       {/* --- Bottom statement --- */}
-      <div className="reveal-section py-16 sm:py-20 lg:py-24">
+      <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
         <Container className="text-center">
-          <h3 className="font-display mx-auto max-w-4xl text-2xl leading-tight text-ink sm:text-3xl lg:text-4xl">
+          <h3 className="font-display mx-auto max-w-4xl text-2xl leading-tight text-navy sm:text-3xl lg:text-4xl">
             One pricing adjustment outperformed six months of marketing
             spend. That&apos;s what we measure.
           </h3>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted">
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-navy/60">
             The only question that matters: did the business get stronger?
           </p>
         </Container>
