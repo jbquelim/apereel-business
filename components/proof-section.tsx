@@ -14,7 +14,7 @@ export function ProofSection() {
       <section
         id="proof"
         aria-labelledby="proof-heading"
-        className="reveal-section bg-ink py-24 sm:py-32"
+        className="reveal-section py-24 sm:py-32"
       >
         <Container>
           <div className="grid gap-16 lg:grid-cols-2 lg:gap-20">
@@ -24,11 +24,11 @@ export function ProofSection() {
               </p>
               <h2
                 id="proof-heading"
-                className="font-display mt-4 text-3xl text-navy sm:text-4xl lg:text-5xl"
+                className="font-display mt-4 text-3xl text-ink sm:text-4xl lg:text-5xl"
               >
                 Proof, Not Promises.
               </h2>
-              <div className="mt-8 max-w-xl space-y-4 text-base leading-relaxed text-navy/60">
+              <div className="mt-8 max-w-xl space-y-4 text-base leading-relaxed text-muted">
                 <p>SEO should be measurable.</p>
                 <p>
                   This is what sustained organic growth looks like over time.
@@ -42,7 +42,7 @@ export function ProofSection() {
                   the shopping experience, and making the website more useful to
                   customers.
                 </p>
-                <p className="text-navy">
+                <p className="text-ink">
                   As the business became stronger, its digital presence followed.
                 </p>
               </div>
@@ -50,14 +50,14 @@ export function ProofSection() {
               <div className="mt-12 grid grid-cols-2 gap-6">
                 {metrics.map((m) => (
                   <div key={m.label}>
-                    <p className="font-display text-3xl text-navy sm:text-4xl">
+                    <p className="font-display text-3xl text-ink sm:text-4xl">
                       {m.value}
                     </p>
-                    <p className="mt-1 text-[12px] tracking-[0.1em] text-navy/60 uppercase">
+                    <p className="mt-1 text-[12px] tracking-[0.1em] text-muted uppercase">
                       {m.label}
                     </p>
                     {m.sublabel && (
-                      <p className="mt-1 text-[11px] leading-snug text-navy/40 normal-case">
+                      <p className="mt-1 text-[11px] leading-snug text-muted/60 normal-case">
                         {m.sublabel}
                       </p>
                     )}
@@ -67,7 +67,7 @@ export function ProofSection() {
             </div>
 
             <div className="flex flex-col justify-center">
-              <div className="overflow-hidden rounded-2xl border border-navy/10">
+              <div className="overflow-hidden rounded-2xl border border-white/10">
                 <Image
                   src="/images/organic-growth-trend.png"
                   alt="Sustained organic growth trend showing search visibility and non-branded traffic increasing over time"
@@ -78,10 +78,10 @@ export function ProofSection() {
                 />
               </div>
               <div className="mt-4">
-                <p className="text-sm font-medium text-navy">
+                <p className="text-sm font-medium text-ink">
                   Sustained Organic Growth
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-navy/60">
+                <p className="mt-1 text-sm leading-relaxed text-muted">
                   Long-term growth in search visibility and non-branded traffic,
                   showing that customers are discovering the business through
                   what it offers, not simply by searching for the company name.
@@ -93,13 +93,13 @@ export function ProofSection() {
       </section>
 
       {/* --- Bottom statement --- */}
-      <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
+      <div className="reveal-section py-16 sm:py-20 lg:py-24">
         <Container className="text-center">
-          <h3 className="font-display mx-auto max-w-4xl text-2xl leading-tight text-navy sm:text-3xl lg:text-4xl">
+          <h3 className="font-display mx-auto max-w-4xl text-2xl leading-tight text-ink sm:text-3xl lg:text-4xl">
             One pricing adjustment outperformed six months of marketing
             spend. That&apos;s what we measure.
           </h3>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-navy/60">
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted">
             The only question that matters: did the business get stronger?
           </p>
         </Container>
