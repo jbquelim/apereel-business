@@ -59,6 +59,20 @@ type Channel = {
   percentage: number;
 };
 
+type InventoryCategory = {
+  category: string;
+  productCount: number;
+  avgPrice: string;
+  priceRange: string;
+};
+
+type CompetitorInventory = {
+  name: string;
+  domain: string;
+  categories: { category: string; estimatedProducts: number; avgPrice: string }[];
+  totalProducts: number;
+};
+
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
@@ -68,6 +82,8 @@ type IndustryAnalysis = {
   topPlayer: string;
   keywords: Keyword[];
   totalKeywords: number;
+  inventoryCategories?: InventoryCategory[];
+  competitorInventory?: CompetitorInventory[];
 } | null;
 
 type TrendPoint = {
@@ -385,6 +401,88 @@ function AuditResults({ data }: { data: AuditData }) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {data.industry?.inventoryCategories && data.industry.inventoryCategories.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Inventory & Pricing Intelligence
+            </p>
+            <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-[10px] tracking-wide text-muted/60 uppercase">
+              Estimate
+            </span>
+          </div>
+
+          <div className="mt-5">
+            <p className="mb-2 text-[12px] font-medium text-ink/70">
+              {new URL(data.url).hostname}
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-[11px] tracking-wide text-muted/60 uppercase">
+                    <th className="pb-2 pr-4 font-medium">Category</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Products</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Avg Price</th>
+                    <th className="pb-2 font-medium text-right">Range</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.industry.inventoryCategories.map((cat, i) => (
+                    <tr key={i} className="border-b border-white/5">
+                      <td className="py-2.5 pr-4 text-ink">{cat.category}</td>
+                      <td className="py-2.5 pr-4 text-right font-mono text-electric">{cat.productCount.toLocaleString()}</td>
+                      <td className="py-2.5 pr-4 text-right font-mono text-ink/80">{cat.avgPrice}</td>
+                      <td className="py-2.5 text-right text-[12px] text-muted">{cat.priceRange}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {data.industry.competitorInventory && data.industry.competitorInventory.length > 0 && (
+            <div className="mt-8 space-y-6">
+              <p className="text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
+                Competitor Inventory Comparison
+              </p>
+              {data.industry.competitorInventory.map((comp, ci) => (
+                <div key={ci} className="rounded-lg border border-white/5 bg-navy p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-ink">{comp.name}</p>
+                      <span className="font-mono text-[12px] text-muted/60">{comp.domain}</span>
+                    </div>
+                    <p className="font-mono text-[12px] text-electric">
+                      {comp.totalProducts.toLocaleString()} total
+                    </p>
+                  </div>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="text-[11px] tracking-wide text-muted/60 uppercase">
+                          <th className="pb-1.5 pr-4 font-medium">Category</th>
+                          <th className="pb-1.5 pr-4 font-medium text-right">Est. Products</th>
+                          <th className="pb-1.5 font-medium text-right">Avg Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comp.categories.map((cat, j) => (
+                          <tr key={j} className="border-t border-white/5">
+                            <td className="py-2 pr-4 text-ink/80">{cat.category}</td>
+                            <td className="py-2 pr-4 text-right font-mono text-ink/70">{cat.estimatedProducts.toLocaleString()}</td>
+                            <td className="py-2 text-right font-mono text-ink/70">{cat.avgPrice}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

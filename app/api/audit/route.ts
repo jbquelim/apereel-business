@@ -57,6 +57,20 @@ type Keyword = {
   traffic: number;
 };
 
+type InventoryCategory = {
+  category: string;
+  productCount: number;
+  avgPrice: string;
+  priceRange: string;
+};
+
+type CompetitorInventory = {
+  name: string;
+  domain: string;
+  categories: { category: string; estimatedProducts: number; avgPrice: string }[];
+  totalProducts: number;
+};
+
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
@@ -66,6 +80,8 @@ type IndustryAnalysis = {
   topPlayer: string;
   keywords: Keyword[];
   totalKeywords: number;
+  inventoryCategories: InventoryCategory[];
+  competitorInventory: CompetitorInventory[];
 } | null;
 
 type TrendPoint = {
@@ -442,7 +458,20 @@ Respond with ONLY valid JSON, no markdown formatting:
   "keywords": [
     { "keyword": "example keyword", "intent": "C", "position": 1, "volume": "3.6K", "cpc": 0.28, "traffic": 5.16 }
   ],
-  "totalKeywords": 8311
+  "totalKeywords": 8311,
+  "inventoryCategories": [
+    { "category": "Category Name", "productCount": 150, "avgPrice": "$89.50", "priceRange": "$12 - $450" }
+  ],
+  "competitorInventory": [
+    {
+      "name": "Competitor Name",
+      "domain": "competitor.com",
+      "categories": [
+        { "category": "Category Name", "estimatedProducts": 500, "avgPrice": "$95.00" }
+      ],
+      "totalProducts": 2500
+    }
+  ]
 }
 
 Rules:
@@ -455,7 +484,9 @@ Rules:
 - For "channels": estimate the typical traffic channel distribution for this specific industry/niche. Percentages must sum to 100. Use your knowledge of how businesses in this industry typically acquire traffic. Include channels like Direct, Organic Search, Paid Search, Social, Referral, Email, Display, AI Traffic as relevant. Only include channels with >= 2%.
 - "topPlayer": name the single strongest competitor (the market leader) in this space
 - For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
-- "totalKeywords": estimate the total number of organic keywords this domain likely ranks for`;
+- "totalKeywords": estimate the total number of organic keywords this domain likely ranks for
+- For "inventoryCategories": identify the main product/service categories this business offers. For each category estimate the number of products/items, average price, and price range. Use evidence from page content, sitemap data, structured data, and search results. For B2B or non-ecommerce businesses, estimate service categories and typical contract/project values instead.
+- For "competitorInventory": for the top 3 competitors, estimate their product/service categories, product counts, and average pricing. Use your industry knowledge to make informed estimates. The categories should match or overlap with the analyzed site's categories for easy comparison.`;
 
   try {
     let res: Response | null = null;
@@ -526,6 +557,28 @@ Rules:
           }))
         : [],
       totalKeywords: parsed.totalKeywords ?? 0,
+      inventoryCategories: Array.isArray(parsed.inventoryCategories)
+        ? parsed.inventoryCategories.map((cat: InventoryCategory) => ({
+            category: cat.category,
+            productCount: cat.productCount,
+            avgPrice: cat.avgPrice,
+            priceRange: cat.priceRange,
+          }))
+        : [],
+      competitorInventory: Array.isArray(parsed.competitorInventory)
+        ? parsed.competitorInventory.slice(0, 3).map((comp: CompetitorInventory) => ({
+            name: comp.name,
+            domain: comp.domain,
+            categories: Array.isArray(comp.categories)
+              ? comp.categories.map((cat: { category: string; estimatedProducts: number; avgPrice: string }) => ({
+                  category: cat.category,
+                  estimatedProducts: cat.estimatedProducts,
+                  avgPrice: cat.avgPrice,
+                }))
+              : [],
+            totalProducts: comp.totalProducts,
+          }))
+        : [],
     };
   } catch (err) {
     console.error("Industry analysis failed:", err);
