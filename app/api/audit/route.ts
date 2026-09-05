@@ -393,8 +393,6 @@ async function fetchIndustryAnalysis(
     googleSearchData && `\nVERIFIED DATA FROM GOOGLE SEARCH (use this as factual information):\n${googleSearchData}`,
   ].filter(Boolean);
 
-  const hasPageContent = !!(title || description || h1 || bodyText);
-
   const models = [
     "claude-sonnet-4-20250514",
     "claude-haiku-4-5-20251001",
@@ -406,16 +404,14 @@ async function fetchIndustryAnalysis(
 
 Website signals:
 ${pageSignals.join("\n")}
-${!hasPageContent ? `\nIMPORTANT: The main page content could not be retrieved directly. However, you may have received VERIFIED DATA FROM GOOGLE SEARCH above. If Google search results are present, treat them as FACTUAL information about this business. Base your industry classification, competitors, and analysis on these verified results.
+${googleSearchData ? `
+IMPORTANT: VERIFIED DATA FROM GOOGLE SEARCH is provided above. This is the most reliable source of information about this business. You MUST use it to determine:
+- What this business actually does (industry, products, services)
+- Who their direct competitors are
+- Their market position and strengths
 
-If Google search data IS available above:
-- Use the search result titles and snippets to determine what this business actually does
-- Identify real competitors mentioned in or implied by the search results
-- Base your analysis on facts from the search results, not guesses
-
-If NO verified data is available at all:
-- State clearly that the website could not be accessed and no external data was available
-- Do not fabricate an analysis` : ""}
+Even if the main page content is missing, blocked, or shows a CAPTCHA/challenge screen, the Google search data is sufficient to perform a complete analysis. DO NOT return "Unable to determine" or "Insufficient data" when Google search data is available.` : `
+NOTE: No external search data was available and the main page content may be limited. If you have enough signals from the title, description, domain name, or page content to identify the business, proceed with the analysis. Only return insufficient data if you truly cannot determine what the business does.`}
 
 CRITICAL: Competitors must be DIRECT competitors — businesses of the same type that compete for the same customers. NOT brands, suppliers, or parent companies they may carry.
 
