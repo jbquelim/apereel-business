@@ -7,11 +7,11 @@ export function Founder() {
     <section
       id="founder"
       aria-labelledby="founder-heading"
-      className="reveal-section py-24 sm:py-32"
+      className="reveal-section bg-ink py-24 sm:py-32"
     >
       <Container className="grid gap-12 lg:grid-cols-12">
         <div className="lg:col-span-5">
-          <div className="relative max-w-sm overflow-hidden rounded-2xl border border-white/10">
+          <div className="relative max-w-sm overflow-hidden rounded-2xl border border-navy/10">
             <Image
               src="/images/john-lim.png"
               alt={site.founder.name}
@@ -22,33 +22,33 @@ export function Founder() {
               priority={false}
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy/80 via-navy/40 to-transparent px-8 pt-16 pb-8">
-              <p className="font-display text-3xl text-ink sm:text-4xl">
+              <p className="font-display text-3xl text-navy sm:text-4xl">
                 {site.founder.name}
               </p>
-              <p className="mt-2 text-sm text-ink/70">{site.founder.title}</p>
+              <p className="mt-2 text-sm text-navy/70">{site.founder.title}</p>
             </div>
           </div>
           <ul className="mt-6 space-y-4 text-sm">
             <li>
-              <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+              <p className="text-[11px] tracking-[0.18em] text-navy/40 uppercase">
                 Email
               </p>
               <a
                 href={`mailto:${site.email}`}
-                className="mt-1 inline-block text-ink transition-colors hover:text-electric"
+                className="mt-1 inline-block text-navy transition-colors hover:text-electric"
               >
                 {site.email}
               </a>
             </li>
             <li>
-              <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+              <p className="text-[11px] tracking-[0.18em] text-navy/40 uppercase">
                 LinkedIn
               </p>
               <a
                 href={site.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-block text-ink transition-colors hover:text-electric"
+                className="mt-1 inline-block text-navy transition-colors hover:text-electric"
               >
                 linkedin.com/in/jblim
               </a>
@@ -61,18 +61,18 @@ export function Founder() {
           </p>
           <h2
             id="founder-heading"
-            className="font-display mt-4 text-3xl text-ink sm:text-4xl"
+            className="font-display mt-4 text-3xl text-navy sm:text-4xl"
           >
             {site.founder.name}
           </h2>
-          <p className="mt-2 text-sm tracking-wide text-muted">
+          <p className="mt-2 text-sm tracking-wide text-navy/60">
             {site.founder.title}
           </p>
-          <div className="mt-8 space-y-5 text-base leading-relaxed text-muted">
+          <div className="mt-8 space-y-5 text-base leading-relaxed text-navy/60">
             {site.founder.bio.map((paragraph) => (
               <p key={paragraph.slice(0, 40)}>{paragraph}</p>
             ))}
-            <p className="font-display text-xl italic text-ink">
+            <p className="font-display text-xl italic text-navy">
               &ldquo;{site.founder.philosophy}&rdquo;
             </p>
           </div>
@@ -80,7 +80,7 @@ export function Founder() {
         </div>
 
         {/* Principles */}
-        <div className="lg:col-span-12 mt-12 border-t border-white/10 pt-10">
+        <div className="lg:col-span-12 mt-12 border-t border-navy/10 pt-10">
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
             Principles
           </p>
@@ -93,7 +93,7 @@ export function Founder() {
                 <span className="font-mono text-[11px] tracking-[0.22em] text-signal">
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                <p className="text-base text-ink">
+                <p className="text-base text-navy">
                   {principle}
                 </p>
               </li>

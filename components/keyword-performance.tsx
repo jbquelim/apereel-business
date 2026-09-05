@@ -51,7 +51,7 @@ export function KeywordPerformance() {
     <section
       id="keyword-performance"
       aria-labelledby="kd-heading"
-      className="reveal-section bg-ink py-24 sm:py-32"
+      className="reveal-section py-24 sm:py-32"
     >
       <Container>
         {/* --- Two-column: header+cards left, screenshot right --- */}
@@ -67,7 +67,7 @@ export function KeywordPerformance() {
             >
               Ranking Against the Market Leaders
             </h2>
-            <div className="mt-5 space-y-4 text-base leading-relaxed text-navy/60">
+            <div className="mt-5 space-y-4 text-base leading-relaxed text-muted">
               <p>
                 Ranking on page 1 for the searches that drive revenue,
                 <br />
@@ -89,7 +89,7 @@ export function KeywordPerformance() {
                 >
                   <div className="flex items-start justify-between">
                     <p
-                      className={`font-display text-3xl ${r.position === 1 ? "text-electric" : "text-navy"}`}
+                      className={`font-display text-3xl ${r.position === 1 ? "text-electric" : "text-ink"}`}
                     >
                       #{r.position}
                     </p>
@@ -103,14 +103,14 @@ export function KeywordPerformance() {
                       {r.difficulty}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm font-medium text-navy">{r.label}</p>
-                  <p className="mt-1 text-xs text-navy/60">
+                  <p className="mt-3 text-sm font-medium text-ink">{r.label}</p>
+                  <p className="mt-1 text-xs text-muted">
                     {r.volume} people search this every month
                   </p>
                 </div>
               ))}
             </div>
-            <p className="mt-6 max-w-md text-xs leading-relaxed text-navy/40">
+            <p className="mt-6 max-w-md text-xs leading-relaxed text-muted/60">
               Difficulty ratings reflect how competitive each search term is.
               &ldquo;Very Hard&rdquo; means even large, established brands
               struggle to reach page 1. Data via Semrush. Results for a luxury
@@ -131,15 +131,15 @@ export function KeywordPerformance() {
               />
             </div>
             <div className="mt-4">
-              <p className="text-sm font-medium text-navy">
+              <p className="text-sm font-medium text-ink">
                 Visibility Where Demand Exists
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-navy/60">
+              <p className="mt-2 text-sm leading-relaxed text-muted">
                 Strong positions across highly competitive searches with
                 meaningful customer demand. Search terms have been intentionally
                 obscured to protect confidential business information.
               </p>
-              <p className="mt-3 text-[11px] tracking-[0.1em] text-navy/40 italic">
+              <p className="mt-3 text-[11px] tracking-[0.1em] text-muted/60 italic">
                 Search terms obscured to protect confidential business data.
               </p>
             </div>

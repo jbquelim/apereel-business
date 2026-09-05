@@ -8,7 +8,7 @@ export function RealityCheck() {
 <section
         id="reality-check"
         aria-labelledby="reality-check-heading"
-        className="reveal-section"
+        className="reveal-section py-24 sm:py-32"
       >
         <Container>
           <div className="grid lg:grid-cols-2">

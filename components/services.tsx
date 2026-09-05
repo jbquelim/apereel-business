@@ -30,7 +30,7 @@ export function Services() {
     <section
       id="services"
       aria-labelledby="services-heading"
-      className="reveal-section py-24 sm:py-32"
+      className="reveal-section bg-ink py-24 sm:py-32"
     >
       <Container>
         <div className="max-w-2xl">
@@ -39,22 +39,22 @@ export function Services() {
           </p>
           <h2
             id="services-heading"
-            className="font-display mt-4 text-3xl text-ink sm:text-5xl"
+            className="font-display mt-4 text-3xl text-navy sm:text-5xl"
           >
             Every service starts with the same question: what&apos;s actually limiting growth?
           </h2>
         </div>
 
         {/* Tab bar */}
-        <div className="mt-14 flex gap-1 overflow-x-auto border-b border-white/10">
+        <div className="mt-14 flex gap-1 overflow-x-auto border-b border-navy/10">
           {visibleServices.map((s, i) => (
             <button
               key={s.tag}
               onClick={() => setActive(i)}
               className={`press-scale relative shrink-0 px-5 py-4 text-sm font-medium tracking-wide transition-colors ${
                 i === active
-                  ? "text-ink"
-                  : "text-muted hover:text-ink/70"
+                  ? "text-navy"
+                  : "text-navy/40 hover:text-navy/70"
               }`}
             >
               {s.title}
@@ -66,18 +66,18 @@ export function Services() {
         </div>
 
         {/* Active service */}
-        <article key={active} className="tab-content grid overflow-hidden rounded-2xl border border-white/10 mt-10 lg:grid-cols-2">
-          <div className="hidden min-h-[280px] items-center justify-center bg-navy p-8 lg:flex">
+        <article key={active} className="tab-content grid overflow-hidden rounded-2xl border border-navy/10 mt-10 lg:grid-cols-2">
+          <div className="hidden min-h-[280px] items-center justify-center bg-navy-mid p-8 lg:flex">
             <Diagram />
           </div>
           <div className="flex flex-col justify-center p-8 sm:p-10">
             <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
               {service.tag}
             </p>
-            <h3 className="font-display mt-3 text-2xl text-ink sm:text-3xl">
+            <h3 className="font-display mt-3 text-2xl text-navy sm:text-3xl">
               {service.title}
             </h3>
-            <p className="mt-4 text-base leading-relaxed text-muted">
+            <p className="mt-4 text-base leading-relaxed text-navy/60">
               {service.body}
             </p>
           </div>

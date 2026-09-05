@@ -69,7 +69,7 @@ export function CreativeShowcase() {
     <section
       id="creative"
       aria-labelledby="creative-heading"
-      className="reveal-section bg-ink py-24 sm:py-32"
+      className="reveal-section py-24 sm:py-32"
     >
       <Container>
         <div className="grid gap-14 lg:grid-cols-12">
@@ -79,11 +79,11 @@ export function CreativeShowcase() {
             </p>
             <h2
               id="creative-heading"
-              className="font-display mt-4 text-3xl text-navy sm:text-4xl"
+              className="font-display mt-4 text-3xl text-ink sm:text-4xl"
             >
               Once we know your competitive advantage, we make it visible.
             </h2>
-            <p className="mt-5 text-base leading-relaxed text-navy/60">
+            <p className="mt-5 text-base leading-relaxed text-muted">
               AI-assisted creative workflows produce campaign-quality visuals
               at a fraction of traditional cost. The value is not generating
               images — it&apos;s knowing what imagery should exist, and how it
@@ -119,7 +119,7 @@ export function CreativeShowcase() {
               </ul>
             </div>
 
-            <p className="mt-4 text-[12px] leading-relaxed text-navy/60">
+            <p className="mt-4 text-[12px] leading-relaxed text-muted">
               All creative examples shown are concept demonstrations unless
               otherwise noted.
             </p>
