@@ -121,18 +121,36 @@ async function fetchPageMeta(url: string) {
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const res = await fetch(url, {
+    let res = await fetch(url, {
       signal: controller.signal,
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; ApereelAudit/1.0; +https://apereel.com)",
-        Accept: "text/html",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
       redirect: "follow",
     });
+
+    if (!res.ok) {
+      const controller2 = new AbortController();
+      const timeout2 = setTimeout(() => controller2.abort(), 10000);
+      res = await fetch(url, {
+        signal: controller2.signal,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "*/*",
+        },
+        redirect: "follow",
+      });
+      clearTimeout(timeout2);
+    }
     clearTimeout(timeout);
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error("fetchPageMeta: both attempts failed for", url, "status:", res.status);
+      return null;
+    }
 
     const html = await res.text();
     const maxLen = 200000;
@@ -473,7 +491,10 @@ export async function POST(request: Request) {
     fetchPageSpeed(url),
   ]);
 
-  if (!meta && !pageSpeed) {
+  const hasAnyData = meta || pageSpeed;
+  const canRunAI = !!process.env.ANTHROPIC_API_KEY;
+
+  if (!hasAnyData && !canRunAI) {
     return NextResponse.json(
       {
         ok: false,
@@ -519,9 +540,12 @@ export async function POST(request: Request) {
     imagesWithoutAlt: 0,
   };
 
-  const industry = meta
-    ? await fetchIndustryAnalysis(url, meta.title, meta.description, meta.h1)
-    : null;
+  const industry = await fetchIndustryAnalysis(
+    url,
+    meta?.title ?? null,
+    meta?.description ?? null,
+    meta?.h1 ?? null,
+  );
 
   const brandName =
     meta?.title?.split(/[|\-–—]/)[0]?.trim() ??
