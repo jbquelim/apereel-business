@@ -253,6 +253,38 @@ async function fetchViaJinaReader(url: string): Promise<string | null> {
   }
 }
 
+async function fetchViaWaybackMachine(url: string): Promise<string | null> {
+  try {
+    const domain = new URL(url).hostname;
+    const availRes = await fetch(
+      `https://archive.org/wayback/available?url=${domain}`,
+      { signal: AbortSignal.timeout(10000) },
+    );
+    if (!availRes.ok) return null;
+    const availData = await availRes.json();
+    const snapshotUrl = availData?.archived_snapshots?.closest?.url;
+    if (!snapshotUrl) return null;
+
+    const pageRes = await fetch(snapshotUrl, {
+      signal: AbortSignal.timeout(15000),
+      headers: { Accept: "text/html" },
+    });
+    if (!pageRes.ok) return null;
+    const html = await pageRes.text();
+
+    return html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&[a-z]+;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 8000);
+  } catch {
+    return null;
+  }
+}
+
 async function fetchPageSpeed(url: string) {
   const categories = [
     "performance",
@@ -334,13 +366,14 @@ async function fetchIndustryAnalysis(
 
 Website signals:
 ${pageSignals.join("\n")}
-${!hasPageContent ? `\nIMPORTANT: No page content could be retrieved for this website. Be honest about this limitation:
-- Only identify the industry if you have SPECIFIC, CONFIRMED knowledge of this company from your training data
-- If you are unsure what this business does, set industry to "Unknown" and subIndustry to "Unable to determine without page content"
-- Set competitors to an empty array [] if you cannot confidently identify the business type
-- In the insight field, explain that page content was unavailable and recommend the user verify the analysis
-- Do NOT fabricate competitors, keywords, or traffic data based on guesses from the domain name
-- It is better to return "Unknown" than to guess wrong` : ""}
+${!hasPageContent ? `\nIMPORTANT: No page content could be retrieved directly from this website (likely blocked by CAPTCHA or firewall).
+
+Use your training knowledge to identify this business:
+- Search your knowledge for "${domain}" and the company name that appears in the domain
+- If you can identify the business with reasonable confidence, provide full analysis and note in the insight that it is based on publicly available information rather than a live page scan
+- Include real competitors you know exist in their market
+- If you genuinely have no knowledge of this company, set industry to "Unknown" and explain in the insight
+- Do NOT guess the industry from the domain name pattern alone (e.g. do not assume a name that sounds like a person's name is a law firm)` : ""}
 
 CRITICAL: Competitors must be DIRECT competitors — businesses of the same type that compete for the same customers. NOT brands, suppliers, or parent companies they may carry.
 
@@ -532,14 +565,18 @@ export async function POST(request: Request) {
     fetchPageSpeed(url),
   ]);
 
-  let jinaContent: string | null = null;
+  let fallbackContent: string | null = null;
   if (!meta) {
-    console.log("Direct fetch failed, trying Jina Reader for", url);
-    jinaContent = await fetchViaJinaReader(url);
-    if (jinaContent) console.log("Jina Reader succeeded, got", jinaContent.length, "chars");
+    console.log("Direct fetch failed, trying fallbacks for", url);
+    const [jina, wayback] = await Promise.all([
+      fetchViaJinaReader(url),
+      fetchViaWaybackMachine(url),
+    ]);
+    fallbackContent = jina ?? wayback;
+    if (fallbackContent) console.log("Fallback succeeded, got", fallbackContent.length, "chars via", jina ? "Jina" : "Wayback");
   }
 
-  const hasAnyData = meta || pageSpeed || jinaContent;
+  const hasAnyData = meta || pageSpeed || fallbackContent;
   const canRunAI = !!process.env.ANTHROPIC_API_KEY;
 
   if (!hasAnyData && !canRunAI) {
@@ -593,7 +630,7 @@ export async function POST(request: Request) {
     meta?.title ?? null,
     meta?.description ?? null,
     meta?.h1 ?? null,
-    meta?.bodyText ?? jinaContent,
+    meta?.bodyText ?? fallbackContent,
     meta?.structuredData ?? null,
   );
 
