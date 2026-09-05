@@ -199,6 +199,20 @@ async function fetchPageMeta(url: string) {
     ).length;
     const imagesWithoutAlt = imgTags.length - imagesWithAlt;
 
+    const bodyText = doc
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&[a-z]+;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 5000);
+
+    const jsonLdBlocks = extractAll(
+      /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+    );
+    const structuredData = jsonLdBlocks.length > 0 ? jsonLdBlocks.join("\n") : null;
+
     return {
       title,
       titleLength: title?.length ?? 0,
@@ -216,9 +230,25 @@ async function fetchPageMeta(url: string) {
       imageCount: imgTags.length,
       imagesWithAlt,
       imagesWithoutAlt,
+      bodyText,
+      structuredData,
     };
   } catch {
     clearTimeout(timeout);
+    return null;
+  }
+}
+
+async function fetchViaJinaReader(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      headers: { Accept: "text/plain" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return text.slice(0, 8000);
+  } catch {
     return null;
   }
 }
@@ -275,6 +305,8 @@ async function fetchIndustryAnalysis(
   title: string | null,
   description: string | null,
   h1: string | null,
+  bodyText?: string | null,
+  structuredData?: string | null,
 ): Promise<IndustryAnalysis> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
@@ -285,9 +317,11 @@ async function fetchIndustryAnalysis(
     description && `Description: ${description}`,
     h1 && `H1: ${h1}`,
     `Domain: ${domain}`,
+    bodyText && `Page content (excerpt):\n${bodyText}`,
+    structuredData && `Structured data (JSON-LD):\n${structuredData}`,
   ].filter(Boolean);
 
-  const hasPageContent = !!(title || description || h1);
+  const hasPageContent = !!(title || description || h1 || bodyText);
 
   const models = [
     "claude-sonnet-4-20250514",
@@ -300,7 +334,13 @@ async function fetchIndustryAnalysis(
 
 Website signals:
 ${pageSignals.join("\n")}
-${!hasPageContent ? `\nIMPORTANT: The page content could not be fetched (likely blocked by a firewall). You MUST use your training knowledge about the domain "${domain}" to identify what this business actually does. Search your knowledge for any information about this company — their actual industry, services, products, and real competitors. Do NOT guess based on the domain name alone. If you truly have no knowledge of this business, set the industry based on the most likely interpretation of the company name and domain, but be conservative and avoid defaulting to common industries like jewelry retail.` : ""}
+${!hasPageContent ? `\nIMPORTANT: No page content could be retrieved for this website. Be honest about this limitation:
+- Only identify the industry if you have SPECIFIC, CONFIRMED knowledge of this company from your training data
+- If you are unsure what this business does, set industry to "Unknown" and subIndustry to "Unable to determine without page content"
+- Set competitors to an empty array [] if you cannot confidently identify the business type
+- In the insight field, explain that page content was unavailable and recommend the user verify the analysis
+- Do NOT fabricate competitors, keywords, or traffic data based on guesses from the domain name
+- It is better to return "Unknown" than to guess wrong` : ""}
 
 CRITICAL: Competitors must be DIRECT competitors — businesses of the same type that compete for the same customers. NOT brands, suppliers, or parent companies they may carry.
 
@@ -492,7 +532,14 @@ export async function POST(request: Request) {
     fetchPageSpeed(url),
   ]);
 
-  const hasAnyData = meta || pageSpeed;
+  let jinaContent: string | null = null;
+  if (!meta) {
+    console.log("Direct fetch failed, trying Jina Reader for", url);
+    jinaContent = await fetchViaJinaReader(url);
+    if (jinaContent) console.log("Jina Reader succeeded, got", jinaContent.length, "chars");
+  }
+
+  const hasAnyData = meta || pageSpeed || jinaContent;
   const canRunAI = !!process.env.ANTHROPIC_API_KEY;
 
   if (!hasAnyData && !canRunAI) {
@@ -546,6 +593,8 @@ export async function POST(request: Request) {
     meta?.title ?? null,
     meta?.description ?? null,
     meta?.h1 ?? null,
+    meta?.bodyText ?? jinaContent,
+    meta?.structuredData ?? null,
   );
 
   const brandName =
