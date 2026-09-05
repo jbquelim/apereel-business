@@ -285,35 +285,19 @@ async function fetchViaWaybackMachine(url: string): Promise<string | null> {
   }
 }
 
-async function fetchGoogleSearchResults(domain: string): Promise<string | null> {
-  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
-  const cx = process.env.GOOGLE_SEARCH_CX;
-  if (!apiKey || !cx) return null;
-
+async function fetchWebSearchResults(domain: string): Promise<string | null> {
   try {
-    const query = encodeURIComponent(domain);
-    const res = await fetch(
-      `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&num=10`,
-      { signal: AbortSignal.timeout(10000) },
-    );
-    if (!res.ok) {
-      console.error("Google Custom Search error:", res.status);
-      return null;
-    }
-    const data = await res.json();
-    const items = data.items ?? [];
-    if (items.length === 0) return null;
-
-    const results = items
-      .map(
-        (item: { title?: string; snippet?: string; link?: string }) =>
-          `Title: ${item.title ?? ""}\nSnippet: ${item.snippet ?? ""}\nURL: ${item.link ?? ""}`,
-      )
-      .join("\n\n");
-
-    return `Google search results for "${domain}":\n\n${results}`;
+    const searchUrl = `https://r.jina.ai/https://www.google.com/search?q=${encodeURIComponent(domain)}`;
+    const res = await fetch(searchUrl, {
+      headers: { Accept: "text/plain" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    if (!text || text.length < 100) return null;
+    return `Web search results for "${domain}":\n\n${text.slice(0, 6000)}`;
   } catch (err) {
-    console.error("Google Custom Search failed:", err);
+    console.error("Web search failed:", err);
     return null;
   }
 }
@@ -628,16 +612,16 @@ export async function POST(request: Request) {
   let googleSearchData: string | null = null;
   if (!meta) {
     console.log("Direct fetch failed, trying fallbacks for", url);
-    const [jina, wayback, siteClues, googleResults] = await Promise.all([
+    const [jina, wayback, siteClues, webResults] = await Promise.all([
       fetchViaJinaReader(url),
       fetchViaWaybackMachine(url),
       fetchSiteClues(url),
-      fetchGoogleSearchResults(domain),
+      fetchWebSearchResults(domain),
     ]);
     fallbackContent = jina ?? wayback ?? siteClues;
-    googleSearchData = googleResults;
+    googleSearchData = webResults;
     if (fallbackContent) console.log("Fallback content:", fallbackContent.length, "chars");
-    if (googleSearchData) console.log("Google Search data:", googleSearchData.length, "chars");
+    if (googleSearchData) console.log("Web search data:", googleSearchData.length, "chars");
   }
 
   const hasAnyData = meta || pageSpeed || fallbackContent;
