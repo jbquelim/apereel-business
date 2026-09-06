@@ -61,9 +61,9 @@ type Channel = {
 
 type InventoryCategory = {
   category: string;
-  productCount: number;
-  avgPrice: string;
-  priceRange: string;
+  productCount: number | null;
+  avgPrice: string | null;
+  priceRange: string | null;
 };
 
 type CompetitorInventory = {
@@ -432,9 +432,9 @@ function AuditResults({ data }: { data: AuditData }) {
                   {data.industry.inventoryCategories.map((cat, i) => (
                     <tr key={i} className="border-b border-white/5">
                       <td className="py-2.5 pr-4 text-ink">{cat.category}</td>
-                      <td className="py-2.5 pr-4 text-right font-mono text-electric">{cat.productCount.toLocaleString()}</td>
-                      <td className="py-2.5 pr-4 text-right font-mono text-ink/80">{cat.avgPrice}</td>
-                      <td className="py-2.5 text-right text-[12px] text-muted">{cat.priceRange}</td>
+                      <td className="py-2.5 pr-4 text-right font-mono text-electric">{cat.productCount != null ? cat.productCount.toLocaleString() : "—"}</td>
+                      <td className="py-2.5 pr-4 text-right font-mono text-ink/80">{cat.avgPrice ?? "—"}</td>
+                      <td className="py-2.5 text-right text-[12px] text-muted">{cat.priceRange ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -484,9 +484,9 @@ function AuditResults({ data }: { data: AuditData }) {
                       {comp.categories.map((cat, i) => (
                         <tr key={i} className="border-b border-white/5">
                           <td className="py-2.5 pr-4 text-ink">{cat.category}</td>
-                          <td className="py-2.5 pr-4 text-right font-mono text-electric">{cat.productCount.toLocaleString()}</td>
-                          <td className="py-2.5 pr-4 text-right font-mono text-ink/80">{cat.avgPrice}</td>
-                          <td className="py-2.5 text-right text-[12px] text-muted">{cat.priceRange}</td>
+                          <td className="py-2.5 pr-4 text-right font-mono text-electric">{cat.productCount != null ? cat.productCount.toLocaleString() : "—"}</td>
+                          <td className="py-2.5 pr-4 text-right font-mono text-ink/80">{cat.avgPrice ?? "—"}</td>
+                          <td className="py-2.5 text-right text-[12px] text-muted">{cat.priceRange ?? "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -727,15 +727,19 @@ export function SiteAudit() {
     setErrorMessage("");
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 90000);
       const res = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           url: url.trim(),
           name: name.trim(),
           email: email.trim(),
         }),
       });
+      clearTimeout(timeout);
       const body = await res.json();
       if (!res.ok || !body.ok) {
         throw new Error(body.error || "Unable to analyze this website.");
@@ -744,9 +748,13 @@ export function SiteAudit() {
       setStatus("done");
     } catch (err) {
       setStatus("error");
-      setErrorMessage(
-        err instanceof Error ? err.message : "Something went wrong.",
-      );
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setErrorMessage("The analysis took too long. Please try again.");
+      } else {
+        setErrorMessage(
+          err instanceof Error ? err.message : "Something went wrong.",
+        );
+      }
     }
   }
 

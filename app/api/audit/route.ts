@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const googleTrends = require("google-trends-api");
 
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS = 10;
@@ -61,9 +61,9 @@ type Keyword = {
 
 type InventoryCategory = {
   category: string;
-  productCount: number;
-  avgPrice: string;
-  priceRange: string;
+  productCount: number | null;
+  avgPrice: string | null;
+  priceRange: string | null;
 };
 
 type CompetitorInventory = {
@@ -256,18 +256,24 @@ async function fetchPageMeta(url: string) {
   }
 }
 
-async function fetchViaJinaReader(url: string): Promise<string | null> {
+async function fetchViaJina(targetUrl: string, timeoutMs = 15000): Promise<string | null> {
   try {
-    const res = await fetch(`https://r.jina.ai/${url}`, {
-      headers: { Accept: "text/plain" },
-      signal: AbortSignal.timeout(15000),
+    const headers: Record<string, string> = { Accept: "text/plain" };
+    if (process.env.JINA_API_KEY) headers.Authorization = `Bearer ${process.env.JINA_API_KEY}`;
+    const res = await fetch(`https://r.jina.ai/${targetUrl}`, {
+      headers,
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return null;
-    const text = await res.text();
-    return text.slice(0, 8000);
+    return await res.text();
   } catch {
     return null;
   }
+}
+
+async function fetchViaJinaReader(url: string): Promise<string | null> {
+  const text = await fetchViaJina(url);
+  return text ? text.slice(0, 8000) : null;
 }
 
 async function fetchViaWaybackMachine(url: string): Promise<string | null> {
@@ -354,30 +360,168 @@ async function fetchCompetitorSearchResults(industry: string, subIndustry: strin
   return results.length > 0 ? results.join("\n\n---\n\n") : null;
 }
 
-async function crawlSiteInventory(domain: string): Promise<string | null> {
+const BROWSER_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+async function fetchShopifyInventory(domain: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://${domain}/collections.json?limit=10`, {
+      headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) return null;
+    const collections = (await res.json())?.collections;
+    if (!Array.isArray(collections) || collections.length === 0) return null;
+
+    const lines = (await Promise.all(
+      collections.slice(0, 6).map(async (col: { handle: string; title: string }) => {
+        try {
+          const pRes = await fetch(
+            `https://${domain}/collections/${col.handle}/products.json?limit=250`,
+            {
+              headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
+              signal: AbortSignal.timeout(6000),
+            },
+          );
+          if (!pRes.ok) return null;
+          const products = (await pRes.json())?.products;
+          if (!Array.isArray(products) || products.length === 0) return null;
+          const prices = products
+            .flatMap((p: { variants?: { price: string }[] }) =>
+              (p.variants ?? []).map((v) => parseFloat(v.price)),
+            )
+            .filter((n: number) => Number.isFinite(n) && n > 0);
+          const count = `${products.length}${products.length === 250 ? "+" : ""}`;
+          if (prices.length === 0) return `Collection "${col.title}": ${count} products`;
+          const min = Math.min(...prices);
+          const max = Math.max(...prices);
+          const avg = prices.reduce((a: number, b: number) => a + b, 0) / prices.length;
+          return `Collection "${col.title}": ${count} products, avg price $${Math.round(avg).toLocaleString()}, price range $${Math.round(min).toLocaleString()} - $${Math.round(max).toLocaleString()}`;
+        } catch {
+          return null;
+        }
+      }),
+    )).filter(Boolean) as string[];
+
+    if (lines.length === 0) return null;
+    console.log("Shopify inventory data found for", domain);
+    return `Live product data from ${domain} (exact figures from the store's product API — use these numbers verbatim):\n${lines.join("\n")}`;
+  } catch {
+    return null;
+  }
+}
+
+function extractCollectionLinks(markdown: string, domain: string): string[] {
+  const root = domain.replace(/^www\./, "");
+  const linkRe = /\]\((https?:\/\/[^\s)]+)\)/g;
+  const seen = new Set<string>();
+  const links: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = linkRe.exec(markdown)) !== null && links.length < 8) {
+    try {
+      const u = new URL(m[1]);
+      if (!u.hostname.replace(/^www\./, "").endsWith(root)) continue;
+      const path = u.pathname.toLowerCase();
+      if (!/(collections?|categor|shop|store|catalog|products?)/.test(path)) continue;
+      if (/(privacy|terms|blog|about|contact|account|cart|login|policy|faq|financ)/.test(path)) continue;
+      if (/\.(webp|jpe?g|png|gif|svg|avif|ico|pdf|css|js|xml)$/.test(path)) continue;
+      if (/wp-content|wp-includes|\/cdn\/|\/assets\//.test(path)) continue;
+      const key = u.origin + u.pathname.replace(/\/$/, "");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      links.push(key);
+    } catch {}
+  }
+  return links;
+}
+
+function digestCollectionPage(text: string, url: string): string | null {
+  const title = text.match(/^Title:\s*(.+)$/m)?.[1]?.trim() ?? url;
+  const counts = [
+    ...new Set(
+      (text.match(/[\d,]*[1-9][\d,]*\s*(?:products|items|results)/gi) ?? []).map((c) =>
+        c.replace(/\s+/g, " ").trim(),
+      ),
+    ),
+  ].slice(0, 5);
+  const prices = (text.match(/\$\s?[\d,]*[1-9][\d,]*(?:\.\d{2})?/g) ?? []).slice(0, 60);
+  if (counts.length === 0 && prices.length === 0) return null;
+  return [
+    `Page: ${title} (${url})`,
+    counts.length > 0 ? `Product counts seen on page: ${counts.join(", ")}` : null,
+    prices.length > 0 ? `Prices seen on page: ${prices.join(", ")}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function crawlCollectionPages(domain: string): Promise<string | null> {
+  const home = await fetchViaJina(`https://${domain}`, 20000);
+  if (!home) return null;
+
+  const links = extractCollectionLinks(home, domain).slice(0, 3);
+  if (links.length === 0) return null;
+
+  const digests = (await Promise.all(
+    links.map(async (link) => {
+      const text = await fetchViaJina(link, 20000);
+      return text ? digestCollectionPage(text, link) : null;
+    }),
+  )).filter(Boolean) as string[];
+
+  if (digests.length === 0) return null;
+  console.log("Crawled", digests.length, "collection pages from", domain);
+  return `Crawled category/collection pages from ${domain} (real on-page data):\n\n${digests.join("\n\n")}`;
+}
+
+async function searchIndexedInventory(domain: string): Promise<string | null> {
   const queries = [
     `site:${domain} collections`,
     `site:${domain} products price`,
   ];
 
-  const results: string[] = [];
-  for (const query of queries) {
-    try {
-      const res = await fetch(
-        `https://r.jina.ai/https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-        { headers: { Accept: "text/plain" }, signal: AbortSignal.timeout(12000) },
-      );
-      if (!res.ok) continue;
-      const text = await res.text();
-      if (text && text.length > 200) {
-        results.push(`Search: "${query}"\n${text.slice(0, 5000)}`);
-      }
-    } catch {}
-  }
+  const results = (await Promise.all(
+    queries.map(async (query) => {
+      try {
+        const res = await fetch(
+          `https://r.jina.ai/https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+          { headers: { Accept: "text/plain" }, signal: AbortSignal.timeout(10000) },
+        );
+        if (!res.ok) return null;
+        const text = await res.text();
+        if (text && text.length > 200) {
+          return `Search: "${query}"\n${text.slice(0, 5000)}`;
+        }
+      } catch {}
+      return null;
+    }),
+  )).filter(Boolean) as string[];
 
   if (results.length === 0) return null;
-  console.log("Inventory search data found:", results.reduce((a, r) => a + r.length, 0), "chars");
   return results.join("\n\n---\n\n");
+}
+
+async function crawlSiteInventory(domain: string): Promise<string | null> {
+  const shopify = await fetchShopifyInventory(domain);
+  if (shopify) return shopify;
+
+  const crawled = await crawlCollectionPages(domain);
+  if (crawled) return crawled;
+
+  const indexed = await searchIndexedInventory(domain);
+  if (indexed) console.log("Falling back to search-indexed inventory for", domain);
+  return indexed;
+}
+
+function normalizeInventoryCategory(cat: Partial<InventoryCategory> | null): InventoryCategory | null {
+  if (!cat?.category || typeof cat.category !== "string") return null;
+  const productCount =
+    typeof cat.productCount === "number" && cat.productCount > 0 ? cat.productCount : null;
+  const avgPrice = typeof cat.avgPrice === "string" && cat.avgPrice.trim() ? cat.avgPrice : null;
+  const priceRange =
+    typeof cat.priceRange === "string" && cat.priceRange.trim() ? cat.priceRange : null;
+  if (productCount === null && avgPrice === null && priceRange === null) return null;
+  return { category: cat.category, productCount, avgPrice, priceRange };
 }
 
 async function fetchCompetitorInventories(
@@ -397,14 +541,14 @@ async function fetchCompetitorInventories(
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return [];
 
-  const prompt = `Analyze the following search engine indexed product/collection page data for multiple competitor websites. For each website, extract real product categories, product counts, and pricing information directly from the indexed data.
+  const prompt = `Below is crawled inventory data for multiple competitor websites. Depending on the site it comes from the store's live product API (exact figures), crawled category pages (real on-page counts and prices), or search-engine-indexed pages.
 
 ${withData.map((r) => `=== ${r.name} (${r.domain}) ===\n${r.data}`).join("\n\n")}
 
-For each competitor, extract their inventory categories based on what you find in the indexed data above. Look for:
-- Collection/category names from page titles and URLs
-- Product counts (e.g., "219 products", "1,166 items")
-- Price figures (e.g., "$5,000", "$500 - $10,000")
+For each competitor, extract their inventory categories from the data above. Look for:
+- Collection/category names from page titles and URLs (clean them up: "Watches for Men and Women | Maison Birks" -> "Watches")
+- Product counts (e.g., "219 products", "620 Results", "1,166 items")
+- Price figures. When a page lists many individual prices, compute the range from min to max and estimate avgPrice as a typical mid value. Round-number sequences like $1,000, $5,000, $10,000, $20,000, $50,000 are price FILTER buckets, not products — use them only for the range, not the average.
 
 Respond with ONLY valid JSON:
 {
@@ -419,11 +563,11 @@ Respond with ONLY valid JSON:
 }
 
 Rules:
-- Extract categories from real collection/product page titles in the search results
-- Product counts should come from real numbers found in the data when available
-- Prices should come from real prices found in the data when available
+- "Live product data" lines already contain exact counts, avg and range — copy those numbers verbatim
+- Use null for any field you cannot determine from the data — never guess or invent numbers
+- OMIT any category where productCount, avgPrice AND priceRange would all be null; a bare category name is useless
 - If a competitor has no meaningful product data, return an empty categories array for them
-- Do NOT invent categories that don't appear in the indexed data`;
+- Do NOT invent categories that don't appear in the data`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -447,7 +591,7 @@ Rules:
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return [];
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) => ch === "\n" || ch === "\r" || ch === "\t" ? " " : ""));
     if (!Array.isArray(parsed.competitors)) return [];
 
     return withData
@@ -459,12 +603,9 @@ Rules:
           name: r.name,
           domain: r.domain,
           categories: Array.isArray(match?.categories)
-            ? match.categories.map((cat: InventoryCategory) => ({
-                category: cat.category,
-                productCount: cat.productCount,
-                avgPrice: cat.avgPrice,
-                priceRange: cat.priceRange,
-              }))
+            ? match.categories
+                .map((cat: InventoryCategory) => normalizeInventoryCategory(cat))
+                .filter(Boolean) as InventoryCategory[]
             : [],
         };
       })
@@ -583,11 +724,12 @@ async function fetchIndustryAnalysis(
     bodyText && `Page content (excerpt):\n${bodyText}`,
     structuredData && `Structured data (JSON-LD):\n${structuredData}`,
     googleSearchData && `\nVERIFIED DATA FROM WEB SEARCH (use this as factual information):\n${googleSearchData}`,
-    inventorySearchData && `\nINDEXED PRODUCT/COLLECTION PAGES FROM SEARCH ENGINES (real data from this website):\n${inventorySearchData}`,
+    inventorySearchData && `\nCRAWLED PRODUCT/COLLECTION DATA (real data from this website):\n${inventorySearchData}`,
   ].filter(Boolean);
 
   const models = [
     "claude-sonnet-4-20250514",
+    "claude-sonnet-4-0",
     "claude-haiku-4-5-20251001",
     "claude-3-5-haiku-20241022",
     "claude-3-haiku-20240307",
@@ -653,7 +795,7 @@ Rules:
 - "topPlayer": name the single strongest competitor (the market leader) in this space
 - For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
 - "totalKeywords": estimate the total number of organic keywords this domain likely ranks for
-- For "inventoryCategories": If INDEXED PRODUCT/COLLECTION PAGES data is provided above, analyze it to extract REAL product categories, product counts, and price ranges directly from the search engine indexed data. Look for collection names, "X products" counts, and price figures (e.g. "$5,000 - $10,000", "219 products"). Each category should reflect what you actually find in the indexed data. If no indexed data is available, return an empty array [].`;
+- For "inventoryCategories": If CRAWLED PRODUCT/COLLECTION DATA is provided above, extract REAL product categories, product counts, and price ranges directly from it. Look for collection names, "X products"/"X results" counts, and price figures (e.g. "$5,000 - $10,000", "219 products"). Use null for any field not present in the data — never invent numbers — and omit categories where all of productCount, avgPrice and priceRange would be null. If no crawled data is available, return an empty array [].`;
 
   try {
     let res: Response | null = null;
@@ -693,7 +835,11 @@ Rules:
       console.error("Anthropic response not JSON:", text.slice(0, 200));
       return null;
     }
-    const parsed = JSON.parse(jsonMatch[0]);
+    const sanitized = jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) => {
+      if (ch === "\n" || ch === "\r" || ch === "\t") return " ";
+      return "";
+    });
+    const parsed = JSON.parse(sanitized);
 
     if (!parsed.industry || !Array.isArray(parsed.competitors)) return null;
 
@@ -725,12 +871,9 @@ Rules:
         : [],
       totalKeywords: parsed.totalKeywords ?? 0,
       inventoryCategories: Array.isArray(parsed.inventoryCategories)
-        ? parsed.inventoryCategories.map((cat: InventoryCategory) => ({
-            category: cat.category,
-            productCount: cat.productCount,
-            avgPrice: cat.avgPrice,
-            priceRange: cat.priceRange,
-          }))
+        ? (parsed.inventoryCategories
+            .map((cat: InventoryCategory) => normalizeInventoryCategory(cat))
+            .filter(Boolean) as InventoryCategory[])
         : [],
     };
   } catch (err) {
@@ -816,7 +959,7 @@ export async function POST(request: Request) {
   ]);
 
   let fallbackContent: string | null = null;
-  let googleSearchData: string | null = webSearchData;
+  const googleSearchData: string | null = webSearchData;
   if (!meta) {
     console.log("Direct fetch failed, trying fallbacks for", url);
     const [jina, wayback, siteClues] = await Promise.all([
@@ -944,7 +1087,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
             const refineText = refineData.content?.[0]?.text ?? "";
             const jsonMatch = refineText.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
-              const refined = JSON.parse(jsonMatch[0]);
+              const refined = JSON.parse(jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) => ch === "\n" || ch === "\r" || ch === "\t" ? " " : ""));
               if (Array.isArray(refined) && refined.length > 0) {
                 industry.competitors = refined.slice(0, 5).map((c: { name: string; domain: string; strength: string }) => ({
                   name: c.name,
@@ -964,16 +1107,18 @@ Respond with ONLY a JSON array of exactly 5 competitors:
   }
 
   let competitorInventories: CompetitorInventory[] = [];
+  let trends: TrendsData = null;
+
   if (industry && industry.competitors.length > 0) {
-    console.log("Crawling competitor inventories...");
-    competitorInventories = await fetchCompetitorInventories(industry.competitors);
+    const top3 = industry.competitors.slice(0, 3);
+    const [inventories, trendsResult] = await Promise.all([
+      fetchCompetitorInventories(top3),
+      fetchGoogleTrends(brandName, industry.competitors),
+    ]);
+    competitorInventories = inventories;
+    trends = trendsResult;
     console.log("Competitor inventories found:", competitorInventories.length);
   }
-
-  const trends =
-    industry && industry.competitors.length > 0
-      ? await fetchGoogleTrends(brandName, industry.competitors)
-      : null;
 
   const result: AuditResult = {
     url,
