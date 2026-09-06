@@ -66,6 +66,12 @@ type InventoryCategory = {
   priceRange: string;
 };
 
+type CompetitorInventory = {
+  name: string;
+  domain: string;
+  categories: InventoryCategory[];
+};
+
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
@@ -95,6 +101,7 @@ type AuditData = {
   meta: Meta;
   industry: IndustryAnalysis;
   trends: TrendsData;
+  competitorInventories?: CompetitorInventory[];
 };
 
 function ScoreRing({ score, label }: { score: number | null; label: string }) {
@@ -435,6 +442,59 @@ function AuditResults({ data }: { data: AuditData }) {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {data.competitorInventories && data.competitorInventories.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Competitor Inventory Comparison
+            </p>
+            <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+              Crawled Data
+            </span>
+          </div>
+
+          <div className="mt-5 space-y-6">
+            {data.competitorInventories.map((comp, ci) => (
+              <div key={ci}>
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-electric/10 font-mono text-[10px] font-bold text-electric">
+                    {ci + 1}
+                  </span>
+                  <p className="text-[12px] font-medium text-ink">
+                    {comp.name}
+                  </p>
+                  <span className="font-mono text-[11px] text-muted/50">
+                    {comp.domain}
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-[11px] tracking-wide text-muted/60 uppercase">
+                        <th className="pb-2 pr-4 font-medium">Category</th>
+                        <th className="pb-2 pr-4 font-medium text-right">Products</th>
+                        <th className="pb-2 pr-4 font-medium text-right">Avg Price</th>
+                        <th className="pb-2 font-medium text-right">Range</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {comp.categories.map((cat, i) => (
+                        <tr key={i} className="border-b border-white/5">
+                          <td className="py-2.5 pr-4 text-ink">{cat.category}</td>
+                          <td className="py-2.5 pr-4 text-right font-mono text-electric">{cat.productCount.toLocaleString()}</td>
+                          <td className="py-2.5 pr-4 text-right font-mono text-ink/80">{cat.avgPrice}</td>
+                          <td className="py-2.5 text-right text-[12px] text-muted">{cat.priceRange}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const googleTrends = require("google-trends-api");
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS = 10;
@@ -66,6 +66,12 @@ type InventoryCategory = {
   priceRange: string;
 };
 
+type CompetitorInventory = {
+  name: string;
+  domain: string;
+  categories: InventoryCategory[];
+};
+
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
@@ -124,6 +130,7 @@ type AuditResult = {
   };
   industry: IndustryAnalysis;
   trends: TrendsData;
+  competitorInventories?: CompetitorInventory[];
 };
 
 async function fetchPageMeta(url: string) {
@@ -371,6 +378,101 @@ async function crawlSiteInventory(domain: string): Promise<string | null> {
   if (results.length === 0) return null;
   console.log("Inventory search data found:", results.reduce((a, r) => a + r.length, 0), "chars");
   return results.join("\n\n---\n\n");
+}
+
+async function fetchCompetitorInventories(
+  competitors: Competitor[],
+): Promise<CompetitorInventory[]> {
+  const crawlResults = await Promise.all(
+    competitors.map(async (c) => ({
+      name: c.name,
+      domain: c.domain,
+      data: await crawlSiteInventory(c.domain),
+    })),
+  );
+
+  const withData = crawlResults.filter((r) => r.data);
+  if (withData.length === 0) return [];
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return [];
+
+  const prompt = `Analyze the following search engine indexed product/collection page data for multiple competitor websites. For each website, extract real product categories, product counts, and pricing information directly from the indexed data.
+
+${withData.map((r) => `=== ${r.name} (${r.domain}) ===\n${r.data}`).join("\n\n")}
+
+For each competitor, extract their inventory categories based on what you find in the indexed data above. Look for:
+- Collection/category names from page titles and URLs
+- Product counts (e.g., "219 products", "1,166 items")
+- Price figures (e.g., "$5,000", "$500 - $10,000")
+
+Respond with ONLY valid JSON:
+{
+  "competitors": [
+    {
+      "domain": "example.com",
+      "categories": [
+        { "category": "Category Name", "productCount": 150, "avgPrice": "$89.50", "priceRange": "$12 - $450" }
+      ]
+    }
+  ]
+}
+
+Rules:
+- Extract categories from real collection/product page titles in the search results
+- Product counts should come from real numbers found in the data when available
+- Prices should come from real prices found in the data when available
+- If a competitor has no meaningful product data, return an empty categories array for them
+- Do NOT invent categories that don't appear in the indexed data`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4000,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text ?? "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return [];
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed.competitors)) return [];
+
+    return withData
+      .map((r) => {
+        const match = parsed.competitors.find(
+          (c: { domain: string }) => c.domain === r.domain,
+        );
+        return {
+          name: r.name,
+          domain: r.domain,
+          categories: Array.isArray(match?.categories)
+            ? match.categories.map((cat: InventoryCategory) => ({
+                category: cat.category,
+                productCount: cat.productCount,
+                avgPrice: cat.avgPrice,
+                priceRange: cat.priceRange,
+              }))
+            : [],
+        };
+      })
+      .filter((r) => r.categories.length > 0);
+  } catch (err) {
+    console.error("Competitor inventory analysis failed:", err);
+    return [];
+  }
 }
 
 function detectCountry(domain: string): string | null {
@@ -861,6 +963,13 @@ Respond with ONLY a JSON array of exactly 5 competitors:
 
   }
 
+  let competitorInventories: CompetitorInventory[] = [];
+  if (industry && industry.competitors.length > 0) {
+    console.log("Crawling competitor inventories...");
+    competitorInventories = await fetchCompetitorInventories(industry.competitors);
+    console.log("Competitor inventories found:", competitorInventories.length);
+  }
+
   const trends =
     industry && industry.competitors.length > 0
       ? await fetchGoogleTrends(brandName, industry.competitors)
@@ -873,6 +982,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     meta: metaData,
     industry,
     trends,
+    competitorInventories: competitorInventories.length > 0 ? competitorInventories : undefined,
   };
 
   if (name && email && process.env.RESEND_API_KEY) {
