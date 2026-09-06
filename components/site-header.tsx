@@ -94,39 +94,37 @@ export function SiteHeader() {
         </button>
       </div>
 
-      <div
-        id={menuId}
-        className={cn(
-          "mobile-menu fixed inset-0 z-40 overflow-y-auto bg-navy lg:hidden",
-          open && "is-open",
-        )}
-        aria-hidden={!open}
-      >
-        <nav
-          className="flex min-h-full flex-col justify-center gap-6 px-8 pt-20 pb-12"
-          aria-label="Mobile"
+      {open && (
+        <div
+          id={menuId}
+          className="fixed inset-0 z-40 overflow-y-auto lg:hidden"
+          style={{ backgroundColor: "#070e1c" }}
+          aria-hidden={!open}
         >
-          {site.nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              tabIndex={open ? 0 : -1}
-              className="mobile-menu-link font-display text-4xl text-ink sm:text-5xl"
-            >
-              {item.label}
-            </Link>
-          ))}
-          <Link
-            href="/#contact"
-            onClick={() => setOpen(false)}
-            tabIndex={open ? 0 : -1}
-            className="mobile-menu-link pt-4 text-[12px] tracking-[0.18em] text-electric uppercase"
+          <nav
+            className="flex min-h-full flex-col justify-center gap-6 px-8 pt-20 pb-12"
+            aria-label="Mobile"
           >
-            Work With Apereel
-          </Link>
-        </nav>
-      </div>
+            {site.nav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="font-display text-4xl text-ink sm:text-5xl"
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Link
+              href="/#contact"
+              onClick={() => setOpen(false)}
+              className="pt-4 text-[12px] tracking-[0.18em] text-electric uppercase"
+            >
+              Work With Apereel
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
