@@ -800,7 +800,7 @@ export function SiteAudit() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="Enter your website URL"
-              className="h-12 flex-1 rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+              className="h-12 w-full sm:flex-1 rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
               aria-label="Website URL"
             />
             <button

@@ -32,72 +32,74 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
-        scrolled || open
-          ? "border-b border-white/10 bg-navy/85 backdrop-blur-md"
-          : "border-b border-transparent bg-transparent",
-      )}
-    >
-      <div className="mx-auto flex h-[4.25rem] w-full max-w-[1120px] items-center justify-between px-6 sm:px-8">
-        <Link href="/" aria-label="Apereel home" className="relative z-50">
-          <Logo />
-        </Link>
+    <>
+      <header
+        className={cn(
+          "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
+          scrolled || open
+            ? "border-b border-white/10 bg-navy/85 backdrop-blur-md"
+            : "border-b border-transparent bg-transparent",
+        )}
+      >
+        <div className="mx-auto flex h-[4.25rem] w-full max-w-[1120px] items-center justify-between px-6 sm:px-8">
+          <Link href="/" aria-label="Apereel home" className="relative z-50">
+            <Logo />
+          </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex" aria-label="Primary">
-          {site.nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-[12px] font-medium tracking-[0.16em] text-muted uppercase transition-colors hover:text-ink"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+          <nav className="hidden items-center gap-8 lg:flex" aria-label="Primary">
+            {site.nav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-[12px] font-medium tracking-[0.16em] text-muted uppercase transition-colors hover:text-ink"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
 
-        <Link
-          href="/#contact"
-          className="press-scale hidden h-10 items-center rounded-full border border-electric/40 px-4 text-[11px] font-semibold tracking-[0.14em] text-electric uppercase transition-colors duration-200 hover:border-electric hover:bg-electric hover:text-navy lg:inline-flex"
-        >
-          Work With Apereel
-        </Link>
+          <Link
+            href="/#contact"
+            className="press-scale hidden h-10 items-center rounded-full border border-electric/40 px-4 text-[11px] font-semibold tracking-[0.14em] text-electric uppercase transition-colors duration-200 hover:border-electric hover:bg-electric hover:text-navy lg:inline-flex"
+          >
+            Work With Apereel
+          </Link>
 
-        <button
-          type="button"
-          className="relative z-50 flex h-10 w-10 items-center justify-center lg:hidden"
-          aria-expanded={open}
-          aria-controls={menuId}
-          aria-label={open ? "Close menu" : "Open menu"}
-          onClick={() => setOpen((value) => !value)}
-        >
-          <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
-          <span
-            className={cn(
-              "absolute h-px w-5 bg-ink transition-transform duration-200",
-              open ? "translate-y-0 rotate-45" : "-translate-y-1.5",
-            )}
-          />
-          <span
-            className={cn(
-              "absolute h-px w-5 bg-ink transition-opacity duration-200",
-              open ? "opacity-0" : "opacity-100",
-            )}
-          />
-          <span
-            className={cn(
-              "absolute h-px w-5 bg-ink transition-transform duration-200",
-              open ? "translate-y-0 -rotate-45" : "translate-y-1.5",
-            )}
-          />
-        </button>
-      </div>
+          <button
+            type="button"
+            className="relative z-50 flex h-10 w-10 items-center justify-center lg:hidden"
+            aria-expanded={open}
+            aria-controls={menuId}
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+            <span
+              className={cn(
+                "absolute h-px w-5 bg-ink transition-transform duration-200",
+                open ? "translate-y-0 rotate-45" : "-translate-y-1.5",
+              )}
+            />
+            <span
+              className={cn(
+                "absolute h-px w-5 bg-ink transition-opacity duration-200",
+                open ? "opacity-0" : "opacity-100",
+              )}
+            />
+            <span
+              className={cn(
+                "absolute h-px w-5 bg-ink transition-transform duration-200",
+                open ? "translate-y-0 -rotate-45" : "translate-y-1.5",
+              )}
+            />
+          </button>
+        </div>
+      </header>
 
       {open && (
         <div
           id={menuId}
-          className="fixed inset-0 z-40 overflow-y-auto lg:hidden"
+          className="fixed inset-0 z-[45] overflow-y-auto lg:hidden"
           style={{ backgroundColor: "#070e1c" }}
           aria-hidden={!open}
         >
@@ -125,6 +127,6 @@ export function SiteHeader() {
           </nav>
         </div>
       )}
-    </header>
+    </>
   );
 }
