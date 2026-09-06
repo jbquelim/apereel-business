@@ -329,6 +329,63 @@ async function fetchWebSearchResults(domain: string): Promise<string | null> {
   return null;
 }
 
+async function fetchCompetitorSearchResults(industry: string, subIndustry: string, domain: string): Promise<string | null> {
+  const queries = [
+    `${subIndustry} competitors ${domain}`,
+    `best ${subIndustry} online stores`,
+    `${industry} ${subIndustry} top companies`,
+  ];
+
+  const results: string[] = [];
+  for (const query of queries) {
+    try {
+      const res = await fetch(
+        `https://r.jina.ai/https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+        { headers: { Accept: "text/plain" }, signal: AbortSignal.timeout(12000) },
+      );
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (text && text.length > 200) {
+        results.push(`Search: "${query}"\n${text.slice(0, 3000)}`);
+      }
+    } catch {}
+    if (results.length >= 2) break;
+  }
+  return results.length > 0 ? results.join("\n\n---\n\n") : null;
+}
+
+async function crawlSitePages(url: string): Promise<string | null> {
+  const origin = new URL(url).origin;
+  const pagePaths = [
+    "/collections", "/collections/all", "/products",
+    "/shop", "/shop/all", "/catalog",
+    "/product-category", "/categories",
+  ];
+
+  const pages: string[] = [];
+  const fetches = pagePaths.map(async (path) => {
+    try {
+      const res = await fetch(`https://r.jina.ai/${origin}${path}`, {
+        headers: { Accept: "text/plain" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) return null;
+      const text = await res.text();
+      if (text && text.length > 300) {
+        return { path, content: text.slice(0, 4000) };
+      }
+    } catch {}
+    return null;
+  });
+
+  const results = await Promise.all(fetches);
+  for (const r of results) {
+    if (r) pages.push(`--- ${origin}${r.path} ---\n${r.content}`);
+  }
+
+  return pages.length > 0 ? pages.join("\n\n") : null;
+}
+
 async function fetchSiteClues(url: string): Promise<string | null> {
   const origin = new URL(url).origin;
   const targets = [`${origin}/sitemap.xml`, `${origin}/robots.txt`];
@@ -605,6 +662,7 @@ async function fetchIndustryAnalysis(
   bodyText?: string | null,
   structuredData?: string | null,
   googleSearchData?: string | null,
+  sitePages?: string | null,
 ): Promise<IndustryAnalysis> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
@@ -617,7 +675,8 @@ async function fetchIndustryAnalysis(
     `Domain: ${domain}`,
     bodyText && `Page content (excerpt):\n${bodyText}`,
     structuredData && `Structured data (JSON-LD):\n${structuredData}`,
-    googleSearchData && `\nVERIFIED DATA FROM GOOGLE SEARCH (use this as factual information):\n${googleSearchData}`,
+    googleSearchData && `\nVERIFIED DATA FROM WEB SEARCH (use this as factual information):\n${googleSearchData}`,
+    sitePages && `\nCRAWLED PRODUCT/CATEGORY PAGES FROM THE ACTUAL WEBSITE:\n${sitePages}`,
   ].filter(Boolean);
 
   const models = [
@@ -696,8 +755,8 @@ Rules:
 - "topPlayer": name the single strongest competitor (the market leader) in this space
 - For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
 - "totalKeywords": estimate the total number of organic keywords this domain likely ranks for
-- For "inventoryCategories": return an empty array [] — inventory data will be crawled separately from the actual website.
-- For "competitorInventory": return an empty array [] — competitor inventory will be crawled separately from their actual websites.`;
+- For "inventoryCategories": If CRAWLED PRODUCT/CATEGORY PAGES data is provided above, analyze it carefully to extract REAL product categories, count the actual products listed, and extract real prices shown on those pages. Each category should reflect what you actually see in the crawled data. If no crawled pages data is available, return an empty array [].
+- For "competitorInventory": return an empty array [] — competitor inventory will be gathered separately.`;
 
   try {
     let res: Response | null = null;
@@ -862,27 +921,29 @@ export async function POST(request: Request) {
     );
   }
 
-  const [meta, pageSpeed] = await Promise.all([
+  const domain = new URL(url).hostname;
+
+  const [meta, pageSpeed, webSearchData, sitePages] = await Promise.all([
     fetchPageMeta(url),
     fetchPageSpeed(url),
+    fetchWebSearchResults(domain),
+    crawlSitePages(url),
   ]);
 
-  const domain = new URL(url).hostname;
   let fallbackContent: string | null = null;
-  let googleSearchData: string | null = null;
+  let googleSearchData: string | null = webSearchData;
   if (!meta) {
     console.log("Direct fetch failed, trying fallbacks for", url);
-    const [jina, wayback, siteClues, webResults] = await Promise.all([
+    const [jina, wayback, siteClues] = await Promise.all([
       fetchViaJinaReader(url),
       fetchViaWaybackMachine(url),
       fetchSiteClues(url),
-      fetchWebSearchResults(domain),
     ]);
     fallbackContent = jina ?? wayback ?? siteClues;
-    googleSearchData = webResults;
     if (fallbackContent) console.log("Fallback content:", fallbackContent.length, "chars");
-    if (googleSearchData) console.log("Web search data:", googleSearchData.length, "chars");
   }
+  if (googleSearchData) console.log("Web search data:", googleSearchData.length, "chars");
+  if (sitePages) console.log("Site pages crawled:", sitePages.length, "chars");
 
   const hasAnyData = meta || pageSpeed || fallbackContent;
   const canRunAI = !!process.env.ANTHROPIC_API_KEY;
@@ -941,24 +1002,76 @@ export async function POST(request: Request) {
     meta?.bodyText ?? fallbackContent,
     meta?.structuredData ?? null,
     googleSearchData,
+    sitePages,
   );
 
   const brandName =
     meta?.title?.split(/[|\-–—]/)[0]?.trim() ??
     new URL(url).hostname.replace(/^www\./, "").split(".")[0];
 
-  const trends =
-    industry && industry.competitors.length > 0
-      ? await fetchGoogleTrends(brandName, industry.competitors)
-      : null;
-
   if (industry) {
-    const [siteInventory, ...compInventories] = await Promise.all([
+    const [competitorSearchData, siteInventory, ...compInventories] = await Promise.all([
+      fetchCompetitorSearchResults(industry.industry, industry.subIndustry, domain),
       crawlInventory(url),
       ...(industry.competitors.slice(0, 3).map((c) =>
         crawlCompetitorInventory(c.domain).then((inv) => inv ? { ...inv, name: c.name, domain: c.domain } : null)
       )),
     ]);
+
+    if (competitorSearchData) {
+      console.log("Competitor search data:", competitorSearchData.length, "chars");
+      try {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (apiKey) {
+          const refineRes = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01",
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 2000,
+              messages: [{
+                role: "user",
+                content: `You identified these competitors for ${domain} (a ${industry.subIndustry} business):
+${industry.competitors.map((c, i) => `${i + 1}. ${c.name} (${c.domain}) — ${c.strength}`).join("\n")}
+
+Here are REAL web search results about competitors in this space:
+${competitorSearchData}
+
+Based on the search results, refine the competitor list. Replace any competitors that are NOT direct competitors (e.g. brands/suppliers they sell, or unrelated businesses) with actual competitors found in search results.
+
+CRITICAL: Competitors must be the same TYPE of business. A retailer's competitors are other retailers, NOT brands they carry.
+
+Respond with ONLY a JSON array of exactly 5 competitors:
+[{"name": "Company", "domain": "example.com", "strength": "What makes them competitive"}]`,
+              }],
+            }),
+          });
+
+          if (refineRes.ok) {
+            const refineData = await refineRes.json();
+            const refineText = refineData.content?.[0]?.text ?? "";
+            const jsonMatch = refineText.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              const refined = JSON.parse(jsonMatch[0]);
+              if (Array.isArray(refined) && refined.length > 0) {
+                industry.competitors = refined.slice(0, 5).map((c: { name: string; domain: string; strength: string }) => ({
+                  name: c.name,
+                  domain: c.domain,
+                  strength: c.strength,
+                }));
+                console.log("Competitors refined with search data");
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Competitor refinement failed:", err);
+      }
+    }
 
     if (siteInventory && siteInventory.categories.length > 0) {
       industry.inventoryCategories = siteInventory.categories.map((c) => ({
@@ -985,6 +1098,11 @@ export async function POST(request: Request) {
       console.log("Crawled competitor inventory for", crawledCompetitors.length, "competitors");
     }
   }
+
+  const trends =
+    industry && industry.competitors.length > 0
+      ? await fetchGoogleTrends(brandName, industry.competitors)
+      : null;
 
   const result: AuditResult = {
     url,
