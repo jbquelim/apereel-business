@@ -357,29 +357,71 @@ type CrawledInventory = {
 
 async function crawlSitemapUrls(origin: string): Promise<string[]> {
   const urls: string[] = [];
-  const sitemapUrls = [
-    `${origin}/sitemap.xml`,
-    `${origin}/sitemap_index.xml`,
-    `${origin}/product-sitemap.xml`,
-    `${origin}/sitemap-products.xml`,
+  const sitemapPaths = [
+    "/sitemap.xml",
+    "/sitemap_index.xml",
+    "/product-sitemap.xml",
+    "/sitemap-products.xml",
   ];
 
-  for (const sitemapUrl of sitemapUrls) {
-    try {
-      const res = await fetch(sitemapUrl, {
+  for (const path of sitemapPaths) {
+    const sitemapUrl = `${origin}${path}`;
+    const fetchers = [
+      () => fetch(sitemapUrl, {
         signal: AbortSignal.timeout(8000),
         headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+      }),
+      () => fetch(`https://r.jina.ai/${sitemapUrl}`, {
+        headers: { Accept: "text/plain" },
+        signal: AbortSignal.timeout(10000),
+      }),
+    ];
+
+    for (const doFetch of fetchers) {
+      try {
+        const res = await doFetch();
+        if (!res.ok) continue;
+        const text = await res.text();
+        const locMatches = text.match(/<loc>([^<]+)<\/loc>/g) ?? [];
+        for (const m of locMatches) {
+          const u = m.replace(/<\/?loc>/g, "");
+          if (u.startsWith("http")) urls.push(u);
+        }
+        if (urls.length > 0) break;
+      } catch {}
+    }
+    if (urls.length > 0) break;
+  }
+
+  if (urls.length === 0) {
+    try {
+      const robotsRes = await fetch(`${origin}/robots.txt`, {
+        signal: AbortSignal.timeout(5000),
       });
-      if (!res.ok) continue;
-      const text = await res.text();
-      const locMatches = text.match(/<loc>([^<]+)<\/loc>/g) ?? [];
-      for (const m of locMatches) {
-        const url = m.replace(/<\/?loc>/g, "");
-        urls.push(url);
+      if (robotsRes.ok) {
+        const robotsTxt = await robotsRes.text();
+        const sitemapMatches = robotsTxt.match(/Sitemap:\s*(\S+)/gi) ?? [];
+        for (const match of sitemapMatches) {
+          const smUrl = match.replace(/Sitemap:\s*/i, "").trim();
+          try {
+            const res = await fetch(`https://r.jina.ai/${smUrl}`, {
+              headers: { Accept: "text/plain" },
+              signal: AbortSignal.timeout(10000),
+            });
+            if (!res.ok) continue;
+            const text = await res.text();
+            const locMatches = text.match(/<loc>([^<]+)<\/loc>/g) ?? [];
+            for (const m of locMatches) {
+              const u = m.replace(/<\/?loc>/g, "");
+              if (u.startsWith("http")) urls.push(u);
+            }
+            if (urls.length > 0) break;
+          } catch {}
+        }
       }
-      if (urls.length > 0) break;
     } catch {}
   }
+
   return urls;
 }
 
@@ -456,7 +498,9 @@ async function fetchProductPrices(urls: string[], maxSamples: number = 5): Promi
 async function crawlInventory(url: string): Promise<CrawledInventory | null> {
   try {
     const origin = new URL(url).origin;
+    console.log("Crawling sitemap for:", origin);
     const sitemapUrls = await crawlSitemapUrls(origin);
+    console.log("Sitemap URLs found:", sitemapUrls.length);
     if (sitemapUrls.length === 0) return null;
 
     const categorized = categorizeUrls(sitemapUrls);
