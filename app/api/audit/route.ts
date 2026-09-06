@@ -430,7 +430,7 @@ function extractCollectionLinks(markdown: string, domain: string): string[] {
       if (!u.hostname.replace(/^www\./, "").endsWith(root)) continue;
       const path = u.pathname.toLowerCase();
       if (!/(collections?|categor|shop|store|catalog|products?)/.test(path)) continue;
-      if (/(privacy|terms|blog|about|contact|account|cart|login|policy|faq|financ)/.test(path)) continue;
+      if (/(privacy|terms|blog|about|contact|account|cart|login|policy|faq|financ|bag|checkout|wishlist|search|gift-card|customer|help|service)/.test(path)) continue;
       if (/\.(webp|jpe?g|png|gif|svg|avif|ico|pdf|css|js|xml)$/.test(path)) continue;
       if (/wp-content|wp-includes|\/cdn\/|\/assets\//.test(path)) continue;
       const key = u.origin + u.pathname.replace(/\/$/, "");
