@@ -304,20 +304,29 @@ async function fetchViaWaybackMachine(url: string): Promise<string | null> {
 }
 
 async function fetchWebSearchResults(domain: string): Promise<string | null> {
-  try {
-    const searchUrl = `https://r.jina.ai/https://www.google.com/search?q=${encodeURIComponent(domain)}`;
-    const res = await fetch(searchUrl, {
-      headers: { Accept: "text/plain" },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) return null;
-    const text = await res.text();
-    if (!text || text.length < 100) return null;
-    return `Web search results for "${domain}":\n\n${text.slice(0, 6000)}`;
-  } catch (err) {
-    console.error("Web search failed:", err);
-    return null;
+  const sources = [
+    `https://r.jina.ai/https://html.duckduckgo.com/html/?q=${encodeURIComponent(domain)}`,
+    `https://r.jina.ai/https://www.google.com/search?q=${encodeURIComponent(domain)}`,
+  ];
+
+  for (const searchUrl of sources) {
+    try {
+      const res = await fetch(searchUrl, {
+        headers: { Accept: "text/plain" },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (!text || text.length < 200) continue;
+      console.log("Web search succeeded via:", searchUrl.includes("duckduckgo") ? "DuckDuckGo" : "Google");
+      return `Web search results for "${domain}":\n\n${text.slice(0, 6000)}`;
+    } catch {
+      continue;
+    }
   }
+
+  console.error("All web search sources failed for:", domain);
+  return null;
 }
 
 async function fetchSiteClues(url: string): Promise<string | null> {
