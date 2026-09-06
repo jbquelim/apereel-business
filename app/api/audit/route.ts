@@ -131,6 +131,7 @@ type AuditResult = {
   industry: IndustryAnalysis;
   trends: TrendsData;
   competitorInventories?: CompetitorInventory[];
+  inventoryInsights?: string[];
 };
 
 async function fetchPageMeta(url: string) {
@@ -418,6 +419,108 @@ async function fetchShopifyInventory(domain: string): Promise<string | null> {
   }
 }
 
+async function fetchTextDirect(url: string, timeoutMs = 8000): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": BROWSER_UA, Accept: "*/*" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
+function extractLocs(xml: string): string[] {
+  return [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((m) => m[1]);
+}
+
+async function fetchSitemapProductUrls(domain: string): Promise<string[]> {
+  const xml = await fetchTextDirect(`https://${domain}/sitemap.xml`, 10000);
+  if (!xml || !/<(urlset|sitemapindex)/i.test(xml)) return [];
+
+  let urls = extractLocs(xml);
+  if (/<sitemapindex/i.test(xml)) {
+    const children = [
+      ...urls.filter((u) => /product/i.test(u)),
+      ...urls.filter((u) => !/product/i.test(u) && !/image|blog|video|news/i.test(u)),
+    ].slice(0, 3);
+    const childXmls = await Promise.all(children.map((u) => fetchTextDirect(u, 10000)));
+    urls = (childXmls.filter(Boolean) as string[]).flatMap(extractLocs);
+  }
+
+  return urls.filter((u) => {
+    try {
+      return /\/(products?|item|p)\/[^/]+\/?$/.test(new URL(u).pathname);
+    } catch {
+      return false;
+    }
+  });
+}
+
+function groupProductUrls(productUrls: string[]): { label: string; urls: string[] }[] {
+  const groups = new Map<string, string[]>();
+  for (const u of productUrls) {
+    const slug = new URL(u).pathname.replace(/\/$/, "").split("/").pop() ?? "";
+    const token = slug.split("-")[0]?.toLowerCase() ?? "";
+    if (!token || /^\d+$/.test(token)) continue;
+    const list = groups.get(token) ?? [];
+    list.push(u);
+    groups.set(token, list);
+  }
+  return [...groups.entries()]
+    .filter(([, us]) => us.length >= 5)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 6)
+    .map(([label, us]) => ({ label, urls: us }));
+}
+
+async function sampleProductPrices(urls: string[], sampleSize: number): Promise<number[]> {
+  const step = Math.max(1, Math.floor(urls.length / sampleSize));
+  const picks = Array.from(
+    { length: Math.min(sampleSize, urls.length) },
+    (_, i) => urls[Math.min(i * step, urls.length - 1)],
+  );
+  const prices = await Promise.all(
+    picks.map(async (u) => {
+      const html = await fetchTextDirect(u, 6000);
+      if (!html) return null;
+      const m = html.match(/"price"\s*:\s*"?(\d[\d.]*)/);
+      const val = m ? parseFloat(m[1]) : NaN;
+      return Number.isFinite(val) && val > 0 ? val : null;
+    }),
+  );
+  return prices.filter((p): p is number => p !== null);
+}
+
+async function fetchSitemapInventory(domain: string): Promise<string | null> {
+  const productUrls = await fetchSitemapProductUrls(domain);
+  if (productUrls.length < 20) return null;
+
+  const groups = groupProductUrls(productUrls);
+  const lines: string[] = [`Total products in sitemap: ${productUrls.length.toLocaleString()}`];
+
+  const sampled = await Promise.all(
+    groups.slice(0, 4).map(async (g) => {
+      const prices = await sampleProductPrices(g.urls, 5);
+      const priceNote =
+        prices.length > 0
+          ? `, sampled live prices: ${prices.map((p) => `$${Math.round(p).toLocaleString()}`).join(", ")}`
+          : "";
+      return `Category slug "${g.label}": ${g.urls.length.toLocaleString()} products${priceNote}`;
+    }),
+  );
+  lines.push(...sampled);
+  for (const g of groups.slice(4)) {
+    lines.push(`Category slug "${g.label}": ${g.urls.length.toLocaleString()} products`);
+  }
+
+  console.log("Sitemap inventory found for", domain, "-", productUrls.length, "products");
+  return `Sitemap inventory analysis for ${domain} (product counts are EXACT, taken from the site's sitemap; prices sampled from live product pages — use counts verbatim, derive avg/range from the sampled prices):\n${lines.join("\n")}`;
+}
+
 function extractCollectionLinks(markdown: string, domain: string): string[] {
   const root = domain.replace(/^www\./, "");
   const linkRe = /\]\((https?:\/\/[^\s)]+)\)/g;
@@ -512,6 +615,9 @@ async function crawlSiteInventory(domain: string): Promise<string | null> {
   const shopify = await fetchShopifyInventory(domain);
   if (shopify) return shopify;
 
+  const sitemap = await fetchSitemapInventory(domain);
+  if (sitemap) return sitemap;
+
   const crawled = await crawlCollectionPages(domain);
   if (crawled) return crawled;
 
@@ -553,7 +659,7 @@ async function fetchCompetitorInventories(
 ${withData.map((r) => `=== ${r.name} (${r.domain}) ===\n${r.data}`).join("\n\n")}
 
 For each competitor, extract their inventory categories from the data above. Look for:
-- Collection/category names from page titles and URLs (clean them up: "Watches for Men and Women | Maison Birks" -> "Watches")
+- Collection/category names from page titles and URLs (clean them up: "Watches for Men and Women | Maison Birks" -> "Watches"; slug tokens like "watch" -> "Watches", brand tokens like "roberto" -> the brand, e.g. "Roberto Coin")
 - Product counts (e.g., "219 products", "620 Results", "1,166 items")
 - Price figures. When a page lists many individual prices, compute the range from min to max and estimate avgPrice as a typical mid value. Round-number sequences like $1,000, $5,000, $10,000, $20,000, $50,000 are price FILTER buckets, not products — use them only for the range, not the average.
 
@@ -619,6 +725,74 @@ Rules:
       .filter((r) => r.categories.length > 0);
   } catch (err) {
     console.error("Competitor inventory analysis failed:", err);
+    return [];
+  }
+}
+
+async function generateInventoryInsights(
+  domain: string,
+  subIndustry: string,
+  ownCategories: InventoryCategory[],
+  competitorInventories: CompetitorInventory[],
+): Promise<string[]> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return [];
+
+  const fmt = (cats: InventoryCategory[]) =>
+    cats
+      .map(
+        (c) =>
+          `- ${c.category}: ${c.productCount != null ? `${c.productCount.toLocaleString()} products` : "count unknown"}${c.avgPrice ? `, avg ${c.avgPrice}` : ""}${c.priceRange ? `, range ${c.priceRange}` : ""}`,
+      )
+      .join("\n");
+
+  const prompt = `You are a senior e-commerce strategy consultant. Below is real crawled inventory data for ${domain} (a ${subIndustry} business) and its competitors.
+
+${domain} (the client):
+${ownCategories.length > 0 ? fmt(ownCategories) : "(no inventory data extracted)"}
+
+${competitorInventories.map((c) => `${c.name} (${c.domain}):\n${fmt(c.categories)}`).join("\n\n")}
+
+Write 3-4 sharp, specific insights comparing the client's inventory depth and price positioning against these competitors, and what that means for their search visibility and revenue opportunity. Categories with deeper inventory tend to rank better organically — use that lens where relevant.
+
+Rules:
+- Reference REAL numbers from the data above (product counts, prices) — at least one number per insight
+- Each insight is one sentence, under 35 words, direct and confident, addressed to the client ("Your...")
+- No hedging words like "may", "might", "could potentially"
+- If the client has no inventory data, focus on what competitors' depth means for them
+
+Respond with ONLY a JSON array of strings:
+["insight one", "insight two", "insight three"]`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const text = data.content?.[0]?.text ?? "";
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+    const parsed = JSON.parse(
+      jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) =>
+        ch === "\n" || ch === "\r" || ch === "\t" ? " " : "",
+      ),
+    );
+    return Array.isArray(parsed)
+      ? parsed.filter((s): s is string => typeof s === "string" && s.length > 0).slice(0, 4)
+      : [];
+  } catch (err) {
+    console.error("Inventory insights failed:", err);
     return [];
   }
 }
@@ -802,7 +976,7 @@ Rules:
 - "topPlayer": name the single strongest competitor (the market leader) in this space
 - For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
 - "totalKeywords": estimate the total number of organic keywords this domain likely ranks for
-- For "inventoryCategories": If CRAWLED PRODUCT/COLLECTION DATA is provided above, extract REAL product categories, product counts, and price ranges directly from it. Look for collection names, "X products"/"X results" counts, and price figures (e.g. "$5,000 - $10,000", "219 products"). Use null for any field not present in the data — never invent numbers — and omit categories where all of productCount, avgPrice and priceRange would be null. If no crawled data is available, return an empty array [].`;
+- For "inventoryCategories": If CRAWLED PRODUCT/COLLECTION DATA is provided above, extract REAL product categories, product counts, and price ranges directly from it. Look for collection names, "X products"/"X results" counts, and price figures (e.g. "$5,000 - $10,000", "219 products"). Sitemap data marked EXACT should be copied verbatim; rename slug tokens to proper labels ("watch" -> "Watches", brand tokens like "roberto" -> "Roberto Coin"). When sampled live prices are given, derive avgPrice (typical mid value) and priceRange (min - max) from them. Use null for any field not present in the data — never invent numbers — and omit categories where all of productCount, avgPrice and priceRange would be null. If no crawled data is available, return an empty array [].`;
 
   try {
     let res: Response | null = null;
@@ -1127,6 +1301,20 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     console.log("Competitor inventories found:", competitorInventories.length);
   }
 
+  let inventoryInsights: string[] = [];
+  if (
+    industry &&
+    (industry.inventoryCategories.length > 0 || competitorInventories.length > 0)
+  ) {
+    inventoryInsights = await generateInventoryInsights(
+      domain,
+      industry.subIndustry,
+      industry.inventoryCategories,
+      competitorInventories,
+    );
+    console.log("Inventory insights generated:", inventoryInsights.length);
+  }
+
   const result: AuditResult = {
     url,
     scores,
@@ -1135,6 +1323,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     industry,
     trends,
     competitorInventories: competitorInventories.length > 0 ? competitorInventories : undefined,
+    inventoryInsights: inventoryInsights.length > 0 ? inventoryInsights : undefined,
   };
 
   if (name && email && process.env.RESEND_API_KEY) {

@@ -102,6 +102,7 @@ type AuditData = {
   industry: IndustryAnalysis;
   trends: TrendsData;
   competitorInventories?: CompetitorInventory[];
+  inventoryInsights?: string[];
 };
 
 function ScoreRing({ score, label }: { score: number | null; label: string }) {
@@ -495,6 +496,29 @@ function AuditResults({ data }: { data: AuditData }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {data.inventoryInsights && data.inventoryInsights.length > 0 && (
+        <div className="rounded-2xl border border-electric/20 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Inventory Gap Analysis
+            </p>
+            <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+              What This Means
+            </span>
+          </div>
+          <ul className="mt-5 space-y-4">
+            {data.inventoryInsights.map((insight, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-electric/10 font-mono text-[10px] font-bold text-electric">
+                  {i + 1}
+                </span>
+                <p className="text-sm leading-relaxed text-ink/90">{insight}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
