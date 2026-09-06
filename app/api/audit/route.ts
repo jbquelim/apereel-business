@@ -748,15 +748,17 @@ async function generateInventoryInsights(
 
   const prompt = `You are a senior e-commerce strategy consultant. Below is real crawled inventory data for ${domain} (a ${subIndustry} business) and its competitors.
 
-${domain} (the client):
+=== THE CLIENT: ${domain} — every category below BELONGS TO THE CLIENT ===
 ${ownCategories.length > 0 ? fmt(ownCategories) : "(no inventory data extracted)"}
 
+=== COMPETITORS (NOT the client) ===
 ${competitorInventories.map((c) => `${c.name} (${c.domain}):\n${fmt(c.categories)}`).join("\n\n")}
 
 Write 3-4 sharp, specific insights comparing the client's inventory depth and price positioning against these competitors, and what that means for their search visibility and revenue opportunity. Categories with deeper inventory tend to rank better organically — use that lens where relevant.
 
 Rules:
 - Reference REAL numbers from the data above (product counts, prices) — at least one number per insight
+- Before writing each insight, verify which business each number belongs to: "Your X" must only reference categories in THE CLIENT section, and competitor numbers must be attributed to the right competitor by name
 - Each insight is one sentence, under 35 words, direct and confident, addressed to the client ("Your...")
 - No hedging words like "may", "might", "could potentially"
 - If the client has no inventory data, focus on what competitors' depth means for them
@@ -765,20 +767,25 @@ Respond with ONLY a JSON array of strings:
 ["insight one", "insight two", "insight three"]`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!res.ok) return [];
+    let res: Response | null = null;
+    for (const model of ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"]) {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (res.ok) break;
+      if (res.status !== 404) break;
+    }
+    if (!res || !res.ok) return [];
     const data = await res.json();
     const text = data.content?.[0]?.text ?? "";
     const jsonMatch = text.match(/\[[\s\S]*\]/);
