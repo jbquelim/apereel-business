@@ -365,7 +365,7 @@ const BROWSER_UA =
 
 async function fetchShopifyInventory(domain: string): Promise<string | null> {
   try {
-    const res = await fetch(`https://${domain}/collections.json?limit=10`, {
+    const res = await fetch(`https://${domain}/collections.json?limit=250`, {
       headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
       signal: AbortSignal.timeout(6000),
     });
@@ -373,8 +373,14 @@ async function fetchShopifyInventory(domain: string): Promise<string | null> {
     const collections = (await res.json())?.collections;
     if (!Array.isArray(collections) || collections.length === 0) return null;
 
+    type ShopifyCollection = { handle: string; title: string; products_count?: number };
+    const biggest = (collections as ShopifyCollection[])
+      .filter((c) => (c.products_count ?? 0) > 0)
+      .sort((a, b) => (b.products_count ?? 0) - (a.products_count ?? 0));
+    const picked = biggest.length > 0 ? biggest : (collections as ShopifyCollection[]);
+
     const lines = (await Promise.all(
-      collections.slice(0, 6).map(async (col: { handle: string; title: string }) => {
+      picked.slice(0, 6).map(async (col: ShopifyCollection) => {
         try {
           const pRes = await fetch(
             `https://${domain}/collections/${col.handle}/products.json?limit=250`,
@@ -391,7 +397,8 @@ async function fetchShopifyInventory(domain: string): Promise<string | null> {
               (p.variants ?? []).map((v) => parseFloat(v.price)),
             )
             .filter((n: number) => Number.isFinite(n) && n > 0);
-          const count = `${products.length}${products.length === 250 ? "+" : ""}`;
+          const exactCount = col.products_count ?? products.length;
+          const count = `${exactCount}${!col.products_count && products.length === 250 ? "+" : ""}`;
           if (prices.length === 0) return `Collection "${col.title}": ${count} products`;
           const min = Math.min(...prices);
           const max = Math.max(...prices);
