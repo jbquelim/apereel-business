@@ -97,13 +97,13 @@ export function SiteHeader() {
       <div
         id={menuId}
         className={cn(
-          "mobile-menu fixed inset-0 z-40 bg-navy lg:hidden",
+          "mobile-menu fixed inset-0 z-40 overflow-y-auto bg-navy lg:hidden",
           open && "is-open",
         )}
         aria-hidden={!open}
       >
         <nav
-          className="flex h-full flex-col justify-center gap-6 px-8"
+          className="flex min-h-full flex-col justify-center gap-6 px-8 pt-20 pb-12"
           aria-label="Mobile"
         >
           {site.nav.map((item) => (

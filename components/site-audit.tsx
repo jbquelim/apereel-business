@@ -410,8 +410,8 @@ function AuditResults({ data }: { data: AuditData }) {
             <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
               Inventory & Pricing Intelligence
             </p>
-            <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-[10px] tracking-wide text-muted/60 uppercase">
-              Estimate
+            <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+              Crawled Data
             </span>
           </div>
 

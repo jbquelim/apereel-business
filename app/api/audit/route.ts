@@ -350,6 +350,162 @@ async function fetchSiteClues(url: string): Promise<string | null> {
   return results.length > 0 ? results.join("\n\n") : null;
 }
 
+type CrawledInventory = {
+  categories: { category: string; productCount: number; avgPrice: string; priceRange: string; sampleProducts: string[] }[];
+  totalProducts: number;
+};
+
+async function crawlSitemapUrls(origin: string): Promise<string[]> {
+  const urls: string[] = [];
+  const sitemapUrls = [
+    `${origin}/sitemap.xml`,
+    `${origin}/sitemap_index.xml`,
+    `${origin}/product-sitemap.xml`,
+    `${origin}/sitemap-products.xml`,
+  ];
+
+  for (const sitemapUrl of sitemapUrls) {
+    try {
+      const res = await fetch(sitemapUrl, {
+        signal: AbortSignal.timeout(8000),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+      });
+      if (!res.ok) continue;
+      const text = await res.text();
+      const locMatches = text.match(/<loc>([^<]+)<\/loc>/g) ?? [];
+      for (const m of locMatches) {
+        const url = m.replace(/<\/?loc>/g, "");
+        urls.push(url);
+      }
+      if (urls.length > 0) break;
+    } catch {}
+  }
+  return urls;
+}
+
+function categorizeUrls(urls: string[]): Record<string, string[]> {
+  const categories: Record<string, string[]> = {};
+  const productPatterns = [
+    /\/product[s]?\//i,
+    /\/shop\//i,
+    /\/collection[s]?\//i,
+    /\/categor[yies]+\//i,
+    /\/item[s]?\//i,
+    /\/catalog\//i,
+    /\/p\//i,
+  ];
+
+  for (const url of urls) {
+    const path = new URL(url).pathname.toLowerCase();
+    if (path === "/" || path === "") continue;
+
+    const segments = path.split("/").filter(Boolean);
+    if (segments.length < 1) continue;
+
+    let isProduct = productPatterns.some((p) => p.test(path));
+    if (!isProduct && segments.length >= 2) isProduct = true;
+
+    if (isProduct && segments.length >= 2) {
+      const category = segments[segments.length - 2]
+        .replace(/[-_]/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      if (!categories[category]) categories[category] = [];
+      categories[category].push(url);
+    } else if (segments.length === 1) {
+      const cat = segments[0].replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(url);
+    }
+  }
+  return categories;
+}
+
+async function fetchProductPrices(urls: string[], maxSamples: number = 5): Promise<{ prices: number[]; names: string[] }> {
+  const prices: number[] = [];
+  const names: string[] = [];
+  const sampled = urls.slice(0, maxSamples);
+
+  for (const url of sampled) {
+    try {
+      const res = await fetch(`https://r.jina.ai/${url}`, {
+        headers: { Accept: "text/plain" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) continue;
+      const text = await res.text();
+
+      const priceMatch = text.match(/\$[\d,]+\.?\d*/g);
+      if (priceMatch) {
+        for (const p of priceMatch.slice(0, 3)) {
+          const num = parseFloat(p.replace(/[$,]/g, ""));
+          if (num > 0 && num < 1000000) prices.push(num);
+        }
+      }
+
+      const titleMatch = text.match(/^Title:\s*(.+)/m);
+      if (titleMatch) {
+        const name = titleMatch[1].split(/[|\-–]/)[0].trim();
+        if (name.length > 2 && name.length < 100) names.push(name);
+      }
+    } catch {}
+  }
+
+  return { prices, names };
+}
+
+async function crawlInventory(url: string): Promise<CrawledInventory | null> {
+  try {
+    const origin = new URL(url).origin;
+    const sitemapUrls = await crawlSitemapUrls(origin);
+    if (sitemapUrls.length === 0) return null;
+
+    const categorized = categorizeUrls(sitemapUrls);
+    const categoryNames = Object.keys(categorized);
+    if (categoryNames.length === 0) return null;
+
+    const sorted = categoryNames
+      .map((name) => ({ name, urls: categorized[name] }))
+      .filter((c) => c.urls.length >= 2)
+      .sort((a, b) => b.urls.length - a.urls.length)
+      .slice(0, 10);
+
+    const categories = await Promise.all(
+      sorted.map(async (cat) => {
+        const { prices, names } = await fetchProductPrices(cat.urls, 3);
+        const avg = prices.length > 0
+          ? `$${(prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(0)}`
+          : "N/A";
+        const range = prices.length >= 2
+          ? `$${Math.min(...prices).toFixed(0)} - $${Math.max(...prices).toFixed(0)}`
+          : prices.length === 1 ? `$${prices[0].toFixed(0)}` : "N/A";
+        return {
+          category: cat.name,
+          productCount: cat.urls.length,
+          avgPrice: avg,
+          priceRange: range,
+          sampleProducts: names.slice(0, 3),
+        };
+      })
+    );
+
+    return {
+      categories,
+      totalProducts: sitemapUrls.filter((u) => {
+        const p = new URL(u).pathname;
+        return p !== "/" && p.split("/").filter(Boolean).length >= 2;
+      }).length,
+    };
+  } catch (err) {
+    console.error("Inventory crawl failed:", err);
+    return null;
+  }
+}
+
+async function crawlCompetitorInventory(domain: string): Promise<CrawledInventory | null> {
+  const origin = `https://${domain}`;
+  return crawlInventory(origin);
+}
+
 async function fetchPageSpeed(url: string) {
   const categories = [
     "performance",
@@ -496,8 +652,8 @@ Rules:
 - "topPlayer": name the single strongest competitor (the market leader) in this space
 - For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
 - "totalKeywords": estimate the total number of organic keywords this domain likely ranks for
-- For "inventoryCategories": identify the main product/service categories this business offers. For each category estimate the number of products/items, average price, and price range. Use evidence from page content, sitemap data, structured data, and search results. For B2B or non-ecommerce businesses, estimate service categories and typical contract/project values instead.
-- For "competitorInventory": for the top 3 competitors, estimate their product/service categories, product counts, and average pricing. Use your industry knowledge to make informed estimates. The categories should match or overlap with the analyzed site's categories for easy comparison.`;
+- For "inventoryCategories": return an empty array [] — inventory data will be crawled separately from the actual website.
+- For "competitorInventory": return an empty array [] — competitor inventory will be crawled separately from their actual websites.`;
 
   try {
     let res: Response | null = null;
@@ -751,6 +907,40 @@ export async function POST(request: Request) {
     industry && industry.competitors.length > 0
       ? await fetchGoogleTrends(brandName, industry.competitors)
       : null;
+
+  if (industry) {
+    const [siteInventory, ...compInventories] = await Promise.all([
+      crawlInventory(url),
+      ...(industry.competitors.slice(0, 3).map((c) =>
+        crawlCompetitorInventory(c.domain).then((inv) => inv ? { ...inv, name: c.name, domain: c.domain } : null)
+      )),
+    ]);
+
+    if (siteInventory && siteInventory.categories.length > 0) {
+      industry.inventoryCategories = siteInventory.categories.map((c) => ({
+        category: c.category,
+        productCount: c.productCount,
+        avgPrice: c.avgPrice,
+        priceRange: c.priceRange,
+      }));
+      console.log("Crawled site inventory:", siteInventory.totalProducts, "products in", siteInventory.categories.length, "categories");
+    }
+
+    const crawledCompetitors = compInventories.filter(Boolean) as (CrawledInventory & { name: string; domain: string })[];
+    if (crawledCompetitors.length > 0) {
+      industry.competitorInventory = crawledCompetitors.map((comp) => ({
+        name: comp.name,
+        domain: comp.domain,
+        categories: comp.categories.map((c) => ({
+          category: c.category,
+          estimatedProducts: c.productCount,
+          avgPrice: c.avgPrice,
+        })),
+        totalProducts: comp.totalProducts,
+      }));
+      console.log("Crawled competitor inventory for", crawledCompetitors.length, "competitors");
+    }
+  }
 
   const result: AuditResult = {
     url,
