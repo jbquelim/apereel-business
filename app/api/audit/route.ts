@@ -329,11 +329,12 @@ async function fetchWebSearchResults(domain: string): Promise<string | null> {
   return null;
 }
 
-async function fetchCompetitorSearchResults(industry: string, subIndustry: string, domain: string): Promise<string | null> {
+async function fetchCompetitorSearchResults(industry: string, subIndustry: string, domain: string, country?: string | null): Promise<string | null> {
+  const geo = country || "";
   const queries = [
     `${subIndustry} competitors ${domain}`,
-    `best ${subIndustry} online stores`,
-    `${industry} ${subIndustry} top companies`,
+    `best ${subIndustry} ${geo}`.trim(),
+    `top ${subIndustry} stores ${geo}`.trim(),
   ];
 
   const results: string[] = [];
@@ -354,36 +355,44 @@ async function fetchCompetitorSearchResults(industry: string, subIndustry: strin
   return results.length > 0 ? results.join("\n\n---\n\n") : null;
 }
 
-async function crawlSitePages(url: string): Promise<string | null> {
-  const origin = new URL(url).origin;
-  const pagePaths = [
-    "/collections", "/collections/all", "/products",
-    "/shop", "/shop/all", "/catalog",
-    "/product-category", "/categories",
+async function crawlSiteInventory(domain: string): Promise<string | null> {
+  const queries = [
+    `site:${domain} collections`,
+    `site:${domain} products price`,
   ];
 
-  const pages: string[] = [];
-  const fetches = pagePaths.map(async (path) => {
+  const results: string[] = [];
+  for (const query of queries) {
     try {
-      const res = await fetch(`https://r.jina.ai/${origin}${path}`, {
-        headers: { Accept: "text/plain" },
-        signal: AbortSignal.timeout(10000),
-      });
-      if (!res.ok) return null;
+      const res = await fetch(
+        `https://r.jina.ai/https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+        { headers: { Accept: "text/plain" }, signal: AbortSignal.timeout(12000) },
+      );
+      if (!res.ok) continue;
       const text = await res.text();
-      if (text && text.length > 300) {
-        return { path, content: text.slice(0, 4000) };
+      if (text && text.length > 200) {
+        results.push(`Search: "${query}"\n${text.slice(0, 5000)}`);
       }
     } catch {}
-    return null;
-  });
-
-  const results = await Promise.all(fetches);
-  for (const r of results) {
-    if (r) pages.push(`--- ${origin}${r.path} ---\n${r.content}`);
   }
 
-  return pages.length > 0 ? pages.join("\n\n") : null;
+  if (results.length === 0) return null;
+  console.log("Inventory search data found:", results.reduce((a, r) => a + r.length, 0), "chars");
+  return results.join("\n\n---\n\n");
+}
+
+function detectCountry(domain: string): string | null {
+  const tld = domain.split(".").pop()?.toLowerCase();
+  const tldMap: Record<string, string> = {
+    ca: "Canada", us: "United States", uk: "United Kingdom", au: "Australia",
+    nz: "New Zealand", de: "Germany", fr: "France", it: "Italy",
+    es: "Spain", nl: "Netherlands", be: "Belgium", jp: "Japan",
+    kr: "South Korea", sg: "Singapore", hk: "Hong Kong", in: "India",
+    br: "Brazil", mx: "Mexico", za: "South Africa", ie: "Ireland",
+    ph: "Philippines", ae: "United Arab Emirates",
+  };
+  if (tld && tldMap[tld]) return tldMap[tld];
+  return null;
 }
 
 async function fetchSiteClues(url: string): Promise<string | null> {
@@ -662,7 +671,8 @@ async function fetchIndustryAnalysis(
   bodyText?: string | null,
   structuredData?: string | null,
   googleSearchData?: string | null,
-  sitePages?: string | null,
+  inventorySearchData?: string | null,
+  country?: string | null,
 ): Promise<IndustryAnalysis> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
@@ -673,10 +683,11 @@ async function fetchIndustryAnalysis(
     description && `Description: ${description}`,
     h1 && `H1: ${h1}`,
     `Domain: ${domain}`,
+    country && `Country: ${country}`,
     bodyText && `Page content (excerpt):\n${bodyText}`,
     structuredData && `Structured data (JSON-LD):\n${structuredData}`,
     googleSearchData && `\nVERIFIED DATA FROM WEB SEARCH (use this as factual information):\n${googleSearchData}`,
-    sitePages && `\nCRAWLED PRODUCT/CATEGORY PAGES FROM THE ACTUAL WEBSITE:\n${sitePages}`,
+    inventorySearchData && `\nINDEXED PRODUCT/COLLECTION PAGES FROM SEARCH ENGINES (real data from this website):\n${inventorySearchData}`,
   ].filter(Boolean);
 
   const models = [
@@ -700,6 +711,7 @@ Even if the main page content is missing, blocked, or shows a CAPTCHA/challenge 
 NOTE: No external search data was available and the main page content may be limited. If you have enough signals from the title, description, domain name, or page content to identify the business, proceed with the analysis. Only return insufficient data if you truly cannot determine what the business does.`}
 
 CRITICAL: Competitors must be DIRECT competitors — businesses of the same type that compete for the same customers. NOT brands, suppliers, or parent companies they may carry.
+${country ? `\nGEOGRAPHIC CONSTRAINT: This business operates in ${country}. ALL competitors MUST also operate in ${country}. Do NOT include competitors from other countries. Only list businesses that have a physical or strong online presence serving ${country} customers.` : ""}
 
 Examples of correct competitor identification:
 - A jewelry RETAILER's competitors are other jewelry RETAILERS (e.g. Birks, Knar Jewellery, Mejuri), NOT jewelry brands they sell (NOT Cartier, Rolex, Tiffany)
@@ -747,7 +759,7 @@ Respond with ONLY valid JSON, no markdown formatting:
 Rules:
 - Do NOT include the analyzed website itself in the competitors list
 - Competitors must be the same TYPE of business (retailer vs retailer, service vs service)
-- Prefer competitors in the same geographic market when the business is local/regional
+- Competitors MUST be in the same geographic market as the business${country ? ` (${country})` : ""}
 - Be specific with the sub-industry (e.g. "Fine Jewelry Retail" not just "Retail")
 - Keep each "strength" under 15 words
 - The "insight" should read like strategic consulting advice, not generic filler
@@ -755,7 +767,7 @@ Rules:
 - "topPlayer": name the single strongest competitor (the market leader) in this space
 - For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
 - "totalKeywords": estimate the total number of organic keywords this domain likely ranks for
-- For "inventoryCategories": If CRAWLED PRODUCT/CATEGORY PAGES data is provided above, analyze it carefully to extract REAL product categories, count the actual products listed, and extract real prices shown on those pages. Each category should reflect what you actually see in the crawled data. If no crawled pages data is available, return an empty array [].
+- For "inventoryCategories": If INDEXED PRODUCT/COLLECTION PAGES data is provided above, analyze it to extract REAL product categories, product counts, and price ranges directly from the search engine indexed data. Look for collection names, "X products" counts, and price figures (e.g. "$5,000 - $10,000", "219 products"). Each category should reflect what you actually find in the indexed data. If no indexed data is available, return an empty array [].
 - For "competitorInventory": return an empty array [] — competitor inventory will be gathered separately.`;
 
   try {
@@ -923,11 +935,13 @@ export async function POST(request: Request) {
 
   const domain = new URL(url).hostname;
 
-  const [meta, pageSpeed, webSearchData, sitePages] = await Promise.all([
+  const country = detectCountry(domain);
+
+  const [meta, pageSpeed, webSearchData, inventorySearchData] = await Promise.all([
     fetchPageMeta(url),
     fetchPageSpeed(url),
     fetchWebSearchResults(domain),
-    crawlSitePages(url),
+    crawlSiteInventory(domain),
   ]);
 
   let fallbackContent: string | null = null;
@@ -943,7 +957,8 @@ export async function POST(request: Request) {
     if (fallbackContent) console.log("Fallback content:", fallbackContent.length, "chars");
   }
   if (googleSearchData) console.log("Web search data:", googleSearchData.length, "chars");
-  if (sitePages) console.log("Site pages crawled:", sitePages.length, "chars");
+  if (inventorySearchData) console.log("Inventory search data:", inventorySearchData.length, "chars");
+  if (country) console.log("Detected country:", country);
 
   const hasAnyData = meta || pageSpeed || fallbackContent;
   const canRunAI = !!process.env.ANTHROPIC_API_KEY;
@@ -1002,7 +1017,8 @@ export async function POST(request: Request) {
     meta?.bodyText ?? fallbackContent,
     meta?.structuredData ?? null,
     googleSearchData,
-    sitePages,
+    inventorySearchData,
+    country,
   );
 
   const brandName =
@@ -1011,7 +1027,7 @@ export async function POST(request: Request) {
 
   if (industry) {
     const [competitorSearchData, siteInventory, ...compInventories] = await Promise.all([
-      fetchCompetitorSearchResults(industry.industry, industry.subIndustry, domain),
+      fetchCompetitorSearchResults(industry.industry, industry.subIndustry, domain, country),
       crawlInventory(url),
       ...(industry.competitors.slice(0, 3).map((c) =>
         crawlCompetitorInventory(c.domain).then((inv) => inv ? { ...inv, name: c.name, domain: c.domain } : null)
@@ -1035,7 +1051,7 @@ export async function POST(request: Request) {
               max_tokens: 2000,
               messages: [{
                 role: "user",
-                content: `You identified these competitors for ${domain} (a ${industry.subIndustry} business):
+                content: `You identified these competitors for ${domain} (a ${industry.subIndustry} business${country ? ` in ${country}` : ""}):
 ${industry.competitors.map((c, i) => `${i + 1}. ${c.name} (${c.domain}) — ${c.strength}`).join("\n")}
 
 Here are REAL web search results about competitors in this space:
@@ -1043,7 +1059,9 @@ ${competitorSearchData}
 
 Based on the search results, refine the competitor list. Replace any competitors that are NOT direct competitors (e.g. brands/suppliers they sell, or unrelated businesses) with actual competitors found in search results.
 
-CRITICAL: Competitors must be the same TYPE of business. A retailer's competitors are other retailers, NOT brands they carry.
+CRITICAL RULES:
+- Competitors must be the same TYPE of business. A retailer's competitors are other retailers, NOT brands they carry.
+- Do NOT include ${domain} itself as a competitor.${country ? `\n- ALL competitors MUST operate in ${country}. Do NOT include businesses from other countries.` : ""}
 
 Respond with ONLY a JSON array of exactly 5 competitors:
 [{"name": "Company", "domain": "example.com", "strength": "What makes them competitive"}]`,
