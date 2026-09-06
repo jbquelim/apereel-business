@@ -17,14 +17,14 @@ const rankings = [
     volume: "22,200",
   },
   {
-    label: "International luxury brand",
+    label: "International brand",
     position: 2,
     kd: 44,
     difficulty: "Hard",
     volume: "135,000",
   },
   {
-    label: "Luxury brand name",
+    label: "Brand name",
     position: 2,
     kd: 42,
     difficulty: "Hard",
@@ -103,7 +103,7 @@ export function KeywordPerformance() {
                       {r.difficulty}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm font-medium text-ink">{r.label}</p>
+                  <p className="mt-3 text-sm font-medium text-electric">{r.label}</p>
                   <p className="mt-1 text-xs text-muted">
                     {r.volume} people search this every month
                   </p>
