@@ -66,13 +66,6 @@ type InventoryCategory = {
   priceRange: string;
 };
 
-type CompetitorInventory = {
-  name: string;
-  domain: string;
-  categories: { category: string; estimatedProducts: number; avgPrice: string }[];
-  totalProducts: number;
-};
-
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
@@ -83,7 +76,6 @@ type IndustryAnalysis = {
   keywords: Keyword[];
   totalKeywords: number;
   inventoryCategories: InventoryCategory[];
-  competitorInventory: CompetitorInventory[];
 } | null;
 
 type TrendPoint = {
@@ -546,16 +538,6 @@ Respond with ONLY valid JSON, no markdown formatting:
   "inventoryCategories": [
     { "category": "Category Name", "productCount": 150, "avgPrice": "$89.50", "priceRange": "$12 - $450" }
   ],
-  "competitorInventory": [
-    {
-      "name": "Competitor Name",
-      "domain": "competitor.com",
-      "categories": [
-        { "category": "Category Name", "estimatedProducts": 500, "avgPrice": "$95.00" }
-      ],
-      "totalProducts": 2500
-    }
-  ]
 }
 
 Rules:
@@ -569,8 +551,7 @@ Rules:
 - "topPlayer": name the single strongest competitor (the market leader) in this space
 - For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
 - "totalKeywords": estimate the total number of organic keywords this domain likely ranks for
-- For "inventoryCategories": If INDEXED PRODUCT/COLLECTION PAGES data is provided above, analyze it to extract REAL product categories, product counts, and price ranges directly from the search engine indexed data. Look for collection names, "X products" counts, and price figures (e.g. "$5,000 - $10,000", "219 products"). Each category should reflect what you actually find in the indexed data. If no indexed data is available, return an empty array [].
-- For "competitorInventory": return an empty array [] — competitor inventory will be gathered separately.`;
+- For "inventoryCategories": If INDEXED PRODUCT/COLLECTION PAGES data is provided above, analyze it to extract REAL product categories, product counts, and price ranges directly from the search engine indexed data. Look for collection names, "X products" counts, and price figures (e.g. "$5,000 - $10,000", "219 products"). Each category should reflect what you actually find in the indexed data. If no indexed data is available, return an empty array [].`;
 
   try {
     let res: Response | null = null;
@@ -647,20 +628,6 @@ Rules:
             productCount: cat.productCount,
             avgPrice: cat.avgPrice,
             priceRange: cat.priceRange,
-          }))
-        : [],
-      competitorInventory: Array.isArray(parsed.competitorInventory)
-        ? parsed.competitorInventory.slice(0, 3).map((comp: CompetitorInventory) => ({
-            name: comp.name,
-            domain: comp.domain,
-            categories: Array.isArray(comp.categories)
-              ? comp.categories.map((cat: { category: string; estimatedProducts: number; avgPrice: string }) => ({
-                  category: cat.category,
-                  estimatedProducts: cat.estimatedProducts,
-                  avgPrice: cat.avgPrice,
-                }))
-              : [],
-            totalProducts: comp.totalProducts,
           }))
         : [],
     };
@@ -892,48 +859,6 @@ Respond with ONLY a JSON array of exactly 5 competitors:
       }
     }
 
-    const compInvResults = await Promise.all(
-      industry.competitors.slice(0, 3).map(async (c) => {
-        try {
-          const res = await fetch(
-            `https://r.jina.ai/https://html.duckduckgo.com/html/?q=${encodeURIComponent(`site:${c.domain} products OR collections`)}`,
-            { headers: { Accept: "text/plain" }, signal: AbortSignal.timeout(12000) },
-          );
-          if (!res.ok) return null;
-          const text = await res.text();
-          if (!text || text.length < 200) return null;
-
-          const productCounts = text.match(/(\d[\d,]*)\s*products?/gi) ?? [];
-          const prices = text.match(/\$[\d,]+(?:\.\d{2})?/g) ?? [];
-          const categories = text.match(/(?:Collection|Category|Shop)[:\s]+([A-Z][^|\n]{2,40})/gi) ?? [];
-
-          const totalProducts = productCounts.reduce((max, m) => {
-            const n = parseInt(m.replace(/[^\d]/g, ""));
-            return n > max ? n : max;
-          }, 0);
-
-          const priceNums = prices.slice(0, 20).map(p => parseFloat(p.replace(/[$,]/g, ""))).filter(n => n > 0 && n < 1000000);
-          const avgPrice = priceNums.length > 0 ? `$${Math.round(priceNums.reduce((a, b) => a + b, 0) / priceNums.length).toLocaleString()}` : "N/A";
-
-          const catNames = [...new Set(categories.slice(0, 8).map(c => c.replace(/^(Collection|Category|Shop)[:\s]+/i, "").trim()))];
-
-          return {
-            name: c.name,
-            domain: c.domain,
-            categories: catNames.length > 0
-              ? catNames.map(cat => ({ category: cat, estimatedProducts: 0, avgPrice }))
-              : [{ category: c.strength.split(" ").slice(0, 3).join(" "), estimatedProducts: 0, avgPrice }],
-            totalProducts: totalProducts || priceNums.length,
-          };
-        } catch { return null; }
-      }),
-    );
-
-    const validCompInv = compInvResults.filter((r): r is CompetitorInventory => r !== null && r.totalProducts > 0);
-    if (validCompInv.length > 0) {
-      industry.competitorInventory = validCompInv;
-      console.log("Competitor inventory from search:", validCompInv.map(c => `${c.name}: ${c.totalProducts}`).join(", "));
-    }
   }
 
   const trends =
