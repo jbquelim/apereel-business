@@ -768,7 +768,7 @@ Respond with ONLY a JSON array of strings:
 
   try {
     let res: Response | null = null;
-    for (const model of ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"]) {
+    for (const model of ["claude-sonnet-5", "claude-haiku-4-5"]) {
       res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -916,11 +916,8 @@ async function fetchIndustryAnalysis(
   ].filter(Boolean);
 
   const models = [
-    "claude-sonnet-4-20250514",
-    "claude-sonnet-4-0",
-    "claude-haiku-4-5-20251001",
-    "claude-3-5-haiku-20241022",
-    "claude-3-haiku-20240307",
+    "claude-sonnet-5",
+    "claude-haiku-4-5",
   ];
 
   const prompt = `Analyze this website and identify its industry, then provide competitive intelligence including top 5 direct competitors and market traffic channel estimates.
