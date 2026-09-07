@@ -700,7 +700,7 @@ Rules:
     if (!res.ok) return [];
 
     const data = await res.json();
-    const text = data.content?.[0]?.text ?? "";
+    const text = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return [];
 
@@ -779,6 +779,7 @@ Respond with ONLY a JSON array of strings:
         body: JSON.stringify({
           model,
           max_tokens: 1000,
+          thinking: { type: "disabled" },
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -787,7 +788,7 @@ Respond with ONLY a JSON array of strings:
     }
     if (!res || !res.ok) return [];
     const data = await res.json();
-    const text = data.content?.[0]?.text ?? "";
+    const text = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) return [];
     const parsed = JSON.parse(
@@ -996,6 +997,7 @@ Rules:
         body: JSON.stringify({
           model,
           max_tokens: 4000,
+          thinking: { type: "disabled" },
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -1014,7 +1016,7 @@ Rules:
     if (!res || !res.ok) return null;
 
     const data = await res.json();
-    const text = data.content?.[0]?.text ?? "";
+    const text = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("Anthropic response not JSON:", text.slice(0, 200));
@@ -1269,7 +1271,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
 
           if (refineRes.ok) {
             const refineData = await refineRes.json();
-            const refineText = refineData.content?.[0]?.text ?? "";
+            const refineText = refineData.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
             const jsonMatch = refineText.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
               const refined = JSON.parse(jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) => ch === "\n" || ch === "\r" || ch === "\t" ? " " : ""));
