@@ -651,18 +651,36 @@ const JUNK_CATEGORY_RE = new RegExp(
   [
     "black friday", "cyber monday", "boxing day", "clearance", "flash sale",
     "last chance", "gift ?cards?", "\\bsale\\b", "\\bsales\\b",
+    "april fools?", "valentine", "mother'?s day", "father'?s day",
+    "^(online|web|member|app)?\\s*exclusives?$", "as seen (in|on)", "\\b(cnn|forbes|vogue|gq|oprah|buzzfeed)\\b",
+    "^best ?sellers?$", "^new in$", "^trending( now)?$", "^featured$", "^back in stock$",
+    "^top (picks|rated)$", "^staff picks$", "^most (popular|loved)$",
+    "(spring|summer|fall|autumn|winter|holiday)\\s+(essentials|edits?|picks|favou?rites|shop)",
     "(above|under|over|below)\\s*\\$", "^\\$[\\d,]+",
     "^shop all$", "^all products?$", "^collections?$", "^products?$", "^all$", "^new arrivals?$",
   ].join("|"),
   "i",
 );
 
+// The extraction prompt asks for averages rounded to $10, but the model doesn't
+// always comply — enforce it here so displayed precision never exceeds what
+// crawled data supports.
+function roundAvgPrice(raw: string): string {
+  return raw.replace(/\$\s*([\d,]+(?:\.\d+)?)/, (_, n: string) => {
+    const v = parseFloat(n.replace(/,/g, ""));
+    if (!Number.isFinite(v)) return `$${n}`;
+    if (v < 100) return `$${Math.round(v)}`;
+    return `$${(Math.round(v / 10) * 10).toLocaleString("en-US")}`;
+  });
+}
+
 function normalizeInventoryCategory(cat: Partial<InventoryCategory> | null): InventoryCategory | null {
   if (!cat?.category || typeof cat.category !== "string") return null;
   if (JUNK_CATEGORY_RE.test(cat.category.trim())) return null;
   const productCount =
     typeof cat.productCount === "number" && cat.productCount > 0 ? cat.productCount : null;
-  const avgPrice = typeof cat.avgPrice === "string" && cat.avgPrice.trim() ? cat.avgPrice : null;
+  const avgPrice =
+    typeof cat.avgPrice === "string" && cat.avgPrice.trim() ? roundAvgPrice(cat.avgPrice) : null;
   const priceRange =
     typeof cat.priceRange === "string" && cat.priceRange.trim() ? cat.priceRange : null;
   if (productCount === null && avgPrice === null && priceRange === null) return null;
@@ -673,6 +691,38 @@ function normalizeInventoryCategory(cat: Partial<InventoryCategory> | null): Inv
     return null;
   }
   return { category: cat.category, productCount, avgPrice, priceRange };
+}
+
+// Multiple "collections" sharing an identical to-the-dollar price ceiling are
+// views of the same underlying catalog (campaign collections spanning the whole
+// store), not distinct categories — presenting them side by side double-counts
+// the assortment. Round ceilings ($500) can legitimately repeat across real
+// categories, so only a non-round maximum counts as a fingerprint. Keep the
+// deepest view from each group.
+function dropOverlappingStoreViews(cats: InventoryCategory[]): InventoryCategory[] {
+  const groups = new Map<number, InventoryCategory[]>();
+  for (const c of cats) {
+    const m = c.priceRange?.match(/\$\s*([\d,]+)(?:\.\d+)?\s*$/);
+    const max = m ? Number(m[1].replace(/,/g, "")) : null;
+    if (max !== null && max % 100 !== 0) {
+      groups.set(max, [...(groups.get(max) ?? []), c]);
+    }
+  }
+  const drop = new Set<InventoryCategory>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const keep = group.reduce((a, b) =>
+      (b.productCount ?? 0) > (a.productCount ?? 0) ? b : a,
+    );
+    for (const c of group) if (c !== keep) drop.add(c);
+  }
+  if (drop.size > 0) {
+    console.log(
+      "Dropped overlapping store-wide collections:",
+      [...drop].map((c) => c.category).join(", "),
+    );
+  }
+  return cats.filter((c) => !drop.has(c));
 }
 
 async function fetchCompetitorInventories(
@@ -771,9 +821,11 @@ Rules:
           name: r.name,
           domain: r.domain,
           categories: Array.isArray(match?.categories)
-            ? match.categories
-                .map((cat: InventoryCategory) => normalizeInventoryCategory(cat))
-                .filter(Boolean) as InventoryCategory[]
+            ? dropOverlappingStoreViews(
+                match.categories
+                  .map((cat: InventoryCategory) => normalizeInventoryCategory(cat))
+                  .filter(Boolean) as InventoryCategory[],
+              )
             : [],
         };
       })
@@ -815,6 +867,7 @@ Rules:
 - Reference REAL numbers from the data above (product counts, prices) — at least one number per insight
 - Before writing each insight, verify which business each number belongs to: "Your X" must only reference categories in THE CLIENT section, and competitor numbers must be attributed to the right competitor by name
 - Each insight is one sentence, under 35 words, direct and confident, addressed to the client ("Your...")
+- Collections on the same site can overlap heavily — NEVER add product counts from different categories together or claim a combined total across categories
 - No hedging words like "may", "might", "could potentially"
 - If the client has no inventory data, focus on what competitors' depth means for them
 
@@ -1273,9 +1326,11 @@ Rules:
         : [],
       totalKeywords: parsed.totalKeywords ?? 0,
       inventoryCategories: Array.isArray(parsed.inventoryCategories)
-        ? (parsed.inventoryCategories
-            .map((cat: InventoryCategory) => normalizeInventoryCategory(cat))
-            .filter(Boolean) as InventoryCategory[])
+        ? dropOverlappingStoreViews(
+            parsed.inventoryCategories
+              .map((cat: InventoryCategory) => normalizeInventoryCategory(cat))
+              .filter(Boolean) as InventoryCategory[],
+          )
         : [],
     };
   } catch (err) {
