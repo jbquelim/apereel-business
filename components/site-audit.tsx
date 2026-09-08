@@ -110,7 +110,15 @@ type AuditData = {
   competitorInventories?: CompetitorInventory[];
   inventoryInsights?: string[];
   translateAdvantage?: TranslateAdvantage;
+  headline?: string;
 };
+
+function positionBand(position: number): string {
+  if (position <= 3) return "Top 3";
+  if (position <= 10) return "Page 1";
+  if (position <= 20) return "Page 2";
+  return "21+";
+}
 
 function ScoreRing({ score, label }: { score: number | null; label: string }) {
   if (score === null) return null;
@@ -335,6 +343,17 @@ function AuditResults({ data }: { data: AuditData }) {
 
   return (
     <div className="tab-content mt-10 space-y-8">
+      {data.headline && (
+        <div className="rounded-2xl border border-electric/30 bg-navy-mid p-6 sm:p-8">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+            The Headline
+          </p>
+          <p className="font-display mt-4 text-2xl leading-snug text-ink sm:text-3xl">
+            {data.headline}
+          </p>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
         <div className="flex items-center justify-between">
           <div>
@@ -348,7 +367,7 @@ function AuditResults({ data }: { data: AuditData }) {
           {data.industry && data.industry.totalKeywords > 0 && (
             <p className="hidden text-[12px] text-muted sm:block">
               <span className="font-medium text-ink">
-                {data.industry.totalKeywords.toLocaleString()}
+                ~{(Math.round(data.industry.totalKeywords / 100) * 100).toLocaleString()}
               </span>{" "}
               organic keywords
             </p>
@@ -593,9 +612,9 @@ function AuditResults({ data }: { data: AuditData }) {
             </div>
             {data.industry.totalKeywords > 0 && (
               <p className="text-[12px] text-muted">
-                Top Organic Keywords{" "}
+                Est. Organic Keywords{" "}
                 <span className="font-medium text-ink">
-                  {data.industry.totalKeywords.toLocaleString()}
+                  ~{(Math.round(data.industry.totalKeywords / 100) * 100).toLocaleString()}
                 </span>
               </p>
             )}
@@ -606,10 +625,8 @@ function AuditResults({ data }: { data: AuditData }) {
                 <tr className="border-b border-white/10 text-left text-[11px] tracking-[0.1em] text-muted uppercase">
                   <th className="pb-3 pr-4 font-medium">Keyword</th>
                   <th className="pb-3 px-3 font-medium text-center">Intent</th>
-                  <th className="pb-3 px-3 font-medium text-right">Pos.</th>
-                  <th className="pb-3 px-3 font-medium text-right">Volume</th>
-                  <th className="pb-3 px-3 font-medium text-right">CPC</th>
-                  <th className="pb-3 pl-3 font-medium text-right">Traffic</th>
+                  <th className="pb-3 px-3 font-medium text-right">Est. Position</th>
+                  <th className="pb-3 pl-3 font-medium text-right">Est. Volume</th>
                 </tr>
               </thead>
               <tbody>
@@ -635,16 +652,10 @@ function AuditResults({ data }: { data: AuditData }) {
                         </span>
                       </td>
                       <td className="py-3 px-3 text-right font-mono text-ink">
-                        {kw.position}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-ink">
-                        {kw.volume}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-muted">
-                        {kw.cpc.toFixed(2)}
+                        {positionBand(kw.position)}
                       </td>
                       <td className="py-3 pl-3 text-right font-mono text-ink">
-                        {kw.traffic.toFixed(2)}
+                        {kw.volume.startsWith("~") ? kw.volume : `~${kw.volume}`}
                       </td>
                     </tr>
                   );

@@ -139,6 +139,7 @@ type AuditResult = {
   competitorInventories?: CompetitorInventory[];
   inventoryInsights?: string[];
   translateAdvantage?: TranslateAdvantage;
+  headline?: string;
 };
 
 async function fetchPageMeta(url: string) {
@@ -633,14 +634,33 @@ async function crawlSiteInventory(domain: string): Promise<string | null> {
   return indexed;
 }
 
+// Promo events, price-filter views, and navigational indexes are not merchandising
+// categories — comparing them against real assortment produces junk insights.
+const JUNK_CATEGORY_RE = new RegExp(
+  [
+    "black friday", "cyber monday", "boxing day", "clearance", "flash sale",
+    "last chance", "gift ?cards?", "\\bsale\\b", "\\bsales\\b",
+    "(above|under|over|below)\\s*\\$", "^\\$[\\d,]+",
+    "^shop all$", "^all products?$", "^collections?$", "^products?$", "^all$", "^new arrivals?$",
+  ].join("|"),
+  "i",
+);
+
 function normalizeInventoryCategory(cat: Partial<InventoryCategory> | null): InventoryCategory | null {
   if (!cat?.category || typeof cat.category !== "string") return null;
+  if (JUNK_CATEGORY_RE.test(cat.category.trim())) return null;
   const productCount =
     typeof cat.productCount === "number" && cat.productCount > 0 ? cat.productCount : null;
   const avgPrice = typeof cat.avgPrice === "string" && cat.avgPrice.trim() ? cat.avgPrice : null;
   const priceRange =
     typeof cat.priceRange === "string" && cat.priceRange.trim() ? cat.priceRange : null;
   if (productCount === null && avgPrice === null && priceRange === null) return null;
+  // A bare navigational index row ("Collections", "Watches") with a count but no
+  // price signal is usually a failed crawl of the whole site, not a category —
+  // keep it only if it carries price data or a specific name.
+  if (avgPrice === null && priceRange === null && /^(collections?|categories|items)$/i.test(cat.category.trim())) {
+    return null;
+  }
   return { category: cat.category, productCount, avgPrice, priceRange };
 }
 
@@ -686,6 +706,7 @@ Rules:
 - "Live product data" lines already contain exact counts, avg and range — copy those numbers verbatim
 - Use null for any field you cannot determine from the data — never guess or invent numbers
 - OMIT any category where productCount, avgPrice AND priceRange would all be null; a bare category name is useless
+- OMIT promo events (Black Friday, sales), price-filter views ("Above $2,000", "Under $500"), and bare site indexes ("Collections", "All Products") — they are not real merchandising categories
 - If a competitor has no meaningful product data, return an empty categories array for them
 - Do NOT invent categories that don't appear in the data`;
 
@@ -858,6 +879,8 @@ Respond with ONLY valid JSON, no markdown:
 
 Rules:
 - "strength" must reference data belonging to ${domain} (the client) — never attribute a competitor's numbers to the client
+- The advantage MUST be consistent with how this market actually competes (see "Competitive landscape" above). If customers in this market buy on service, expertise, brand authorization, or experience rather than price, do NOT recommend price-led or discount positioning — choose the strongest DEFENSIBLE position instead, even if a price or count statistic looks bigger
+- Prefer an advantage a competitor cannot easily copy (authorized dealer status, regional dominance, service depth, exclusive lines) over raw catalog size or price, when the data supports one
 - Exactly 3-4 touchpoints, chosen from: Website, Product Pages, Category Navigation, Search & Filtering, Creative, Messaging
 - Exactly 2-3 services, "tag" MUST be one of: ${APEREEL_SERVICES.join(", ")}
 - No hedging words like "may", "might", "could potentially"
@@ -910,6 +933,62 @@ Rules:
     };
   } catch (err) {
     console.error("Translate advantage failed:", err);
+    return null;
+  }
+}
+
+async function generateHeadlineFinding(
+  domain: string,
+  industry: NonNullable<IndustryAnalysis>,
+  inventoryInsights: string[],
+  translateAdvantage: TranslateAdvantage,
+): Promise<string | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const sections = [
+    `Business: ${domain} — ${industry.subIndustry}`,
+    industry.insight && `Competitive landscape: ${industry.insight}`,
+    inventoryInsights.length > 0 && `Inventory findings:\n${inventoryInsights.map((s) => `- ${s}`).join("\n")}`,
+    translateAdvantage && `Identified advantage: ${translateAdvantage.strength}`,
+  ].filter(Boolean);
+
+  const prompt = `You are a senior strategy consultant summarizing an audit for a busy CEO. Below are the audit's findings for ${domain}.
+
+${sections.join("\n\n")}
+
+Write the single most important takeaway of this audit — the one sentence the CEO should read before anything else. It must be consistent with the identified advantage (do not introduce a different strategy), grounded in the findings, addressed to the client ("Your..."), under 35 words, direct and confident, no hedging.
+
+Respond with ONLY the sentence. No quotes, no preamble.`;
+
+  try {
+    let res: Response | null = null;
+    for (const model of ["claude-sonnet-5", "claude-haiku-4-5"]) {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 200,
+          thinking: { type: "disabled" },
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (res.ok) break;
+      if (res.status !== 404) break;
+    }
+    if (!res || !res.ok) return null;
+    const data = await res.json();
+    const text: string =
+      data.content?.find((b: { type: string }) => b.type === "text")?.text?.trim() ?? "";
+    if (!text || text.length > 400) return null;
+    return text.replace(/^["']|["']$/g, "");
+  } catch (err) {
+    console.error("Headline finding failed:", err);
     return null;
   }
 }
@@ -1088,8 +1167,8 @@ Rules:
 - The "insight" should read like strategic consulting advice, not generic filler
 - For "channels": estimate the typical traffic channel distribution for this specific industry/niche. Percentages must sum to 100. Use your knowledge of how businesses in this industry typically acquire traffic. Include channels like Direct, Organic Search, Paid Search, Social, Referral, Email, Display, AI Traffic as relevant. Only include channels with >= 2%.
 - "topPlayer": name the single strongest competitor (the market leader) in this space
-- For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100), "volume" (monthly search volume as string like "3.6K" or "22.2K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
-- "totalKeywords": estimate the total number of organic keywords this domain likely ranks for
+- For "keywords": estimate the top 8 organic keywords this website likely ranks for, based on its content, industry, and domain. For each keyword provide: "keyword" (the search term), "intent" (N=Navigational, C=Commercial, I=Informational, T=Transactional), "position" (estimated Google rank 1-100 — a rough estimate is fine, it is displayed as a band like "Top 3" or "Page 1"), "volume" (APPROXIMATE monthly search volume as a rounded string with a tilde, like "~2K" or "~500" — never false precision like "3.6K"), "cpc" (estimated cost per click in USD), "traffic" (estimated monthly traffic percentage from this keyword). Sort by traffic descending.
+- "totalKeywords": rough order-of-magnitude estimate of total organic keywords this domain ranks for, rounded to the nearest hundred
 - For "inventoryCategories": If CRAWLED PRODUCT/COLLECTION DATA is provided above, extract REAL product categories, product counts, and price ranges directly from it. Look for collection names, "X products"/"X results" counts, and price figures (e.g. "$5,000 - $10,000", "219 products"). Sitemap data marked EXACT should be copied verbatim; rename slug tokens to proper labels ("watch" -> "Watches", brand tokens like "roberto" -> "Roberto Coin"). When sampled live prices are given, derive avgPrice (typical mid value) and priceRange (min - max) from them. Use null for any field not present in the data — never invent numbers — and omit categories where all of productCount, avgPrice and priceRange would be null. If no crawled data is available, return an empty array [].`;
 
   try {
@@ -1431,6 +1510,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
   }
 
   let translateAdvantage: TranslateAdvantage = null;
+  let headline: string | null = null;
   if (industry) {
     translateAdvantage = await generateTranslateAdvantage(
       domain,
@@ -1438,6 +1518,13 @@ Respond with ONLY a JSON array of exactly 5 competitors:
       inventoryInsights,
     );
     if (translateAdvantage) console.log("Translate advantage generated");
+    headline = await generateHeadlineFinding(
+      domain,
+      industry,
+      inventoryInsights,
+      translateAdvantage,
+    );
+    if (headline) console.log("Headline finding generated");
   }
 
   const result: AuditResult = {
@@ -1450,6 +1537,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     competitorInventories: competitorInventories.length > 0 ? competitorInventories : undefined,
     inventoryInsights: inventoryInsights.length > 0 ? inventoryInsights : undefined,
     translateAdvantage: translateAdvantage ?? undefined,
+    headline: headline ?? undefined,
   };
 
   if (name && email && process.env.RESEND_API_KEY) {
