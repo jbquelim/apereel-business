@@ -84,6 +84,12 @@ type IndustryAnalysis = {
   inventoryCategories: InventoryCategory[];
 } | null;
 
+type TranslateAdvantage = {
+  strength: string;
+  touchpoints: { name: string; action: string }[];
+  services: { tag: string; reason: string }[];
+} | null;
+
 type TrendPoint = {
   date: string;
   values: number[];
@@ -132,6 +138,7 @@ type AuditResult = {
   trends: TrendsData;
   competitorInventories?: CompetitorInventory[];
   inventoryInsights?: string[];
+  translateAdvantage?: TranslateAdvantage;
 };
 
 async function fetchPageMeta(url: string) {
@@ -805,6 +812,108 @@ Respond with ONLY a JSON array of strings:
   }
 }
 
+const APEREEL_SERVICES = [
+  "Research & Competitive Analysis",
+  "SEO",
+  "Advertising",
+  "Web Development",
+  "Conversion Optimization",
+  "Premium Creative",
+] as const;
+
+async function generateTranslateAdvantage(
+  domain: string,
+  industry: NonNullable<IndustryAnalysis>,
+  inventoryInsights: string[],
+): Promise<TranslateAdvantage> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const signals = [
+    `Business: ${domain} — ${industry.subIndustry}`,
+    industry.insight && `Competitive landscape: ${industry.insight}`,
+    industry.competitors.length > 0 &&
+      `Competitors: ${industry.competitors.map((c) => `${c.name} (${c.strength})`).join("; ")}`,
+    industry.inventoryCategories.length > 0 &&
+      `Client inventory (belongs to ${domain}): ${industry.inventoryCategories
+        .map((c) => `${c.category}${c.productCount ? ` — ${c.productCount} products` : ""}${c.priceRange ? `, ${c.priceRange}` : ""}`)
+        .join("; ")}`,
+    inventoryInsights.length > 0 && `Inventory analysis findings:\n${inventoryInsights.map((s) => `- ${s}`).join("\n")}`,
+  ].filter(Boolean);
+
+  const prompt = `You are a senior e-commerce strategy consultant. Based on this real audit data for ${domain}, identify their single clearest competitive advantage and how to make it visible across their digital touchpoints.
+
+${signals.join("\n\n")}
+
+Respond with ONLY valid JSON, no markdown:
+{
+  "strength": "One sentence naming their single clearest competitive advantage, grounded in a REAL number or fact from the data above. Addressed to the client ('Your...'). Under 30 words.",
+  "touchpoints": [
+    { "name": "Touchpoint name", "action": "What to change there so the advantage is visible, under 12 words" }
+  ],
+  "services": [
+    { "tag": "Service name from the allowed list", "reason": "Why this service unlocks the advantage for THIS business specifically, under 15 words" }
+  ]
+}
+
+Rules:
+- "strength" must reference data belonging to ${domain} (the client) — never attribute a competitor's numbers to the client
+- Exactly 3-4 touchpoints, chosen from: Website, Product Pages, Category Navigation, Search & Filtering, Creative, Messaging
+- Exactly 2-3 services, "tag" MUST be one of: ${APEREEL_SERVICES.join(", ")}
+- No hedging words like "may", "might", "could potentially"
+- If the data shows no clear advantage, pick the biggest opportunity instead and frame it as what they can own`;
+
+  try {
+    let res: Response | null = null;
+    for (const model of ["claude-sonnet-5", "claude-haiku-4-5"]) {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1000,
+          thinking: { type: "disabled" },
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (res.ok) break;
+      if (res.status !== 404) break;
+    }
+    if (!res || !res.ok) return null;
+    const data = await res.json();
+    const text = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    const parsed = JSON.parse(
+      jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) =>
+        ch === "\n" || ch === "\r" || ch === "\t" ? " " : "",
+      ),
+    );
+    if (!parsed.strength || !Array.isArray(parsed.touchpoints) || !Array.isArray(parsed.services)) {
+      return null;
+    }
+    const allowedTags = new Set<string>(APEREEL_SERVICES);
+    return {
+      strength: String(parsed.strength),
+      touchpoints: parsed.touchpoints
+        .filter((t: { name?: string; action?: string }) => t?.name && t?.action)
+        .slice(0, 4)
+        .map((t: { name: string; action: string }) => ({ name: t.name, action: t.action })),
+      services: parsed.services
+        .filter((s: { tag?: string; reason?: string }) => s?.tag && s?.reason && allowedTags.has(s.tag))
+        .slice(0, 3)
+        .map((s: { tag: string; reason: string }) => ({ tag: s.tag, reason: s.reason })),
+    };
+  } catch (err) {
+    console.error("Translate advantage failed:", err);
+    return null;
+  }
+}
+
 function detectCountry(domain: string): string | null {
   const tld = domain.split(".").pop()?.toLowerCase();
   const tldMap: Record<string, string> = {
@@ -1321,6 +1430,16 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     console.log("Inventory insights generated:", inventoryInsights.length);
   }
 
+  let translateAdvantage: TranslateAdvantage = null;
+  if (industry) {
+    translateAdvantage = await generateTranslateAdvantage(
+      domain,
+      industry,
+      inventoryInsights,
+    );
+    if (translateAdvantage) console.log("Translate advantage generated");
+  }
+
   const result: AuditResult = {
     url,
     scores,
@@ -1330,6 +1449,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     trends,
     competitorInventories: competitorInventories.length > 0 ? competitorInventories : undefined,
     inventoryInsights: inventoryInsights.length > 0 ? inventoryInsights : undefined,
+    translateAdvantage: translateAdvantage ?? undefined,
   };
 
   if (name && email && process.env.RESEND_API_KEY) {

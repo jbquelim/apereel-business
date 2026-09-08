@@ -84,6 +84,12 @@ type IndustryAnalysis = {
   inventoryCategories?: InventoryCategory[];
 } | null;
 
+type TranslateAdvantage = {
+  strength: string;
+  touchpoints: { name: string; action: string }[];
+  services: { tag: string; reason: string }[];
+} | null;
+
 type TrendPoint = {
   date: string;
   values: number[];
@@ -103,6 +109,7 @@ type AuditData = {
   trends: TrendsData;
   competitorInventories?: CompetitorInventory[];
   inventoryInsights?: string[];
+  translateAdvantage?: TranslateAdvantage;
 };
 
 function ScoreRing({ score, label }: { score: number | null; label: string }) {
@@ -697,6 +704,61 @@ function AuditResults({ data }: { data: AuditData }) {
               </p>
             )}
           </div>
+        </div>
+      )}
+
+      {data.translateAdvantage && (
+        <div className="rounded-2xl border border-electric/20 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Your Competitive Advantage
+            </p>
+            <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+              Make It Impossible to Miss
+            </span>
+          </div>
+          <p className="font-display mt-5 text-xl leading-snug text-ink sm:text-2xl">
+            {data.translateAdvantage.strength}
+          </p>
+          <div className="mt-8 grid gap-8 sm:grid-cols-2">
+            <div>
+              <p className="font-mono text-[10px] tracking-[0.22em] text-muted/60 uppercase">
+                Where to make it visible
+              </p>
+              <ul className="mt-4 space-y-3">
+                {data.translateAdvantage.touchpoints.map((t) => (
+                  <li key={t.name} className="flex gap-3">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-electric/60" />
+                    <div>
+                      <p className="font-mono text-[12px] text-electric">{t.name}</p>
+                      <p className="mt-0.5 text-sm leading-relaxed text-ink/80">{t.action}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="font-mono text-[10px] tracking-[0.22em] text-muted/60 uppercase">
+                How Apereel would deploy it
+              </p>
+              <div className="mt-4 space-y-3">
+                {data.translateAdvantage.services.map((s) => (
+                  <div
+                    key={s.tag}
+                    className="rounded-xl border border-white/10 bg-navy/60 p-4"
+                  >
+                    <p className="text-[11px] font-semibold tracking-[0.16em] text-electric uppercase">
+                      {s.tag}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-ink/90">{s.reason}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <p className="mt-6 font-mono text-[10px] tracking-[0.22em] text-muted/40 uppercase">
+            One message, every touchpoint
+          </p>
         </div>
       )}
 
