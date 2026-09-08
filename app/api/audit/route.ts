@@ -619,19 +619,30 @@ async function searchIndexedInventory(domain: string): Promise<string | null> {
   return results.join("\n\n---\n\n");
 }
 
-async function crawlSiteInventory(domain: string): Promise<string | null> {
+type InventorySource = "live" | "sitemap" | "crawl" | "search";
+
+type CrawledInventory = { data: string; source: InventorySource };
+
+const SOURCE_NOTES: Record<InventorySource, string> = {
+  live: "live product API — exact figures",
+  sitemap: "sitemap crawl — real category URLs and counts",
+  crawl: "directly crawled category pages — real on-page counts and prices",
+  search: "search-engine snippets — unreliable",
+};
+
+async function crawlSiteInventory(domain: string): Promise<CrawledInventory | null> {
   const shopify = await fetchShopifyInventory(domain);
-  if (shopify) return shopify;
+  if (shopify) return { data: shopify, source: "live" };
 
   const sitemap = await fetchSitemapInventory(domain);
-  if (sitemap) return sitemap;
+  if (sitemap) return { data: sitemap, source: "sitemap" };
 
   const crawled = await crawlCollectionPages(domain);
-  if (crawled) return crawled;
+  if (crawled) return { data: crawled, source: "crawl" };
 
   const indexed = await searchIndexedInventory(domain);
   if (indexed) console.log("Falling back to search-indexed inventory for", domain);
-  return indexed;
+  return indexed ? { data: indexed, source: "search" } : null;
 }
 
 // Promo events, price-filter views, and navigational indexes are not merchandising
@@ -671,19 +682,32 @@ async function fetchCompetitorInventories(
     competitors.map(async (c) => ({
       name: c.name,
       domain: c.domain,
-      data: await crawlSiteInventory(c.domain),
+      inventory: await crawlSiteInventory(c.domain),
     })),
   );
 
-  const withData = crawlResults.filter((r) => r.data);
+  // Search-snippet data is too unreliable to present as a competitor's real
+  // assortment — a wrong table is worse than no table. Only live API, sitemap,
+  // and directly crawled pages qualify for display.
+  const withData = crawlResults.filter(
+    (r): r is typeof r & { inventory: CrawledInventory } =>
+      r.inventory !== null && r.inventory.source !== "search",
+  );
+  const dropped = crawlResults.filter((r) => r.inventory?.source === "search");
+  if (dropped.length > 0) {
+    console.log(
+      "Dropped search-only competitor inventory for:",
+      dropped.map((r) => r.domain).join(", "),
+    );
+  }
   if (withData.length === 0) return [];
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return [];
 
-  const prompt = `Below is crawled inventory data for multiple competitor websites. Depending on the site it comes from the store's live product API (exact figures), crawled category pages (real on-page counts and prices), or search-engine-indexed pages.
+  const prompt = `Below is crawled inventory data for multiple competitor websites. Each competitor's data source is noted — treat live API figures as exact, and be conservative with anything derived.
 
-${withData.map((r) => `=== ${r.name} (${r.domain}) ===\n${r.data}`).join("\n\n")}
+${withData.map((r) => `=== ${r.name} (${r.domain}) — source: ${SOURCE_NOTES[r.inventory.source]} ===\n${r.inventory.data}`).join("\n\n")}
 
 For each competitor, extract their inventory categories from the data above. Look for:
 - Collection/category names from page titles and URLs (clean them up: "Watches for Men and Women | Maison Birks" -> "Watches"; slug tokens like "watch" -> "Watches", brand tokens like "roberto" -> the brand, e.g. "Roberto Coin")
@@ -707,6 +731,9 @@ Rules:
 - Use null for any field you cannot determine from the data — never guess or invent numbers
 - OMIT any category where productCount, avgPrice AND priceRange would all be null; a bare category name is useless
 - OMIT promo events (Black Friday, sales), price-filter views ("Above $2,000", "Under $500"), and bare site indexes ("Collections", "All Products") — they are not real merchandising categories
+- Do NOT collapse an entire store into one generic category (e.g. "Men's Clothing" for a menswear retailer, "Jewelry" for a jeweler). If the data doesn't support at least 2 specific categories for a competitor, return an empty categories array for them instead
+- Derived averages must be rounded to the nearest $10 ("$790", never "$787.50"); never present a derived number with more precision than the data supports
+- Product counts must appear verbatim in the data — if no count is stated, use null; never estimate one
 - If a competitor has no meaningful product data, return an empty categories array for them
 - Do NOT invent categories that don't appear in the data`;
 
@@ -1085,7 +1112,7 @@ async function fetchIndustryAnalysis(
   bodyText?: string | null,
   structuredData?: string | null,
   googleSearchData?: string | null,
-  inventorySearchData?: string | null,
+  inventorySearchData?: CrawledInventory | null,
   country?: string | null,
 ): Promise<IndustryAnalysis> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -1101,7 +1128,7 @@ async function fetchIndustryAnalysis(
     bodyText && `Page content (excerpt):\n${bodyText}`,
     structuredData && `Structured data (JSON-LD):\n${structuredData}`,
     googleSearchData && `\nVERIFIED DATA FROM WEB SEARCH (use this as factual information):\n${googleSearchData}`,
-    inventorySearchData && `\nCRAWLED PRODUCT/COLLECTION DATA (real data from this website):\n${inventorySearchData}`,
+    inventorySearchData && `\nCRAWLED PRODUCT/COLLECTION DATA from this website (source: ${SOURCE_NOTES[inventorySearchData.source]}):\n${inventorySearchData.data}`,
   ].filter(Boolean);
 
   const models = [
@@ -1346,7 +1373,10 @@ export async function POST(request: Request) {
     if (fallbackContent) console.log("Fallback content:", fallbackContent.length, "chars");
   }
   if (googleSearchData) console.log("Web search data:", googleSearchData.length, "chars");
-  if (inventorySearchData) console.log("Inventory search data:", inventorySearchData.length, "chars");
+  if (inventorySearchData)
+    console.log(
+      "Inventory data:", inventorySearchData.data.length, "chars, source:", inventorySearchData.source,
+    );
   if (country) console.log("Detected country:", country);
 
   const hasAnyData = meta || pageSpeed || fallbackContent;
