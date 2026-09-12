@@ -37,11 +37,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, processed: [], message: "queue empty" });
   }
 
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.apereel.com";
+  // Derive the self-call base from the incoming request — env-configured
+  // bases have too many failure shapes (missing scheme, trailing slash).
+  const host = request.headers.get("host") ?? "www.apereel.com";
+  const proto = request.headers.get("x-forwarded-proto") ?? "https";
+  const base = `${proto}://${host}`;
 
   const processed = await Promise.all(
     batch.map(async (row) => {
       let ok = false;
+      let detail = "";
       try {
         const res = await fetch(`${base}/api/audit`, {
           method: "POST",
@@ -49,9 +54,12 @@ export async function GET(request: Request) {
           body: JSON.stringify({ url: `https://${row.domain}` }),
           signal: AbortSignal.timeout(170_000),
         });
-        ok = res.ok && (await res.json()).ok === true;
+        const body = await res.text();
+        detail = `${res.status} ${body.slice(0, 120)}`;
+        ok = res.ok && JSON.parse(body).ok === true;
       } catch (err) {
-        console.error("Discovery audit failed for", row.domain, err);
+        detail = String(err).slice(0, 200);
+        console.error("Discovery audit failed for", row.domain, detail);
       }
       await sql`
         UPDATE crawl_queue
@@ -64,7 +72,7 @@ export async function GET(request: Request) {
           WHERE id = ${row.id} AND attempts >= ${MAX_ATTEMPTS}
         `;
       }
-      return { domain: row.domain, ok };
+      return { domain: row.domain, ok, detail: ok ? undefined : detail };
     }),
   );
 
