@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { recordAuditSnapshot } from "@/lib/marketdb";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const googleTrends = require("google-trends-api");
 
@@ -70,6 +71,7 @@ type CompetitorInventory = {
   name: string;
   domain: string;
   categories: InventoryCategory[];
+  source?: InventorySource;
 };
 
 type IndustryAnalysis = {
@@ -820,6 +822,7 @@ Rules:
         return {
           name: r.name,
           domain: r.domain,
+          source: r.inventory.source,
           categories: Array.isArray(match?.categories)
             ? dropOverlappingStoreViews(
                 match.categories
@@ -1611,6 +1614,47 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     );
     if (headline) console.log("Headline finding generated");
   }
+
+  // Grow the market dataset from every audit: the client, its inventory-crawled
+  // competitors, and competitors identified but not yet crawled (queued for
+  // snowball discovery). Runs after the response is sent.
+  after(() => {
+    const crawledDomains = new Set(competitorInventories.map((c) => c.domain));
+    return recordAuditSnapshot([
+      {
+        domain,
+        name: brandName ?? null,
+        industry: industry?.industry ?? null,
+        subIndustry: industry?.subIndustry ?? null,
+        country: country ?? null,
+        source: inventorySearchData?.source ?? null,
+        discoveredFrom: null,
+        categories: industry?.inventoryCategories ?? [],
+      },
+      ...competitorInventories.map((c) => ({
+        domain: c.domain,
+        name: c.name as string | null,
+        industry: industry?.industry ?? null,
+        subIndustry: industry?.subIndustry ?? null,
+        country: country ?? null,
+        source: c.source ?? null,
+        discoveredFrom: domain,
+        categories: c.categories,
+      })),
+      ...(industry?.competitors ?? [])
+        .filter((c) => !crawledDomains.has(c.domain))
+        .map((c) => ({
+          domain: c.domain,
+          name: c.name as string | null,
+          industry: industry?.industry ?? null,
+          subIndustry: industry?.subIndustry ?? null,
+          country: country ?? null,
+          source: null,
+          discoveredFrom: domain,
+          categories: [],
+        })),
+    ]);
+  });
 
   const result: AuditResult = {
     url,
