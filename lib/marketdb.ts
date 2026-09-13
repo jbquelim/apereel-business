@@ -62,9 +62,13 @@ export async function recordAuditSnapshot(
 
   for (const b of businesses) {
     try {
+      // One business, one row — "www.example.com" and "example.com" must not
+      // split into two identities.
+      const domain = b.domain.replace(/^www\./, "");
+      const discoveredFrom = b.discoveredFrom?.replace(/^www\./, "") ?? null;
       const rows = (await sql`
         INSERT INTO businesses (domain, name, industry, sub_industry, country, platform, discovered_from, last_crawled)
-        VALUES (${b.domain}, ${b.name}, ${b.industry}, ${b.subIndustry}, ${b.country}, ${b.source}, ${b.discoveredFrom}, now())
+        VALUES (${domain}, ${b.name}, ${b.industry}, ${b.subIndustry}, ${b.country}, ${b.source}, ${discoveredFrom}, now())
         ON CONFLICT (domain) DO UPDATE SET
           name = COALESCE(EXCLUDED.name, businesses.name),
           industry = COALESCE(EXCLUDED.industry, businesses.industry),
@@ -86,9 +90,9 @@ export async function recordAuditSnapshot(
       }
 
       // Discovered competitors seed the snowball queue for later processing.
-      if (b.discoveredFrom) {
+      if (discoveredFrom) {
         await sql`
-          INSERT INTO crawl_queue (domain) VALUES (${b.domain})
+          INSERT INTO crawl_queue (domain) VALUES (${domain})
           ON CONFLICT (domain) DO NOTHING
         `;
       }
