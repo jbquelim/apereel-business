@@ -1376,13 +1376,6 @@ async function fetchGoogleTrends(
 }
 
 export async function POST(request: Request) {
-  if (rateLimited(clientIp(request))) {
-    return NextResponse.json(
-      { ok: false, error: "Too many requests. Please try again later." },
-      { status: 429 },
-    );
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -1393,11 +1386,28 @@ export async function POST(request: Request) {
     );
   }
 
-  const { url: rawUrl, name, email } = body as {
+  const { url: rawUrl, name, email, mode } = body as {
     url?: string;
     name?: string;
     email?: string;
+    mode?: string;
   };
+
+  // Ingest mode: dataset collection only. Skips PageSpeed, trends, and all
+  // visitor-facing prose (insights, translate advantage, headline) — the
+  // pipeline keeps classification, inventory crawl, competitor discovery,
+  // and persistence. Secret-gated so it also bypasses the visitor rate limit.
+  const isIngest =
+    mode === "ingest" &&
+    !!process.env.CRON_SECRET &&
+    request.headers.get("x-ingest-secret") === process.env.CRON_SECRET;
+
+  if (!isIngest && rateLimited(clientIp(request))) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later." },
+      { status: 429 },
+    );
+  }
   const url = normalizeUrl(rawUrl ?? "");
 
   if (!url) {
@@ -1413,7 +1423,7 @@ export async function POST(request: Request) {
 
   const [meta, pageSpeed, webSearchData, inventorySearchData] = await Promise.all([
     fetchPageMeta(url),
-    fetchPageSpeed(url),
+    isIngest ? Promise.resolve(null) : fetchPageSpeed(url),
     fetchWebSearchResults(domain),
     crawlSiteInventory(domain),
   ]);
@@ -1576,7 +1586,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     const top3 = industry.competitors.slice(0, 3);
     const [inventories, trendsResult] = await Promise.all([
       fetchCompetitorInventories(top3),
-      fetchGoogleTrends(brandName, industry.competitors),
+      isIngest ? Promise.resolve(null) : fetchGoogleTrends(brandName, industry.competitors),
     ]);
     competitorInventories = inventories;
     trends = trendsResult;
@@ -1585,6 +1595,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
 
   let inventoryInsights: string[] = [];
   if (
+    !isIngest &&
     industry &&
     (industry.inventoryCategories.length > 0 || competitorInventories.length > 0)
   ) {
@@ -1599,7 +1610,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
 
   let translateAdvantage: TranslateAdvantage = null;
   let headline: string | null = null;
-  if (industry) {
+  if (!isIngest && industry) {
     translateAdvantage = await generateTranslateAdvantage(
       domain,
       industry,
@@ -1655,6 +1666,16 @@ Respond with ONLY a JSON array of exactly 5 competitors:
         })),
     ]);
   });
+
+  if (isIngest) {
+    return NextResponse.json({
+      ok: true,
+      ingest: true,
+      domain,
+      industry: industry?.industry ?? null,
+      competitorsDiscovered: industry?.competitors.length ?? 0,
+    });
+  }
 
   const result: AuditResult = {
     url,
