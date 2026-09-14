@@ -37,11 +37,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, processed: [], message: "queue empty" });
   }
 
-  // Derive the self-call base from the incoming request — env-configured
-  // bases have too many failure shapes (missing scheme, trailing slash).
-  const host = request.headers.get("host") ?? "www.apereel.com";
-  const proto = request.headers.get("x-forwarded-proto") ?? "https";
-  const base = `${proto}://${host}`;
+  // Cron invocations arrive on the raw *.vercel.app deployment URL, which
+  // sits behind deployment protection — self-calls through it get an auth
+  // page, not the API. Route those through the public domain instead.
+  const host = request.headers.get("host") ?? "";
+  const base =
+    !host || host.endsWith(".vercel.app")
+      ? "https://www.apereel.com"
+      : `https://${host}`;
 
   const processed = await Promise.all(
     batch.map(async (row) => {

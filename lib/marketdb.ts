@@ -71,8 +71,10 @@ export async function recordAuditSnapshot(
         VALUES (${domain}, ${b.name}, ${b.industry}, ${b.subIndustry}, ${b.country}, ${b.source}, ${discoveredFrom}, now())
         ON CONFLICT (domain) DO UPDATE SET
           name = COALESCE(EXCLUDED.name, businesses.name),
-          industry = COALESCE(EXCLUDED.industry, businesses.industry),
-          sub_industry = COALESCE(EXCLUDED.sub_industry, businesses.sub_industry),
+          -- First classification wins: model labels drift between runs
+          -- ("Jewelry" vs "Retail"), and churning them breaks grouping.
+          industry = COALESCE(businesses.industry, EXCLUDED.industry),
+          sub_industry = COALESCE(businesses.sub_industry, EXCLUDED.sub_industry),
           country = COALESCE(EXCLUDED.country, businesses.country),
           platform = COALESCE(EXCLUDED.platform, businesses.platform),
           last_crawled = now()
