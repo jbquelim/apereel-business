@@ -22,10 +22,22 @@ export type ProductMatch = {
   confidence: number;
 };
 
+// Materials and marketing words describe the variant, not the product — two
+// stores' "Beaded Bracelet" should pair even when one is plated and one is
+// solid gold. The titles ship verbatim, so the material difference (and why
+// the prices differ) stays visible to the reader.
 const STOPWORDS = new Set([
   "the", "and", "with", "for", "of", "in", "a", "an", "on", "to", "by",
   "set", "new", "our", "your", "from",
+  "18ct", "14k", "18k", "9ct", "gold", "silver", "plated", "vermeil",
+  "solid", "sterling", "recycled", "mini", "midi", "large", "small",
 ]);
+
+// "Hoops" must match "Hoop", "Huggie Earrings" must match "Huggies" —
+// singularize every token before comparing (tuned on real store feeds).
+function singular(t: string): string {
+  return t.length > 3 && t.endsWith("s") ? t.slice(0, -1) : t;
+}
 
 function tokens(s: string): Set<string> {
   return new Set(
@@ -33,12 +45,28 @@ function tokens(s: string): Set<string> {
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, " ")
       .split(/\s+/)
-      .filter((t) => t.length >= 3 && !STOPWORDS.has(t)),
+      .filter((t) => t.length >= 3 && !STOPWORDS.has(t))
+      .map(singular),
   );
 }
 
 function normType(t: string | null): string {
-  return (t ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  return (t ?? "")
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(singular)
+    .join(" ");
+}
+
+// Same family when equal, one is a suffix of the other ("hoop earring" /
+// "earring"), or they share a word. null = at least one side has no type.
+function typeFamily(a: string, b: string): boolean | null {
+  if (!a || !b) return null;
+  if (a === b || a.endsWith(b) || b.endsWith(a)) return true;
+  const bWords = b.split(" ");
+  return a.split(" ").some((w) => bWords.includes(w));
 }
 
 function similarity(a: Set<string>, b: Set<string>): { jaccard: number; shared: number } {
@@ -48,7 +76,7 @@ function similarity(a: Set<string>, b: Set<string>): { jaccard: number; shared: 
   return { jaccard: union === 0 ? 0 : shared / union, shared };
 }
 
-const MIN_JACCARD = 0.45;
+const MIN_JACCARD = 0.5;
 const MIN_SHARED_TOKENS = 2;
 const MAX_MATCHES = 6;
 
@@ -67,13 +95,11 @@ export function matchProducts(
       let best: ProductMatch | null = null;
       for (const p of comp.products) {
         if (p.priceCents == null) continue;
-        // Types must agree when both sides declare one; when either side
-        // omits it, title overlap alone must clear a higher bar.
-        const pType = normType(p.productType);
-        const typedMatch = clientType !== "" && pType !== "" && clientType === pType;
+        const family = typeFamily(clientType, normType(p.productType));
+        if (family === false) continue;
         const { jaccard, shared } = similarity(clientTokens, tokens(p.title));
-        const minJaccard = typedMatch ? MIN_JACCARD : MIN_JACCARD + 0.15;
-        if (clientType !== "" && pType !== "" && !typedMatch) continue;
+        // No declared type on one side → title overlap must clear a higher bar.
+        const minJaccard = family === true ? MIN_JACCARD : MIN_JACCARD + 0.15;
         if (jaccard < minJaccard || shared < MIN_SHARED_TOKENS) continue;
         if (!best || jaccard > best.confidence) {
           best = {
@@ -91,10 +117,20 @@ export function matchProducts(
     }
   }
 
-  // Strongest pairings first; one appearance per client product per
-  // competitor is already guaranteed above.
+  // Strongest pairings first; drop variant-level duplicates (same client
+  // product in two finishes, or two client items pairing to one listing).
+  const seenClient = new Set<string>();
+  const seenCompetitor = new Set<string>();
   return matches
     .sort((a, b) => b.confidence - a.confidence)
+    .filter((m) => {
+      const clientBase = m.clientTitle.split("|")[0].trim();
+      const compKey = `${m.competitorDomain}:${m.competitorTitle}`;
+      if (seenClient.has(clientBase) || seenCompetitor.has(compKey)) return false;
+      seenClient.add(clientBase);
+      seenCompetitor.add(compKey);
+      return true;
+    })
     .slice(0, MAX_MATCHES);
 }
 

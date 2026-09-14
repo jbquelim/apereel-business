@@ -707,7 +707,7 @@ async function crawlSiteInventory(domain: string): Promise<CrawledInventory | nu
 const JUNK_CATEGORY_RE = new RegExp(
   [
     "black friday", "cyber monday", "boxing day", "clearance", "flash sale",
-    "last chance", "gift ?cards?", "\\bsale\\b", "\\bsales\\b",
+    "last chance", "gift ?cards?", "\\bsale\\b", "\\bsales\\b", "\\d+%\\s*off",
     "april fools?", "valentine", "mother'?s day", "father'?s day",
     "^(online|web|member|app)?\\s*exclusives?$", "as seen (in|on)", "\\b(cnn|forbes|vogue|gq|oprah|buzzfeed)\\b",
     "^best ?sellers?$", "^new in$", "^trending( now)?$", "^featured$", "^back in stock$",
