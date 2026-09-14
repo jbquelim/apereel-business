@@ -97,8 +97,8 @@ export async function recordAuditSnapshot(
 
       if (b.proof) {
         await sql`
-          INSERT INTO credibility_snapshots (business_id, case_studies, resources, certifications, industries_served, has_quote_path, has_live_chat, has_published_pricing)
-          VALUES (${businessId}, ${b.proof.caseStudies}, ${b.proof.resources}, ${b.proof.certifications}, ${b.proof.industriesServed}, ${b.proof.hasQuotePath}, ${b.proof.hasLiveChat}, ${b.proof.hasPublishedPricing})
+          INSERT INTO credibility_snapshots (business_id, sitemap_found, case_studies, resources, certifications, industries_served, has_quote_path, has_live_chat, has_published_pricing)
+          VALUES (${businessId}, ${b.proof.sitemapFound}, ${b.proof.caseStudies}, ${b.proof.resources}, ${b.proof.certifications}, ${b.proof.industriesServed}, ${b.proof.hasQuotePath}, ${b.proof.hasLiveChat}, ${b.proof.hasPublishedPricing})
         `;
       }
 

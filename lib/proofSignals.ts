@@ -5,6 +5,9 @@
 // page text), so every number in an audit is verifiable against the site.
 
 export type ProofSignals = {
+  // False when no sitemap could be read — counts are then unknown, not zero,
+  // and must render as "not counted" rather than 0.
+  sitemapFound: boolean;
   caseStudies: number;
   resources: number;
   certifications: number;
@@ -73,6 +76,7 @@ export async function fetchProofSignals(
   if (urls.length === 0 && !html) return null;
 
   const signals: ProofSignals = {
+    sitemapFound: urls.length > 0,
     caseStudies: 0,
     resources: 0,
     certifications: 0,

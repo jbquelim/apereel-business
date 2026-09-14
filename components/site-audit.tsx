@@ -72,9 +72,26 @@ type CompetitorInventory = {
   categories: InventoryCategory[];
 };
 
+type ProofSignals = {
+  sitemapFound: boolean;
+  caseStudies: number;
+  resources: number;
+  certifications: number;
+  industriesServed: number;
+  hasQuotePath: boolean;
+  hasLiveChat: boolean;
+  hasPublishedPricing: boolean;
+};
+
+type Credibility = {
+  client: ProofSignals;
+  competitors: { name: string; domain: string; signals: ProofSignals }[];
+};
+
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
+  businessModel?: string | null;
   competitors: Competitor[];
   insight: string;
   channels: Channel[];
@@ -107,6 +124,7 @@ type AuditData = {
   meta: Meta;
   industry: IndustryAnalysis;
   trends: TrendsData;
+  credibility?: Credibility;
   competitorInventories?: CompetitorInventory[];
   inventoryInsights?: string[];
   translateAdvantage?: TranslateAdvantage;
@@ -337,6 +355,108 @@ const INTENT_LABELS: Record<string, { label: string; color: string; bg: string }
   T: { label: "T", color: "text-emerald-300", bg: "bg-emerald-400/20" },
 };
 
+const CREDIBILITY_COUNT_ROWS: { label: string; key: "caseStudies" | "resources" | "certifications" | "industriesServed" }[] = [
+  { label: "Case study pages", key: "caseStudies" },
+  { label: "Guides & resources", key: "resources" },
+  { label: "Certification pages", key: "certifications" },
+  { label: "Industry pages", key: "industriesServed" },
+];
+
+const CREDIBILITY_CHECK_ROWS: { label: string; key: "hasQuotePath" | "hasLiveChat" | "hasPublishedPricing" }[] = [
+  { label: "Quote request path", key: "hasQuotePath" },
+  { label: "Live chat", key: "hasLiveChat" },
+  { label: "Published pricing", key: "hasPublishedPricing" },
+];
+
+function CredibilitySection({ credibility, url }: { credibility: Credibility; url: string }) {
+  const you = { name: "You", domain: new URL(url).hostname.replace(/^www\./, ""), signals: credibility.client };
+  const cols = [you, ...credibility.competitors];
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+      <div className="flex items-center gap-3">
+        <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+          Buyer Credibility Benchmark
+        </p>
+        <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+          Crawled Data
+        </span>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-muted">
+        B2B buyers shortlist suppliers from website evidence before ever contacting sales.
+        This is the proof each site shows them, counted from public pages.
+      </p>
+
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-white/10 text-[11px] tracking-wide text-muted/60 uppercase">
+              <th className="pb-2 pr-4 font-medium">Signal</th>
+              {cols.map((c, i) => (
+                <th key={i} className={`pb-2 pr-4 text-right font-medium ${i === 0 ? "text-electric/80" : ""}`}>
+                  {c.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {CREDIBILITY_COUNT_ROWS.map((row) => {
+              // A site without a readable sitemap has unknown counts, not
+              // zeros — show "—" and keep it out of the best-in-row highlight.
+              const best = Math.max(
+                ...cols.map((c) => (c.signals.sitemapFound ? c.signals[row.key] : -1)),
+              );
+              return (
+                <tr key={row.key} className="border-b border-white/5">
+                  <td className="py-2.5 pr-4 text-ink">{row.label}</td>
+                  {cols.map((c, i) => (
+                    <td
+                      key={i}
+                      className={`py-2.5 pr-4 text-right font-mono ${
+                        c.signals.sitemapFound && best > 0 && c.signals[row.key] === best
+                          ? "text-electric"
+                          : "text-ink/70"
+                      }`}
+                    >
+                      {c.signals.sitemapFound ? (
+                        c.signals[row.key]
+                      ) : (
+                        <span className="text-muted/40">
+                          —<span className="sr-only">not counted</span>
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+            {CREDIBILITY_CHECK_ROWS.map((row) => (
+              <tr key={row.key} className="border-b border-white/5">
+                <td className="py-2.5 pr-4 text-ink">{row.label}</td>
+                {cols.map((c, i) => (
+                  <td key={i} className="py-2.5 pr-4 text-right">
+                    {c.signals[row.key] ? (
+                      <span className="font-mono text-electric">
+                        <span aria-hidden>✓</span>
+                        <span className="sr-only">Yes</span>
+                      </span>
+                    ) : (
+                      <span className="font-mono text-muted/40">
+                        <span aria-hidden>—</span>
+                        <span className="sr-only">No</span>
+                      </span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function AuditResults({ data }: { data: AuditData }) {
   const hasScores = Object.values(data.scores).some((s) => s !== null);
   const hasVitals = Object.values(data.vitals).some((v) => v !== null);
@@ -471,6 +591,8 @@ function AuditResults({ data }: { data: AuditData }) {
 
         </div>
       )}
+
+      {data.credibility && <CredibilitySection credibility={data.credibility} url={data.url} />}
 
       {data.competitorInventories && data.competitorInventories.length > 0 && (
         <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">

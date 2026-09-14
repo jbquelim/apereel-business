@@ -76,5 +76,7 @@ await sql`
   ON credibility_snapshots (business_id, captured_at)
 `;
 
+await sql`ALTER TABLE credibility_snapshots ADD COLUMN IF NOT EXISTS sitemap_found BOOLEAN NOT NULL DEFAULT true`;
+
 const [{ count }] = await sql`SELECT count(*)::int AS count FROM businesses`;
 console.log("Schema ready. businesses rows:", count);
