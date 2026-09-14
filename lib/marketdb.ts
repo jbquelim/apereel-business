@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import type { ProofSignals } from "./proofSignals";
+import type { RawProduct } from "./productMatch";
 
 // Market-intelligence dataset: every audit persists the businesses it touched,
 // their industry classification, and an inventory snapshot per category. The
@@ -25,6 +26,7 @@ export type BusinessSnapshot = {
   categories: CategorySnapshot[];
   businessModel?: string | null; // retail | b2b | hybrid
   proof?: ProofSignals | null;
+  products?: RawProduct[] | null;
 };
 
 type Sql = ReturnType<typeof neon>;
@@ -99,6 +101,23 @@ export async function recordAuditSnapshot(
         await sql`
           INSERT INTO credibility_snapshots (business_id, sitemap_found, case_studies, resources, certifications, industries_served, has_quote_path, has_live_chat, has_published_pricing)
           VALUES (${businessId}, ${b.proof.sitemapFound}, ${b.proof.caseStudies}, ${b.proof.resources}, ${b.proof.certifications}, ${b.proof.industriesServed}, ${b.proof.hasQuotePath}, ${b.proof.hasLiveChat}, ${b.proof.hasPublishedPricing})
+        `;
+      }
+
+      if (b.products && b.products.length > 0) {
+        // One batched insert — 150 individual round trips would make the
+        // post-response window drag.
+        const rows = b.products.map((p) => ({
+          title: p.title,
+          product_type: p.productType,
+          price_cents: p.priceCents,
+          url: p.url,
+        }));
+        await sql`
+          INSERT INTO product_samples (business_id, title, product_type, price_cents, url)
+          SELECT ${businessId}, x.title, x.product_type, x.price_cents, x.url
+          FROM jsonb_to_recordset(${JSON.stringify(rows)}::jsonb)
+            AS x(title text, product_type text, price_cents int, url text)
         `;
       }
 

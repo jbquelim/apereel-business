@@ -117,6 +117,15 @@ type TrendsData = {
   timeline: TrendPoint[];
 } | null;
 
+type ProductComparison = {
+  clientTitle: string;
+  clientPrice: string;
+  competitorTitle: string;
+  competitorPrice: string;
+  competitorName: string;
+  competitorDomain: string;
+};
+
 type AuditData = {
   url: string;
   scores: Scores;
@@ -126,6 +135,7 @@ type AuditData = {
   trends: TrendsData;
   credibility?: Credibility;
   competitorInventories?: CompetitorInventory[];
+  productComparisons?: ProductComparison[];
   inventoryInsights?: string[];
   translateAdvantage?: TranslateAdvantage;
   headline?: string;
@@ -457,6 +467,67 @@ function CredibilitySection({ credibility, url }: { credibility: Credibility; ur
   );
 }
 
+function priceDelta(clientPrice: string, competitorPrice: string): string | null {
+  const parse = (s: string) => parseFloat(s.replace(/[$,]/g, ""));
+  const c = parse(clientPrice);
+  const k = parse(competitorPrice);
+  if (!Number.isFinite(c) || !Number.isFinite(k) || k === 0) return null;
+  const pct = Math.round(((c - k) / k) * 100);
+  if (pct === 0) return "same price";
+  return pct > 0 ? `you're ${pct}% higher` : `you're ${-pct}% lower`;
+}
+
+function ProductComparisonSection({ comparisons }: { comparisons: ProductComparison[] }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+      <div className="flex items-center gap-3">
+        <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+          Product Price Comparison
+        </p>
+        <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+          Live Price Feeds
+        </span>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-muted">
+        Closest comparable listings, matched from each store&apos;s live product feed.
+        Product names are shown exactly as listed so every pairing can be verified.
+      </p>
+
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-white/10 text-[11px] tracking-wide text-muted/60 uppercase">
+              <th className="pb-2 pr-4 font-medium">Your listing</th>
+              <th className="pb-2 pr-4 font-medium text-right">Your price</th>
+              <th className="pb-2 pr-4 font-medium">Their closest listing</th>
+              <th className="pb-2 pr-4 font-medium text-right">Their price</th>
+              <th className="pb-2 font-medium text-right">Gap</th>
+            </tr>
+          </thead>
+          <tbody>
+            {comparisons.map((m, i) => (
+              <tr key={i} className="border-b border-white/5 align-top">
+                <td className="max-w-[220px] py-2.5 pr-4 text-ink">{m.clientTitle}</td>
+                <td className="py-2.5 pr-4 text-right font-mono text-electric">{m.clientPrice}</td>
+                <td className="max-w-[220px] py-2.5 pr-4">
+                  <span className="text-ink/90">{m.competitorTitle}</span>
+                  <span className="mt-0.5 block font-mono text-[11px] text-muted/50">
+                    {m.competitorName}
+                  </span>
+                </td>
+                <td className="py-2.5 pr-4 text-right font-mono text-ink/80">{m.competitorPrice}</td>
+                <td className="py-2.5 text-right text-[12px] whitespace-nowrap text-muted">
+                  {priceDelta(m.clientPrice, m.competitorPrice) ?? "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function AuditResults({ data }: { data: AuditData }) {
   const hasScores = Object.values(data.scores).some((s) => s !== null);
   const hasVitals = Object.values(data.vitals).some((v) => v !== null);
@@ -645,6 +716,10 @@ function AuditResults({ data }: { data: AuditData }) {
             ))}
           </div>
         </div>
+      )}
+
+      {data.productComparisons && data.productComparisons.length > 0 && (
+        <ProductComparisonSection comparisons={data.productComparisons} />
       )}
 
       {data.inventoryInsights && data.inventoryInsights.length > 0 && (

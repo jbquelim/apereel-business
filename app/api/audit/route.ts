@@ -1,6 +1,12 @@
 import { NextResponse, after } from "next/server";
 import { recordAuditSnapshot } from "@/lib/marketdb";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
+import {
+  matchProducts,
+  formatCents,
+  type RawProduct,
+  type ProductMatch,
+} from "@/lib/productMatch";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const googleTrends = require("google-trends-api");
 
@@ -73,6 +79,8 @@ type CompetitorInventory = {
   domain: string;
   categories: InventoryCategory[];
   source?: InventorySource;
+  // Raw live-feed products, server-side only — stripped before the response.
+  products?: RawProduct[];
 };
 
 type IndustryAnalysis = {
@@ -103,6 +111,15 @@ type TrendsData = {
   keywords: string[];
   timeline: TrendPoint[];
 } | null;
+
+type ProductComparison = {
+  clientTitle: string;
+  clientPrice: string;
+  competitorTitle: string;
+  competitorPrice: string;
+  competitorName: string;
+  competitorDomain: string;
+};
 
 type AuditResult = {
   url: string;
@@ -145,6 +162,7 @@ type AuditResult = {
     competitors: { name: string; domain: string; signals: ProofSignals }[];
   };
   competitorInventories?: CompetitorInventory[];
+  productComparisons?: ProductComparison[];
   inventoryInsights?: string[];
   translateAdvantage?: TranslateAdvantage;
   headline?: string;
@@ -380,7 +398,11 @@ async function fetchCompetitorSearchResults(industry: string, subIndustry: strin
 const BROWSER_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-async function fetchShopifyInventory(domain: string): Promise<string | null> {
+const MAX_RAW_PRODUCTS = 150;
+
+async function fetchShopifyInventory(
+  domain: string,
+): Promise<{ text: string; products: RawProduct[] } | null> {
   try {
     const res = await fetch(`https://${domain}/collections.json?limit=250`, {
       headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
@@ -391,10 +413,19 @@ async function fetchShopifyInventory(domain: string): Promise<string | null> {
     if (!Array.isArray(collections) || collections.length === 0) return null;
 
     type ShopifyCollection = { handle: string; title: string; products_count?: number };
+    type ShopifyProduct = {
+      title?: string;
+      handle?: string;
+      product_type?: string;
+      variants?: { price: string }[];
+    };
     const biggest = (collections as ShopifyCollection[])
       .filter((c) => (c.products_count ?? 0) > 0)
       .sort((a, b) => (b.products_count ?? 0) - (a.products_count ?? 0));
     const picked = biggest.length > 0 ? biggest : (collections as ShopifyCollection[]);
+
+    const seenHandles = new Set<string>();
+    const rawProducts: RawProduct[] = [];
 
     const lines = (await Promise.all(
       picked.slice(0, 6).map(async (col: ShopifyCollection) => {
@@ -409,6 +440,21 @@ async function fetchShopifyInventory(domain: string): Promise<string | null> {
           if (!pRes.ok) return null;
           const products = (await pRes.json())?.products;
           if (!Array.isArray(products) || products.length === 0) return null;
+          for (const p of products as ShopifyProduct[]) {
+            if (rawProducts.length >= MAX_RAW_PRODUCTS) break;
+            if (!p.title || !p.handle || seenHandles.has(p.handle)) continue;
+            seenHandles.add(p.handle);
+            const variantPrices = (p.variants ?? [])
+              .map((v) => parseFloat(v.price))
+              .filter((n) => Number.isFinite(n) && n > 0);
+            rawProducts.push({
+              title: p.title,
+              productType: p.product_type || null,
+              priceCents:
+                variantPrices.length > 0 ? Math.round(Math.min(...variantPrices) * 100) : null,
+              url: `https://${domain}/products/${p.handle}`,
+            });
+          }
           const prices = products
             .flatMap((p: { variants?: { price: string }[] }) =>
               (p.variants ?? []).map((v) => parseFloat(v.price)),
@@ -429,7 +475,10 @@ async function fetchShopifyInventory(domain: string): Promise<string | null> {
 
     if (lines.length === 0) return null;
     console.log("Shopify inventory data found for", domain);
-    return `Live product data from ${domain} (exact figures from the store's product API — use these numbers verbatim):\n${lines.join("\n")}`;
+    return {
+      text: `Live product data from ${domain} (exact figures from the store's product API — use these numbers verbatim):\n${lines.join("\n")}`,
+      products: rawProducts,
+    };
   } catch {
     return null;
   }
@@ -629,7 +678,7 @@ async function searchIndexedInventory(domain: string): Promise<string | null> {
 
 type InventorySource = "live" | "sitemap" | "crawl" | "search";
 
-type CrawledInventory = { data: string; source: InventorySource };
+type CrawledInventory = { data: string; source: InventorySource; products?: RawProduct[] };
 
 const SOURCE_NOTES: Record<InventorySource, string> = {
   live: "live product API — exact figures",
@@ -640,7 +689,7 @@ const SOURCE_NOTES: Record<InventorySource, string> = {
 
 async function crawlSiteInventory(domain: string): Promise<CrawledInventory | null> {
   const shopify = await fetchShopifyInventory(domain);
-  if (shopify) return { data: shopify, source: "live" };
+  if (shopify) return { data: shopify.text, source: "live", products: shopify.products };
 
   const sitemap = await fetchSitemapInventory(domain);
   if (sitemap) return { data: sitemap, source: "sitemap" };
@@ -832,6 +881,7 @@ Rules:
           name: r.name,
           domain: r.domain,
           source: r.inventory.source,
+          products: r.inventory.products,
           categories: Array.isArray(match?.categories)
             ? dropOverlappingStoreViews(
                 match.categories
@@ -853,6 +903,7 @@ async function generateInventoryInsights(
   subIndustry: string,
   ownCategories: InventoryCategory[],
   competitorInventories: CompetitorInventory[],
+  productMatches: ProductMatch[] = [],
 ): Promise<string[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return [];
@@ -872,6 +923,9 @@ ${ownCategories.length > 0 ? fmt(ownCategories) : "(no inventory data extracted)
 
 === COMPETITORS (NOT the client) ===
 ${competitorInventories.map((c) => `${c.name} (${c.domain}):\n${fmt(c.categories)}`).join("\n\n")}
+${productMatches.length > 0 ? `
+=== MATCHED COMPARABLE PRODUCTS (exact prices from live product feeds) ===
+${productMatches.map((m) => `- CLIENT'S "${m.clientTitle}" (${formatCents(m.clientPriceCents)}) vs ${m.competitorName}'s "${m.competitorTitle}" (${formatCents(m.competitorPriceCents)})`).join("\n")}` : ""}
 
 Write 3-4 sharp, specific insights comparing the client's inventory depth and price positioning against these competitors, and what that means for their search visibility and revenue opportunity. Categories with deeper inventory tend to rank better organically — use that lens where relevant.
 
@@ -880,6 +934,7 @@ Rules:
 - Before writing each insight, verify which business each number belongs to: "Your X" must only reference categories in THE CLIENT section, and competitor numbers must be attributed to the right competitor by name
 - Each insight is one sentence, under 35 words, direct and confident, addressed to the client ("Your...")
 - Collections on the same site can overlap heavily — NEVER add product counts from different categories together or claim a combined total across categories
+- Individual products may ONLY be compared using the MATCHED COMPARABLE PRODUCTS pairs above, quoting both product names verbatim — never pair up products yourself
 - No hedging words like "may", "might", "could potentially"
 - If the client has no inventory data, focus on what competitors' depth means for them
 
@@ -1610,6 +1665,32 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     console.log("Competitor inventories found:", competitorInventories.length);
   }
 
+  // Product-level price comparison: only when both sides have live product
+  // feeds with exact titles and prices — matched pairs are the sole place the
+  // audit may compare individual products.
+  let productMatches: ProductMatch[] = [];
+  const clientProducts = inventorySearchData?.products ?? [];
+  if (clientProducts.length > 0) {
+    const liveCompetitors = competitorInventories
+      .filter((c): c is CompetitorInventory & { products: RawProduct[] } =>
+        !!c.products && c.products.length > 0,
+      )
+      .map((c) => ({ name: c.name, domain: c.domain, products: c.products }));
+    if (liveCompetitors.length > 0) {
+      productMatches = matchProducts(clientProducts, liveCompetitors);
+      if (productMatches.length > 0)
+        console.log("Product matches found:", productMatches.length);
+    }
+  }
+  const productComparisons: ProductComparison[] = productMatches.map((m) => ({
+    clientTitle: m.clientTitle,
+    clientPrice: formatCents(m.clientPriceCents),
+    competitorTitle: m.competitorTitle,
+    competitorPrice: formatCents(m.competitorPriceCents),
+    competitorName: m.competitorName,
+    competitorDomain: m.competitorDomain,
+  }));
+
   // B2B and hybrid businesses hide prices, so their comparable dimension is
   // credibility: the proof buyers look for while researching suppliers.
   let credibility: AuditResult["credibility"];
@@ -1644,6 +1725,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
       industry.subIndustry,
       industry.inventoryCategories,
       competitorInventories,
+      productMatches,
     );
     console.log("Inventory insights generated:", inventoryInsights.length);
   }
@@ -1683,6 +1765,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
         categories: industry?.inventoryCategories ?? [],
         businessModel: industry?.businessModel ?? null,
         proof: credibility?.client ?? null,
+        products: inventorySearchData?.products ?? null,
       },
       ...competitorInventories.map((c) => ({
         domain: c.domain,
@@ -1698,6 +1781,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
           credibility?.competitors.find(
             (p) => p.domain.replace(/^www\./, "") === c.domain.replace(/^www\./, ""),
           )?.signals ?? null,
+        products: c.products ?? null,
       })),
       ...(industry?.competitors ?? [])
         .filter((c) => !crawledDomains.has(c.domain))
@@ -1733,7 +1817,16 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     industry,
     trends,
     credibility,
-    competitorInventories: competitorInventories.length > 0 ? competitorInventories : undefined,
+    competitorInventories:
+      competitorInventories.length > 0
+        ? competitorInventories.map((c) => ({
+            name: c.name,
+            domain: c.domain,
+            categories: c.categories,
+            source: c.source,
+          }))
+        : undefined,
+    productComparisons: productComparisons.length > 0 ? productComparisons : undefined,
     inventoryInsights: inventoryInsights.length > 0 ? inventoryInsights : undefined,
     translateAdvantage: translateAdvantage ?? undefined,
     headline: headline ?? undefined,

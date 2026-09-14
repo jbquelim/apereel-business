@@ -78,5 +78,22 @@ await sql`
 
 await sql`ALTER TABLE credibility_snapshots ADD COLUMN IF NOT EXISTS sitemap_found BOOLEAN NOT NULL DEFAULT true`;
 
+await sql`
+  CREATE TABLE IF NOT EXISTS product_samples (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    product_type TEXT,
+    price_cents INTEGER,
+    url TEXT,
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+
+await sql`
+  CREATE INDEX IF NOT EXISTS idx_product_samples_business_time
+  ON product_samples (business_id, captured_at)
+`;
+
 const [{ count }] = await sql`SELECT count(*)::int AS count FROM businesses`;
 console.log("Schema ready. businesses rows:", count);
