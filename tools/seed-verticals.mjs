@@ -34,6 +34,16 @@ const SEEDS = [
   "mec.ca",
   "altitude-sports.com",
   "sportinglife.ca",
+  // B2B: custom packaging (quote-based)
+  "pakfactory.com",
+  "packlane.com",
+  "refinepackaging.com",
+  "noissue.co",
+  // B2B: on-demand manufacturing (quote-based)
+  "protolabs.com",
+  "xometry.com",
+  "fictiv.com",
+  "hubs.com",
 ];
 
 if (!process.env.DATABASE_URL) {

@@ -54,5 +54,27 @@ await sql`
   )
 `;
 
+await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS business_model TEXT`;
+
+await sql`
+  CREATE TABLE IF NOT EXISTS credibility_snapshots (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    case_studies INTEGER NOT NULL DEFAULT 0,
+    resources INTEGER NOT NULL DEFAULT 0,
+    certifications INTEGER NOT NULL DEFAULT 0,
+    industries_served INTEGER NOT NULL DEFAULT 0,
+    has_quote_path BOOLEAN NOT NULL DEFAULT false,
+    has_live_chat BOOLEAN NOT NULL DEFAULT false,
+    has_published_pricing BOOLEAN NOT NULL DEFAULT false,
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+
+await sql`
+  CREATE INDEX IF NOT EXISTS idx_credibility_business_time
+  ON credibility_snapshots (business_id, captured_at)
+`;
+
 const [{ count }] = await sql`SELECT count(*)::int AS count FROM businesses`;
 console.log("Schema ready. businesses rows:", count);

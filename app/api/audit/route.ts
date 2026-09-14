@@ -1,5 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { recordAuditSnapshot } from "@/lib/marketdb";
+import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const googleTrends = require("google-trends-api");
 
@@ -77,6 +78,7 @@ type CompetitorInventory = {
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
+  businessModel: string | null;
   competitors: Competitor[];
   insight: string;
   channels: Channel[];
@@ -138,6 +140,10 @@ type AuditResult = {
   };
   industry: IndustryAnalysis;
   trends: TrendsData;
+  credibility?: {
+    client: ProofSignals;
+    competitors: { name: string; domain: string; signals: ProofSignals }[];
+  };
   competitorInventories?: CompetitorInventory[];
   inventoryInsights?: string[];
   translateAdvantage?: TranslateAdvantage;
@@ -676,7 +682,10 @@ function roundAvgPrice(raw: string): string {
   });
 }
 
-function normalizeInventoryCategory(cat: Partial<InventoryCategory> | null): InventoryCategory | null {
+function normalizeInventoryCategory(
+  cat: Partial<InventoryCategory> | null,
+  allowBare = false,
+): InventoryCategory | null {
   if (!cat?.category || typeof cat.category !== "string") return null;
   if (JUNK_CATEGORY_RE.test(cat.category.trim())) return null;
   const productCount =
@@ -685,7 +694,7 @@ function normalizeInventoryCategory(cat: Partial<InventoryCategory> | null): Inv
     typeof cat.avgPrice === "string" && cat.avgPrice.trim() ? roundAvgPrice(cat.avgPrice) : null;
   const priceRange =
     typeof cat.priceRange === "string" && cat.priceRange.trim() ? cat.priceRange : null;
-  if (productCount === null && avgPrice === null && priceRange === null) return null;
+  if (!allowBare && productCount === null && avgPrice === null && priceRange === null) return null;
   // A bare navigational index row ("Collections", "Watches") with a count but no
   // price signal is usually a failed crawl of the whole site, not a category —
   // keep it only if it carries price data or a specific name.
@@ -1218,6 +1227,7 @@ Respond with ONLY valid JSON, no markdown formatting:
 {
   "industry": "broad industry name",
   "subIndustry": "specific niche or sub-category",
+  "businessModel": "retail | b2b | hybrid — 'retail' sells to consumers at listed prices; 'b2b' sells to businesses via quotes, RFQs, or sales conversations (manufacturers, distributors, professional services); 'hybrid' does both",
   "competitors": [
     { "name": "Company Name", "domain": "example.com", "strength": "What they do well that makes them a strong competitor" }
   ],
@@ -1328,10 +1338,17 @@ Rules:
           }))
         : [],
       totalKeywords: parsed.totalKeywords ?? 0,
+      businessModel: ["retail", "b2b", "hybrid"].includes(parsed.businessModel)
+        ? parsed.businessModel
+        : null,
       inventoryCategories: Array.isArray(parsed.inventoryCategories)
         ? dropOverlappingStoreViews(
             parsed.inventoryCategories
-              .map((cat: InventoryCategory) => normalizeInventoryCategory(cat))
+              // B2B service lines legitimately have no counts or prices — a
+              // bare named offering is still worth keeping for them.
+              .map((cat: InventoryCategory) =>
+                normalizeInventoryCategory(cat, parsed.businessModel === "b2b"),
+              )
               .filter(Boolean) as InventoryCategory[],
           )
         : [],
@@ -1593,6 +1610,29 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     console.log("Competitor inventories found:", competitorInventories.length);
   }
 
+  // B2B and hybrid businesses hide prices, so their comparable dimension is
+  // credibility: the proof buyers look for while researching suppliers.
+  let credibility: AuditResult["credibility"];
+  if (industry && (industry.businessModel === "b2b" || industry.businessModel === "hybrid")) {
+    const top3 = industry.competitors.slice(0, 3);
+    const [clientProof, ...compProofs] = await Promise.all([
+      fetchProofSignals(domain),
+      ...top3.map((c) => fetchProofSignals(c.domain.replace(/^www\./, ""))),
+    ]);
+    if (clientProof) {
+      credibility = {
+        client: clientProof,
+        competitors: top3
+          .map((c, i) => ({ name: c.name, domain: c.domain, signals: compProofs[i] }))
+          .filter(
+            (c): c is { name: string; domain: string; signals: ProofSignals } =>
+              c.signals !== null,
+          ),
+      };
+      console.log("Credibility benchmarks:", 1 + credibility.competitors.length, "sites");
+    }
+  }
+
   let inventoryInsights: string[] = [];
   if (
     !isIngest &&
@@ -1641,6 +1681,8 @@ Respond with ONLY a JSON array of exactly 5 competitors:
         source: inventorySearchData?.source ?? null,
         discoveredFrom: null,
         categories: industry?.inventoryCategories ?? [],
+        businessModel: industry?.businessModel ?? null,
+        proof: credibility?.client ?? null,
       },
       ...competitorInventories.map((c) => ({
         domain: c.domain,
@@ -1651,6 +1693,11 @@ Respond with ONLY a JSON array of exactly 5 competitors:
         source: c.source ?? null,
         discoveredFrom: domain,
         categories: c.categories,
+        businessModel: industry?.businessModel ?? null,
+        proof:
+          credibility?.competitors.find(
+            (p) => p.domain.replace(/^www\./, "") === c.domain.replace(/^www\./, ""),
+          )?.signals ?? null,
       })),
       ...(industry?.competitors ?? [])
         .filter((c) => !crawledDomains.has(c.domain))
@@ -1663,6 +1710,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
           source: null,
           discoveredFrom: domain,
           categories: [],
+          businessModel: industry?.businessModel ?? null,
         })),
     ]);
   });
@@ -1684,6 +1732,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     meta: metaData,
     industry,
     trends,
+    credibility,
     competitorInventories: competitorInventories.length > 0 ? competitorInventories : undefined,
     inventoryInsights: inventoryInsights.length > 0 ? inventoryInsights : undefined,
     translateAdvantage: translateAdvantage ?? undefined,
