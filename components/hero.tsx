@@ -1,5 +1,6 @@
 import { ButtonLink } from "@/components/button-link";
 import { Container } from "@/components/container";
+import { CountUp } from "@/components/count-up";
 import { site } from "@/lib/site";
 
 const STATS = [
@@ -31,7 +32,9 @@ export function Hero() {
         <div className="animate-rise-delay-2 mt-14 flex flex-wrap gap-10 border-t border-white/10 pt-8 sm:gap-16">
           {STATS.map((s) => (
             <div key={s.label}>
-              <p className="font-display text-4xl text-ink sm:text-5xl">{s.value}</p>
+              <p className="font-display text-4xl text-ink sm:text-5xl">
+                <CountUp value={s.value} />
+              </p>
               <p className="mt-2 font-mono text-[12px] tracking-[0.08em] text-muted uppercase">
                 {s.label}
               </p>

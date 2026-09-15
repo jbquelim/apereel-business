@@ -145,8 +145,31 @@ body {
   transform: none;
 }
 
+/* Children of a revealed section that should land one after another —
+   data cards, metric cells. 60ms steps, same curve as the section. */
+.reveal-stagger {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.5s var(--ease-out),
+    transform 0.5s var(--ease-out);
+}
+
+.reveal-section.is-visible .reveal-stagger {
+  opacity: 1;
+  transform: none;
+}
+
+.reveal-section.is-visible .reveal-stagger:nth-child(2) { transition-delay: 60ms; }
+.reveal-section.is-visible .reveal-stagger:nth-child(3) { transition-delay: 120ms; }
+.reveal-section.is-visible .reveal-stagger:nth-child(4) { transition-delay: 180ms; }
+.reveal-section.is-visible .reveal-stagger:nth-child(5) { transition-delay: 240ms; }
+.reveal-section.is-visible .reveal-stagger:nth-child(6) { transition-delay: 300ms; }
+
 @media (prefers-reduced-motion: reduce) {
-  .reveal-section {
+  .reveal-section,
+  .reveal-stagger,
+  .reveal-section.is-visible .reveal-stagger {
     opacity: 1;
     transform: none;
     transition: none;

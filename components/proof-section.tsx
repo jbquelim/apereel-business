@@ -1,4 +1,5 @@
 import { Container } from "@/components/container";
+import { CountUp } from "@/components/count-up";
 import Image from "next/image";
 
 const metrics: { value: string; label: string; sublabel?: string }[] = [
@@ -49,9 +50,9 @@ export function ProofSection() {
 
               <div className="mt-12 grid grid-cols-2 gap-6">
                 {metrics.map((m) => (
-                  <div key={m.label}>
+                  <div key={m.label} className="reveal-stagger">
                     <p className="font-mono text-3xl text-ink sm:text-4xl">
-                      {m.value}
+                      <CountUp value={m.value} />
                     </p>
                     <p className="mt-1 font-mono text-[12px] tracking-[0.08em] text-muted uppercase">
                       {m.label}

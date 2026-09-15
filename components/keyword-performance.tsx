@@ -85,7 +85,7 @@ export function KeywordPerformance() {
               {rankings.map((r) => (
                 <div
                   key={r.label}
-                  className="rounded-[var(--radius-parent)] bg-white p-5"
+                  className="reveal-stagger rounded-[var(--radius-parent)] bg-white p-5"
                 >
                   <div className="flex items-start justify-between">
                     <p
