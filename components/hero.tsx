@@ -1,6 +1,7 @@
 import { ButtonLink } from "@/components/button-link";
 import { Container } from "@/components/container";
 import { CountUp } from "@/components/count-up";
+import { HeroGraph } from "@/components/hero-graph";
 import { site } from "@/lib/site";
 
 const STATS = [
@@ -15,8 +16,9 @@ export function Hero() {
   return (
     <section
       id="top"
-      className="relative flex min-h-screen flex-col justify-end pt-28 pb-16 sm:pb-20 lg:pb-24"
+      className="relative isolate flex min-h-screen flex-col justify-end overflow-hidden pt-28 pb-16 sm:pb-20 lg:pb-24"
     >
+      <HeroGraph />
       <Container className="relative">
         <p className="animate-rise font-mono text-[13px] tracking-[0.08em] text-muted uppercase">
           A digital growth consultancy for e-commerce businesses
