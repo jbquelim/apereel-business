@@ -9,12 +9,12 @@ export function Principles() {
       className="reveal-section py-24 sm:py-32"
     >
       <Container>
-        <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+        <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
           Principles
         </p>
         <h2
           id="principles-heading"
-          className="font-display mt-4 max-w-xl text-3xl text-ink sm:text-4xl"
+          className="font-display mt-4 max-w-xl text-4xl font-normal tracking-[-0.02em] text-ink sm:text-5xl"
         >
           Six rules. Zero exceptions.
         </h2>

@@ -16,7 +16,7 @@ export function SiteFooter() {
           </p>
         </div>
         <div className="md:col-span-3">
-          <p className="text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
+          <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
             Navigate
           </p>
           <ul className="mt-4 space-y-3">
@@ -33,7 +33,7 @@ export function SiteFooter() {
           </ul>
         </div>
         <div className="md:col-span-4">
-          <p className="text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
+          <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
             Contact
           </p>
           <ul className="mt-4 space-y-3 text-sm">

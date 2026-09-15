@@ -15,7 +15,7 @@ export function RealityCheck() {
             <div className="py-24 pr-12 sm:py-32">
               <h3
                 id="reality-check-heading"
-                className="font-display text-3xl text-ink sm:text-4xl"
+                className="font-display text-4xl font-normal tracking-[-0.02em] text-ink sm:text-5xl"
               >
                 You were promised better rankings and more business.
               </h3>
@@ -48,13 +48,13 @@ export function RealityCheck() {
       {/* --- Three principles (white background) --- */}
       <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
         <Container>
-          <h2 className="font-display mb-12 text-center text-3xl text-navy sm:mb-16 sm:text-4xl">
+          <h2 className="font-display mb-12 text-center text-4xl font-normal tracking-[-0.02em] text-navy sm:mb-16 sm:text-5xl">
             What to Know. What to Look For.
           </h2>
           <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
             {/* 01 */}
-            <div className="rounded-2xl border border-navy/10 bg-white p-8 sm:p-10">
-              <p className="font-mono text-[12px] tracking-[0.22em] text-electric">
+            <div className="rounded-[var(--radius-parent)] bg-white p-8 sm:p-10">
+              <p className="font-mono text-[12px] tracking-[0.22em] text-navy/60">
                 01
               </p>
               <h3 className="font-display mt-4 text-xl text-navy sm:text-2xl">
@@ -68,8 +68,8 @@ export function RealityCheck() {
             </div>
 
             {/* 02 */}
-            <div className="rounded-2xl border border-navy/10 bg-white p-8 sm:p-10">
-              <p className="font-mono text-[12px] tracking-[0.22em] text-electric">
+            <div className="rounded-[var(--radius-parent)] bg-white p-8 sm:p-10">
+              <p className="font-mono text-[12px] tracking-[0.22em] text-navy/60">
                 02
               </p>
               <h3 className="font-display mt-4 text-xl text-navy sm:text-2xl">
@@ -82,8 +82,8 @@ export function RealityCheck() {
                 </p>
                 <p className="mt-3">Apereel asks:</p>
               </div>
-              <blockquote className="mt-3 border-l-2 border-electric pl-4">
-                <p className="font-display text-lg text-electric sm:text-xl">
+              <blockquote className="mt-3 border-l-2 border-navy/20 pl-4">
+                <p className="font-display text-lg text-navy sm:text-xl">
                   &ldquo;Why should this business rank ahead of everyone
                   else?&rdquo;
                 </p>
@@ -95,8 +95,8 @@ export function RealityCheck() {
             </div>
 
             {/* 03 */}
-            <div className="rounded-2xl border border-navy/10 bg-white p-8 sm:p-10">
-              <p className="font-mono text-[12px] tracking-[0.22em] text-electric">
+            <div className="rounded-[var(--radius-parent)] bg-white p-8 sm:p-10">
+              <p className="font-mono text-[12px] tracking-[0.22em] text-navy/60">
                 03
               </p>
               <h3 className="font-display mt-4 text-xl text-navy sm:text-2xl">
@@ -122,7 +122,7 @@ export function RealityCheck() {
                     className="flex items-start gap-2.5 text-sm text-navy/60"
                   >
                     <span
-                      className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-electric"
+                      className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy/40"
                       aria-hidden="true"
                     />
                     {q}

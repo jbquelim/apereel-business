@@ -11,7 +11,7 @@ export function Founder() {
     >
       <Container className="grid gap-12 lg:grid-cols-12">
         <div className="lg:col-span-5">
-          <div className="relative max-w-sm overflow-hidden rounded-2xl border border-navy/10">
+          <div className="relative max-w-sm overflow-hidden rounded-[var(--radius-parent)]">
             <Image
               src="/images/john-lim.png"
               alt={site.founder.name}
@@ -21,12 +21,6 @@ export function Founder() {
               className="aspect-square w-full object-contain"
               priority={false}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy/80 via-navy/40 to-transparent px-8 pt-16 pb-8">
-              <p className="font-display text-3xl text-navy sm:text-4xl">
-                {site.founder.name}
-              </p>
-              <p className="mt-2 text-sm text-navy/70">{site.founder.title}</p>
-            </div>
           </div>
           <ul className="mt-6 space-y-4 text-sm">
             <li>
@@ -56,12 +50,12 @@ export function Founder() {
           </ul>
         </div>
         <div className="lg:col-span-7 lg:pt-4">
-          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+          <p className="font-mono text-[11px] tracking-[0.24em] text-navy/60 uppercase">
             About
           </p>
           <h2
             id="founder-heading"
-            className="font-display mt-4 text-3xl text-navy sm:text-4xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl"
           >
             {site.founder.name}
           </h2>
@@ -81,7 +75,7 @@ export function Founder() {
 
         {/* Principles */}
         <div className="lg:col-span-12 mt-12 border-t border-navy/10 pt-10">
-          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+          <p className="font-mono text-[11px] tracking-[0.24em] text-navy/60 uppercase">
             Principles
           </p>
           <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

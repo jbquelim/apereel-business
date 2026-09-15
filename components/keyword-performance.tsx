@@ -58,12 +58,12 @@ export function KeywordPerformance() {
         <div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Left: header + keyword cards */}
           <div>
-            <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+            <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
               Search Visibility
             </p>
             <h2
               id="kd-heading"
-              className="font-display mt-4 text-3xl text-navy sm:text-4xl"
+              className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl"
             >
               Ranking Against the Market Leaders
             </h2>
@@ -85,25 +85,25 @@ export function KeywordPerformance() {
               {rankings.map((r) => (
                 <div
                   key={r.label}
-                  className="rounded-xl border border-navy/10 bg-white p-5"
+                  className="rounded-[var(--radius-parent)] bg-white p-5"
                 >
                   <div className="flex items-start justify-between">
                     <p
-                      className="font-display text-3xl text-electric"
+                      className={`font-mono text-3xl ${r.position === 1 ? "text-electric" : "text-navy"}`}
                     >
                       #{r.position}
                     </p>
                     <span
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
+                      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
                         r.difficulty === "Very Hard"
-                          ? "bg-signal/10 text-signal"
-                          : "bg-electric/10 text-electric"
+                          ? "border-signal/20 text-signal"
+                          : "border-navy/10 text-navy/60"
                       }`}
                     >
                       {r.difficulty}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm font-medium text-electric">{r.label}</p>
+                  <p className="mt-3 text-sm font-medium text-navy">{r.label}</p>
                   <p className="mt-1 text-xs text-muted">
                     {r.volume} people search this every month
                   </p>
@@ -120,7 +120,7 @@ export function KeywordPerformance() {
 
           {/* Right: ranking positions screenshot + text below */}
           <div>
-            <div className="overflow-hidden rounded-2xl border border-navy/10 bg-white">
+            <div className="overflow-hidden rounded-[var(--radius-parent)] bg-white">
               <Image
                 src="/images/ranking-positions.png"
                 alt="Strong ranking positions across competitive commercial searches with search terms obscured"

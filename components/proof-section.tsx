@@ -19,12 +19,12 @@ export function ProofSection() {
         <Container>
           <div className="grid gap-16 lg:grid-cols-2 lg:gap-20">
             <div>
-              <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+              <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
                 What Real SEO Looks Like
               </p>
               <h2
                 id="proof-heading"
-                className="font-display mt-4 text-3xl text-ink sm:text-4xl lg:text-5xl"
+                className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink sm:text-5xl lg:text-6xl"
               >
                 Proof, Not Promises.
               </h2>
@@ -50,10 +50,10 @@ export function ProofSection() {
               <div className="mt-12 grid grid-cols-2 gap-6">
                 {metrics.map((m) => (
                   <div key={m.label}>
-                    <p className="font-display text-3xl text-ink sm:text-4xl">
+                    <p className="font-mono text-3xl text-ink sm:text-4xl">
                       {m.value}
                     </p>
-                    <p className="mt-1 text-[12px] tracking-[0.1em] text-muted uppercase">
+                    <p className="mt-1 font-mono text-[12px] tracking-[0.08em] text-muted uppercase">
                       {m.label}
                     </p>
                     {m.sublabel && (
@@ -67,7 +67,7 @@ export function ProofSection() {
             </div>
 
             <div className="flex flex-col justify-center">
-              <div className="overflow-hidden rounded-2xl border border-white/10">
+              <div className="overflow-hidden rounded-[var(--radius-parent)]">
                 <Image
                   src="/images/organic-growth-trend.png"
                   alt="Sustained organic growth trend showing search visibility and non-branded traffic increasing over time"
@@ -95,7 +95,7 @@ export function ProofSection() {
       {/* --- Bottom statement --- */}
       <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
         <Container className="text-center">
-          <h3 className="font-display mx-auto max-w-4xl text-2xl leading-tight text-navy sm:text-3xl lg:text-4xl">
+          <h3 className="font-display mx-auto max-w-4xl text-3xl font-normal leading-tight tracking-[-0.02em] text-navy sm:text-4xl lg:text-5xl">
             One pricing adjustment outperformed six months of marketing
             spend. That&apos;s what we measure.
           </h3>

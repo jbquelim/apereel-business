@@ -11,12 +11,12 @@ export function Contact() {
     >
       <Container className="grid gap-14 lg:grid-cols-12">
         <div className="lg:col-span-5">
-          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+          <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
             Contact
           </p>
           <h2
             id="contact-heading"
-            className="font-display mt-4 text-3xl text-ink text-balance sm:text-5xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-6xl"
           >
             Tell us what&apos;s not working.
           </h2>

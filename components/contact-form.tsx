@@ -5,7 +5,7 @@ import { validateContact, type ContactErrors } from "@/lib/contact";
 import { cn } from "@/lib/cn";
 
 const fieldClass =
-  "mt-2 w-full rounded-lg border border-white/12 bg-navy px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-electric";
+  "mt-2 w-full rounded-[var(--radius-child)] border border-white/12 bg-navy px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-electric";
 
 export function ContactForm() {
   const [errors, setErrors] = useState<ContactErrors>({});
@@ -65,10 +65,10 @@ export function ContactForm() {
   if (status === "success") {
     return (
       <div
-        className="success-fade rounded-2xl border border-white/10 bg-navy-mid p-8 sm:p-10"
+        className="success-fade rounded-[var(--radius-parent)] bg-navy-mid p-8 sm:p-10"
         role="status"
       >
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+        <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
           Received
         </p>
         <p className="font-display mt-4 text-2xl text-ink">
@@ -85,7 +85,7 @@ export function ContactForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="relative rounded-2xl border border-white/10 bg-navy-mid p-8 sm:p-10"
+      className="relative rounded-[var(--radius-parent)] bg-navy-mid p-8 sm:p-10"
       noValidate
     >
       <div className="grid gap-5 sm:grid-cols-2">
@@ -187,7 +187,7 @@ export function ContactForm() {
           />
           <span>
             I agree to the{" "}
-            <a href="/privacy" className="text-electric underline underline-offset-2">
+            <a href="/privacy" className="text-ink underline underline-offset-2 transition-colors hover:text-electric">
               privacy policy
             </a>{" "}
             and consent to Apereel processing my information to respond to this inquiry.
@@ -203,7 +203,7 @@ export function ContactForm() {
             className="mt-0.5 h-4 w-4 shrink-0 rounded border border-white/20 bg-navy accent-electric"
           />
           <span>
-            I'd like to receive occasional insights on digital growth and e-commerce strategy. Unsubscribe anytime.
+            I&apos;d like to receive occasional insights on digital growth and e-commerce strategy. Unsubscribe anytime.
           </span>
         </label>
       </div>

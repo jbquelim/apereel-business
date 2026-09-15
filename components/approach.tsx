@@ -31,12 +31,12 @@ export function Approach() {
     >
       <Container>
         <div className="max-w-3xl">
-          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+          <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
             The Apereel Method
           </p>
           <h2
             id="approach-heading"
-            className="font-display mt-4 text-3xl text-ink sm:text-5xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink sm:text-6xl"
           >
             Fix the business first. Then amplify it with digital.
           </h2>
@@ -54,24 +54,24 @@ export function Approach() {
                   : "text-muted hover:text-ink/70"
               }`}
             >
-              <span className="mr-2 font-mono text-[11px] tracking-[0.22em] text-electric">
+              <span className="mr-2 font-mono text-[11px] tracking-[0.22em] text-muted">
                 {String(i + 1).padStart(2, "0")}
               </span>
               {s.title}
               {i === active && (
-                <span className="absolute bottom-0 left-0 h-[2px] w-full bg-electric" />
+                <span className="absolute bottom-0 left-0 h-[2px] w-full bg-ink" />
               )}
             </button>
           ))}
         </div>
 
         {/* Active tab content */}
-        <article key={active} className="tab-content grid overflow-hidden rounded-2xl border border-white/10 mt-10 lg:grid-cols-2">
-          <div className="hidden min-h-[280px] items-center justify-center bg-navy p-8 lg:flex">
+        <article key={active} className="tab-content grid overflow-hidden rounded-[var(--radius-parent)] bg-navy-mid mt-10 lg:grid-cols-2">
+          <div className="hidden min-h-[280px] items-center justify-center bg-navy-lift p-8 lg:flex">
             <Diagram />
           </div>
           <div className="flex flex-col justify-center p-8 sm:p-10">
-            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+            <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
               {step.title}
             </p>
             <div className="mt-4 space-y-4 text-base leading-relaxed text-muted">
@@ -88,9 +88,9 @@ export function Approach() {
                   {step.services.map((service) => (
                     <li
                       key={service.tag}
-                      className="rounded-lg border border-white/10 bg-white/5 px-4 py-3"
+                      className="rounded-[var(--radius-child)] bg-navy-lift px-4 py-3"
                     >
-                      <p className="text-[11px] font-medium tracking-wide text-electric uppercase">
+                      <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
                         {service.tag}
                       </p>
                       <p className="mt-1 text-[14px] font-semibold leading-snug text-ink">

@@ -30,12 +30,12 @@ export function CaseStudies() {
     >
       <Container>
         <div className="max-w-2xl">
-          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+          <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
             Real Business Problems. Real Fixes.
           </p>
           <h2
             id="work-heading"
-            className="font-display mt-4 text-3xl text-ink sm:text-5xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink sm:text-6xl"
           >
             What we found. And what we changed.
           </h2>
@@ -55,19 +55,19 @@ export function CaseStudies() {
             >
               {s.kicker}
               {i === active && (
-                <span className="absolute bottom-0 left-0 h-[2px] w-full bg-electric" />
+                <span className="absolute bottom-0 left-0 h-[2px] w-full bg-ink" />
               )}
             </button>
           ))}
         </div>
 
         {/* Active case study */}
-        <article key={active} className="tab-content grid overflow-hidden rounded-2xl border border-white/10 mt-10 lg:grid-cols-2">
-          <div className="hidden min-h-[280px] items-center justify-center bg-navy p-8 lg:flex">
+        <article key={active} className="tab-content grid overflow-hidden rounded-[var(--radius-parent)] bg-navy-mid mt-10 lg:grid-cols-2">
+          <div className="hidden min-h-[280px] items-center justify-center bg-navy-lift p-8 lg:flex">
             <Diagram />
           </div>
           <div className="flex flex-col justify-center p-8 sm:p-10">
-            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+            <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
               {study.kicker}
             </p>
             <h3 className="font-display mt-3 text-2xl text-ink sm:text-3xl">
@@ -87,7 +87,7 @@ export function CaseStudies() {
               {study.services.map((service) => (
                 <span
                   key={service}
-                  className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-medium tracking-wide text-electric uppercase"
+                  className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-medium tracking-wide text-muted uppercase"
                 >
                   {service}
                 </span>

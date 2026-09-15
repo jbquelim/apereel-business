@@ -15,12 +15,12 @@ export function Perspectives() {
     >
       <Container>
         <div className="max-w-2xl">
-          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+          <p className="font-mono text-[11px] tracking-[0.24em] text-navy/60 uppercase">
             Before We Start
           </p>
           <h2
             id="perspectives-heading"
-            className="font-display mt-4 text-3xl text-navy sm:text-4xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl"
           >
             The questions your current agency isn&apos;t asking.
           </h2>
@@ -39,7 +39,7 @@ export function Perspectives() {
                   aria-expanded={isOpen}
                 >
                   <span
-                    className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-electric/60"
+                    className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-navy/40"
                     aria-hidden="true"
                   />
                   <div className="flex flex-1 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-8">

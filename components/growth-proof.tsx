@@ -10,8 +10,8 @@ export function GrowthProof() {
       <Container>
         <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
           <div className="lg:col-span-7">
-            <div className="rounded-2xl border border-navy/10 bg-white p-6 sm:p-8">
-              <p className="mb-6 text-[11px] font-semibold tracking-[0.18em] text-navy/40 uppercase">
+            <div className="rounded-[var(--radius-parent)] bg-white p-6 sm:p-8">
+              <p className="mb-6 font-mono text-[11px] tracking-[0.18em] text-navy/40 uppercase">
                 Organic Search Traffic, E-commerce Retailer
               </p>
               <svg
@@ -120,13 +120,6 @@ export function GrowthProof() {
                 <circle
                   cx="540"
                   cy="22"
-                  r="8"
-                  fill="rgba(61,158,255,0.15)"
-                  className="growth-chart-dot"
-                />
-                <circle
-                  cx="540"
-                  cy="22"
                   r="4"
                   fill="#3d9eff"
                   className="growth-chart-dot"
@@ -183,12 +176,12 @@ export function GrowthProof() {
           </div>
 
           <div className="lg:col-span-5">
-            <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+            <p className="font-mono text-[11px] tracking-[0.24em] text-navy/60 uppercase">
               Result
             </p>
             <h2
               id="growth-proof-heading"
-              className="font-display mt-4 text-3xl text-navy sm:text-4xl"
+              className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl"
             >
               Traffic grew 270%.
               <br />
@@ -202,26 +195,26 @@ export function GrowthProof() {
             </p>
             <div className="mt-10 flex flex-wrap gap-8 border-t border-navy/10 pt-8 sm:gap-12">
               <div>
-                <p className="font-display text-3xl text-navy sm:text-4xl">
+                <p className="font-mono text-3xl text-navy sm:text-4xl">
                   20X
                 </p>
-                <p className="mt-1 text-[12px] tracking-[0.1em] text-navy/60 uppercase">
+                <p className="mt-1 font-mono text-[12px] tracking-[0.08em] text-navy/60 uppercase">
                   Revenue Growth
                 </p>
               </div>
               <div>
-                <p className="font-display text-3xl text-navy sm:text-4xl">
+                <p className="font-mono text-3xl text-navy sm:text-4xl">
                   270%
                 </p>
-                <p className="mt-1 text-[12px] tracking-[0.1em] text-navy/60 uppercase">
+                <p className="mt-1 font-mono text-[12px] tracking-[0.08em] text-navy/60 uppercase">
                   Organic Traffic Growth
                 </p>
               </div>
               <div>
-                <p className="font-display text-3xl text-electric sm:text-4xl">
+                <p className="font-mono text-3xl text-navy sm:text-4xl">
                   165%
                 </p>
-                <p className="mt-1 text-[12px] tracking-[0.1em] text-navy/60 uppercase">
+                <p className="mt-1 font-mono text-[12px] tracking-[0.08em] text-navy/60 uppercase">
                   SEO Value Growth
                 </p>
               </div>
