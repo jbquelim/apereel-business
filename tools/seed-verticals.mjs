@@ -44,6 +44,23 @@ const SEEDS = [
   "xometry.com",
   "fictiv.com",
   "hubs.com",
+  // Pets
+  "chewy.com",
+  "ren-spets.ca",
+  "baileyblu.com",
+  // Baby & kids
+  "snugglebugz.ca",
+  "westcoastkids.ca",
+  // Watches & eyewear
+  "myle.ca",
+  "clearlylab.ca",
+  "bonlook.ca",
+  // Supplements & wellness
+  "canadianprotein.com",
+  "supplementsource.ca",
+  // Kitchen & home goods
+  "hendrixrestaurantequipment.com",
+  "paderno.com",
 ];
 
 if (!process.env.DATABASE_URL) {

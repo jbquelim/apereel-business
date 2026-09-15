@@ -9,10 +9,10 @@ import { neon } from "@neondatabase/serverless";
 export const maxDuration = 300;
 
 const WAVE_SIZE = 6;
-const MAX_PER_RUN = 18;
+const MAX_PER_RUN = 30;
 // Stop claiming new waves late enough to matter, early enough that a slow
 // wave (audit timeout 120s) still finishes inside maxDuration.
-const TIME_BUDGET_MS = 150_000;
+const TIME_BUDGET_MS = 170_000;
 const MAX_ATTEMPTS = 3;
 
 export async function GET(request: Request) {
