@@ -1,0 +1,67 @@
+{
+  "source": "https://white-desert.com/",
+  "tokens": {
+    "spacing": {
+      "scale": [10, 12, 17.6, 20, 24, 30, 40, 160, 320],
+      "base_unit": 10
+    },
+    "typography": {
+      "families": ["Oswald", "Cardinal Classic Long", "Inter Tight"],
+      "scale": [
+        { "role": "mega-wordmark", "size": "256px-320px", "weight": "400", "family": "Oswald" },
+        { "role": "h2-display", "size": "140px", "weight": "500", "family": "Cardinal Classic Long" },
+        { "role": "h3-heading", "size": "42px", "weight": "400", "family": "Cardinal Classic Long" },
+        { "role": "body", "size": "16px-18px", "weight": "500", "family": "Inter Tight" },
+        { "role": "ui-caption", "size": "14px", "weight": "500", "family": "Inter Tight" }
+      ]
+    },
+    "colors": [
+      { "role": "background", "value": "#FFFFFF" },
+      { "role": "background-warm-section", "value": "#F3F1EC" },
+      { "role": "text-primary", "value": "#1F2A44" },
+      { "role": "text-secondary", "value": "#535353" },
+      { "role": "text-on-imagery", "value": "#FFFFFF" },
+      { "role": "accent-single-use", "value": "#FF7E15" },
+      { "role": "overlay-glass-dark", "value": "rgba(0,0,0,0.1-0.2)" }
+    ],
+    "radius": ["0px", "2px", "4px", "6px"],
+    "shadows": ["inset 0.35px 0.35px 0 rgba(255,255,255,0.2), inset 0 0 1.75px rgba(255,255,255,0.2)"],
+    "image_ratios": [
+      { "usage": "hero-full-bleed", "ratio": "1.60:1" },
+      { "usage": "feature", "ratio": "1.50:1-1.60:1" },
+      { "usage": "cloud-strip", "ratio": "2.62:1" },
+      { "usage": "thumbnail-portrait", "ratio": "0.80:1" }
+    ],
+    "grid": { "max_width": "none (full-bleed 1440px)", "columns": 12, "gutter": "24px" }
+  },
+  "taste": [
+    {
+      "name": "Landscape Is the Interface",
+      "trigger": "When placing navigation, cards, and CTAs on top of continuous full-bleed Antarctic photography and video",
+      "decision": "Chose translucent glass surfaces (rgba(0,0,0,0.1-0.2) pills, white translucent panels, 2-layer white inset hairlines) over opaque white cards, drop shadows, or letterboxing imagery in a contained column",
+      "reason": "A visitor deciding on a six-figure expedition is buying the place, not the website; every opaque pixel of UI is a pixel of Antarctica they cannot see, so the interface must behave like a window annotation, not a document",
+      "evidence": ["0 drop shadows on entire page", "only shadow: rgba(255,255,255,0.2) 0.35px inset x12", "translucent black backgrounds cover 21.2% of bg area", "containerMaxWidth: none, body padding 0"]
+    },
+    {
+      "name": "Type as Territory Marker",
+      "trigger": "When making a scrolling page about vast empty terrain feel vast rather than like a brochure",
+      "decision": "Chose a jump scale with ~3x leaps (14px UI, 42px serif headings, then 140/256/320px condensed wordmarks) over a conventional 1.25x modular ratio that would fill the 50-130px middle band",
+      "reason": "Monument-scale type that overflows the viewport makes the reader feel physically small relative to the word, mimicking standing before the landscape; mid-size headlines would read as marketing, not geography",
+      "evidence": ["sizeDistribution: 14px x72, 42px x14, 140px x1, 256px x1, 320px x1", "near-empty 50-130px band", "h1 = 256px/256px Oswald weight 400", "footer wordmark 320px spanning 1440px"]
+    },
+    {
+      "name": "One Orange Pin",
+      "trigger": "When they could have deployed a brand accent across CTAs, links, icons, and hovers as luxury-travel competitors do with gold or brand hues",
+      "decision": "Chose to let photography carry 100% of the chroma and restricted saturated color to a single element, the fixed #FF7E15 'How it works' tab; even the two primary CTAs (Rates, Enquire) are colorless glass",
+      "reason": "Expedition gear logic: in a white-and-ice world, one orange marker is instantly findable precisely because nothing else competes; a second orange element would halve the first one's power",
+      "evidence": ["#FF7E15 count: 1 in full-page text-color census", "accentCandidates all navy/gray/white", "palette otherwise #1F2A44, #535353, #FFFFFF, #F3F1EC"]
+    },
+    {
+      "name": "Slow-Ease Traversal",
+      "trigger": "When deciding how a 20782px, 14-viewport-deep narrative page should feel to move through",
+      "decision": "Chose long heavy easing (0.45s cubic-bezier(0.76,0,0.24,1), transform 0.6s cubic-bezier(0.4,0,0.2,1)) over snappy 150-200ms ease-out microinteractions, and accepted shipping without prefers-reduced-motion or :focus-visible support",
+      "reason": "Sub-200ms motion says efficient tool; 450-600ms motion with symmetric-power easing says heavy things moving through cold air — the pacing itself communicates expedition gravity, a deliberate bet of cinematic mood over accessibility hedging",
+      "evidence": ["transitions 0.3-0.6s with three custom cubic-beziers", "reducedMotion: false", "focusVisible: false", "page height 20782px", "section padding 160-320px as pacing device"]
+    }
+  ]
+}

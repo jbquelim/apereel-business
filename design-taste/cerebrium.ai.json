@@ -1,0 +1,80 @@
+{
+  "source": "https://cerebrium.ai/",
+  "tokens": {
+    "spacing": {
+      "scale": [4, 8, 16, 20, 24, 30, 50, 82, 128],
+      "base_unit": 4,
+      "notes": "Component spacing fixed (20px dominant, 77 uses); section rhythm viewport-fluid: 82px and 128px at 1440w via mb-fluid-* utilities"
+    },
+    "typography": {
+      "families": ["ABC Favorit (display)", "Suisse Intl (body/UI)", "Suisse Intl Mono (controls/badges)"],
+      "scale": [
+        { "role": "hero-h1", "size": "86px (fluid)", "weight": "300", "family": "ABC Favorit", "lineHeight": "1.0", "letterSpacing": "-2.15px" },
+        { "role": "display-2", "size": "72.6px (fluid)", "weight": "300", "family": "ABC Favorit" },
+        { "role": "display-3", "size": "57.4px (fluid)", "weight": "300", "family": "ABC Favorit" },
+        { "role": "section-heading", "size": "43.9px (fluid)", "weight": "300", "family": "ABC Favorit" },
+        { "role": "card-heading", "size": "26.5px (fluid)", "weight": "300", "family": "ABC Favorit" },
+        { "role": "body", "size": "17px", "weight": "400", "family": "Suisse Intl", "lineHeight": "1.35" },
+        { "role": "ui-secondary", "size": "15-16px", "weight": "400-500", "family": "Suisse Intl" },
+        { "role": "control/badge", "size": "13px", "weight": "400", "family": "Suisse Intl Mono", "transform": "uppercase", "letterSpacing": "-0.325px" }
+      ]
+    },
+    "colors": [
+      { "role": "background-light-primary", "value": "#FFFFFF", "areaPct": 41.3 },
+      { "role": "background-light-secondary", "value": "#EEF2F5", "areaPct": 33.2 },
+      { "role": "background-card", "value": "#DBE5ED", "areaPct": 15.1 },
+      { "role": "background-dark-hero-footer", "value": "WebGL canvas ~#0A0208 to #8A1F6E magenta ribbons (not CSS)" },
+      { "role": "text-primary / button-navy", "value": "#172B76" },
+      { "role": "text-secondary", "value": "#586490" },
+      { "role": "text-on-dark", "value": "#FFFFFF" },
+      { "role": "button-dark", "value": "#101421" },
+      { "role": "accent-cta", "value": "#FF488B", "areaPct": 0.2 },
+      { "role": "border-muted", "value": "#CFD7E7" }
+    ],
+    "radius": ["7px (system, 236 uses)", "10px (large panels)", "15px", "32px", "100% (dots)"],
+    "shadows": [],
+    "image_ratios": [
+      { "usage": "hero", "ratio": "full-bleed WebGL canvas, no img" },
+      { "usage": "logo-tile", "ratio": "2.3:1 to 6.6:1 SVGs normalized to 136px width" },
+      { "usage": "case-study-card", "ratio": "0.75:1 portrait (~442x592px)" }
+    ],
+    "grid": { "max_width": "1360px content on 1440 viewport (40px side margins)", "columns": 2, "template": "670px 670px", "gutter": "20px" },
+    "motion": {
+      "properties": ["opacity", "transform", "color", "background-color"],
+      "duration": "0.2-0.3s",
+      "easing": ["cubic-bezier(0.4,0,0.2,1)", "cubic-bezier(0.645,0.045,0.355,1)"],
+      "focusVisible": true,
+      "prefersReducedMotion": true
+    }
+  },
+  "taste": [
+    {
+      "name": "Spectacle at the Doors, Spreadsheet in the Room",
+      "trigger": "When selling GPU infrastructure that must feel both cutting-edge and dependable on one homepage",
+      "decision": "Confined the theatrical dark WebGL ribbon scenes to entry (hero) and exit (closing CTA + footer), running the entire evaluative middle on flat white and cool grays — over a full dark-mode developer site, the Vercel/Linear default for infra companies",
+      "reason": "A visitor decides to feel in the first second and decides to buy over the next five minutes; awe works on a black canvas, but comparing cold-start numbers and case studies works on paper-white",
+      "evidence": ["Light surfaces = 89.6% of painted area (#FFFFFF 41.3% + #EEF2F5 33.2% + #DBE5ED 15.1%)", "Hero, mid-globe, and footer screenshots near-black over WebGL", "body background rgba(0,0,0,0) over canvas"]
+    },
+    {
+      "name": "The Accent Is a Button, Not a Brand",
+      "trigger": "When holding a memorable signature color (#FF488B) already saturating the WebGL ribbon scenes",
+      "decision": "Rationed pink to 0.2% of painted surface — sign-up CTAs, map markers, and the single hero word 'scales' — over amortizing the accent across headings, icons, and link underlines as most branded sites do (restraint)",
+      "reason": "When a color appears only where clicking has value, users read it as instruction, not decoration; the 10,870px page can be navigated by scanning for pink alone",
+      "evidence": ["#FF488B areaPct 0.2, 9 background uses, 5 text nodes", "Only pink elements in all 5 screenshots are CTAs (SIGN UP, TRY IT NOW, GET STARTED, STATUS PAGE) and the highlighted verb 'scales'"]
+    },
+    {
+      "name": "Controls Speak Terminal, Prose Speaks Human",
+      "trigger": "When labeling buttons, nav, badges, and data readouts for an audience that lives in a shell",
+      "decision": "Hard typographic split: every control and metadata string is 13px uppercase Suisse Intl Mono with -0.325px tracking, while explanations stay 17px sentence-case Suisse Intl — over the conventional single-voice UI where buttons are just bolder body text",
+      "reason": "Developers parse monospace-uppercase as machine surface and proportional lowercase as documentation; CLI syntax in the chrome ('REGIONS : US-EAST-1') makes the product demo itself inside the marketing page",
+      "evidence": ["Suisse Intl Mono on 81 elements", "13px is the page's most frequent text size (57 nodes)", "Button spec 13px/400/uppercase/-0.325px mono", "Badges: CAPACITY : 2500+, TERMINAL, REGIONS : US-EAST-1, EU-WEST-2"]
+    },
+    {
+      "name": "Depth Is Paint, Never Shadow",
+      "trigger": "When stacking cards, terminal windows, a world map, and doc-link panels on light sections",
+      "decision": "Zero box-shadows page-wide; elevation via a blue-tinted neutral step scale (#FFFFFF to #EEF2F5 to #DBE5ED) and concentric radii (10px parents, 7px children) — over the standard SaaS soft multi-layer drop shadow on every card (restraint + craft)",
+      "reason": "The WebGL scenes are the page's only light source; competing simulated light would cheapen both. Flat tinted planes make dense technical content read as printed spec-sheet, flattering a product whose pitch is solidity",
+      "evidence": ["shadows: [] across 8000 sampled elements", "All neutrals cool-tinted toward #172B76 ink, no pure gray", "Nested radius delta 10px to 7px", "7px radius = 236 uses (system radius)"]
+    }
+  ]
+}

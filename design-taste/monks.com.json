@@ -1,0 +1,69 @@
+{
+  "source": "https://www.monks.com/",
+  "tokens": {
+    "spacing": {
+      "scale": [10, 20, 30, 40, 60, 113],
+      "base_unit": 10
+    },
+    "typography": {
+      "families": ["Helvetica Now", "Helvetica Now Extended", "Morian (serif, display-only)"],
+      "scale": [
+        { "role": "display", "size": "172px", "weight": "500", "family": "Helvetica Now Extended" },
+        { "role": "h1", "size": "66.67px", "weight": "500", "family": "Helvetica Now" },
+        { "role": "h2", "size": "48.33px", "weight": "500", "family": "Helvetica Now Extended" },
+        { "role": "h3", "size": "22.67px", "weight": "500", "family": "Helvetica Now" },
+        { "role": "lead", "size": "18px", "weight": "400", "family": "Helvetica Now" },
+        { "role": "body", "size": "15.33px", "weight": "500", "family": "Helvetica Now" },
+        { "role": "micro", "size": "10px", "weight": "400", "family": "Helvetica Now" }
+      ]
+    },
+    "colors": [
+      { "role": "background", "value": "#EAE8E4" },
+      { "role": "background-dark-section", "value": "#191715" },
+      { "role": "text-primary", "value": "#2D2D2D" },
+      { "role": "text-on-dark", "value": "#EAE8E4" },
+      { "role": "event-panel-lavender", "value": "#DFBBFE" },
+      { "role": "event-panel-pink", "value": "#FFB2E8" },
+      { "role": "incidental-violet", "value": "#4F24EE" }
+    ],
+    "radius": ["100px (pill CTAs)", "50% (arrow circles)", "4px (minor inputs)"],
+    "shadows": ["none (2 instances in 8000 elements; depth via color-field contrast)"],
+    "image_ratios": [
+      { "usage": "video-hero", "ratio": "16:9 (1.77:1)" },
+      { "usage": "feature-card", "ratio": "1.07:1 (645x600 crop)" },
+      { "usage": "wide-feature", "ratio": "1.66:1" },
+      { "usage": "thumbnail", "ratio": "1:1" }
+    ],
+    "grid": { "max_width": "none (full-bleed 1440px)", "columns": 8, "gutter": "30px" }
+  },
+  "taste": [
+    {
+      "name": "Color Is a Chapter Break, Not a Highlighter",
+      "trigger": "When the designers needed an agency site to feel expressive while showing wildly varied client work",
+      "decision": "Confined all saturated color (#DFBBFE lavender, #FFB2E8 pink) to full-viewport 1440x900 panels and announcement bars, over threading an accent color through buttons, links, and icons",
+      "reason": "Client work supplies the site's color; a persistent brand accent would fight every portfolio image. A rare full-screen color flood registers as an event, so announcements feel like news, not chrome",
+      "evidence": ["neutrals cover ~95% of painted area (#EAE8E4 74.9%, #191715 11.7%)", "accentCandidates contain only #EAE8E4/#2D2D2D", "#4F24EE at 0.2% area", "#DFBBFE and #FFB2E8 each appear as 1440x900 blocks"]
+    },
+    {
+      "name": "Hierarchy by Size Alone, at Poster Scale",
+      "trigger": "When they had to rank a promise line, section titles, and body copy without cluttering the page",
+      "decision": "Kept nearly all text at weight 500 in one family and made hierarchy purely with size — 15.33px body to 66.67px h1 to an off-scale 172.45px display — over a conventional weight-and-color hierarchy (bold heads, gray body)",
+      "reason": "When everything shares one voice and one ink color (#2D2D2D on #EAE8E4), a 4x-11x size jump is unmissable; readers rank content by area, and the page reads like a printed poster rather than a document outline",
+      "evidence": ["weight 500 = 126 of 200 text samples spanning body and h1", "172.448px x10 elements breaks the ~1.4x scale", "line-height uniformly ~1.15", "h2 switches to Helvetica Now Extended for width-based emphasis"]
+    },
+    {
+      "name": "Restraint: No Shadows, No Cards, No Gaps",
+      "trigger": "When they needed to separate dozens of content modules (work, thinking, events, video) on one 8487px page",
+      "decision": "Rejected the default kit — card containers, elevation shadows, rounded content wrappers, whitespace gaps between sections — in favor of flush full-bleed color fields (#EAE8E4 to #191715) with 113px of internal padding",
+      "reason": "Boxes-in-boxes make a portfolio feel like a dashboard. Flat color fields joined edge-to-edge feel like turning pages of a printed portfolio, and the background swap tells scrolling readers 'new chapter' faster than any divider line",
+      "evidence": ["2 shadows per 8000 sampled elements", "card detector returned empty ([])", "sectionGaps: [] — sections are flush", "113.333px internal padding x17", "images are flat 645x600 (1.07:1) crops"]
+    },
+    {
+      "name": "Round Means Clickable",
+      "trigger": "When links had to stay findable on busy video heroes, pale gray fields, and near-black footers alike",
+      "decision": "Standardized every interactive element into two shapes — a 100px-radius pill or a 50% circle with an arrow — over color-coded links, underlines, or rectangular buttons",
+      "reason": "With no accent color available, shape must carry affordance. A circle-with-arrow is recognizable at a glance in any color scheme, so the same component works on dark, light, and lavender surfaces without restyling",
+      "evidence": ["border-radius 100px x106 and 50% x21 vs 4px x11", "arrow-circle repeats in nav, feature cards, announcement bar, and 11+ footer policy links", "buttons use default case with no letter-spacing"]
+    }
+  ]
+}
