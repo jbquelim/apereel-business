@@ -7,14 +7,14 @@ export function WebdevDiagram() {
       className="h-auto w-full max-w-md"
     >
       {/* Browser window frame */}
-      <rect x="60" y="28" width="300" height="184" rx="8" fill="#132240" stroke="rgba(244,241,234,0.12)" />
-      <rect x="60" y="28" width="300" height="24" rx="8" fill="#132240" />
-      <rect x="60" y="44" width="300" height="8" fill="#132240" />
-      <circle cx="78" cy="40" r="4" fill="#d45a4e" fillOpacity="0.6" />
-      <circle cx="92" cy="40" r="4" fill="rgba(244,241,234,0.2)" />
-      <circle cx="106" cy="40" r="4" fill="rgba(244,241,234,0.2)" />
+      <rect className="diag-pop" style={{ "--d": "0ms" } as React.CSSProperties} x="60" y="28" width="300" height="184" rx="8" fill="#132240" stroke="rgba(244,241,234,0.12)" />
+      <rect className="diag-fade" style={{ "--d": "20ms" } as React.CSSProperties} x="60" y="28" width="300" height="24" rx="8" fill="#132240" />
+      <rect className="diag-fade" style={{ "--d": "20ms" } as React.CSSProperties} x="60" y="44" width="300" height="8" fill="#132240" />
+      <circle className="diag-pop" style={{ "--d": "60ms" } as React.CSSProperties} cx="78" cy="40" r="4" fill="#d45a4e" fillOpacity="0.6" />
+      <circle className="diag-pop" style={{ "--d": "85ms" } as React.CSSProperties} cx="92" cy="40" r="4" fill="rgba(244,241,234,0.2)" />
+      <circle className="diag-pop" style={{ "--d": "110ms" } as React.CSSProperties} cx="106" cy="40" r="4" fill="rgba(244,241,234,0.2)" />
       {/* URL bar */}
-      <rect x="124" y="34" width="160" height="12" rx="3" fill="rgba(244,241,234,0.06)" />
+      <rect className="diag-fade" style={{ "--d": "150ms" } as React.CSSProperties} x="124" y="34" width="160" height="12" rx="3" fill="rgba(244,241,234,0.06)" />
       {/* Code lines */}
       {[0, 1, 2, 3, 4, 5, 6].map((i) => {
         const widths = [180, 140, 200, 120, 160, 100, 180];
@@ -23,6 +23,8 @@ export function WebdevDiagram() {
         return (
           <rect
             key={i}
+            className="diag-grow-x"
+            style={{ "--d": `${350 + i * 55}ms` } as React.CSSProperties}
             x={80 + indents[i]}
             y={64 + i * 20}
             width={widths[i]}
@@ -35,6 +37,8 @@ export function WebdevDiagram() {
       })}
       {/* Deploy arrow */}
       <path
+        className="diag-fade"
+        style={{ "--d": "820ms" } as React.CSSProperties}
         d="M370 120 L396 120"
         stroke="#3d9eff"
         strokeWidth="1.5"
@@ -46,7 +50,7 @@ export function WebdevDiagram() {
         </marker>
       </defs>
       {/* Speed indicator */}
-      <text x="374" y="108" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" fillOpacity="0.7">
+      <text className="diag-fade" style={{ "--d": "920ms" } as React.CSSProperties} x="374" y="108" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" fillOpacity="0.7">
         LIVE
       </text>
     </svg>

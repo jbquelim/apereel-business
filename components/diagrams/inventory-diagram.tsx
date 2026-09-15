@@ -9,18 +9,23 @@ export function InventoryDiagram() {
       <rect width="420" height="240" fill="transparent" />
       {[0, 1, 2, 3, 4].map((row) =>
         [0, 1, 2, 3, 4, 5].map((col) => {
-          const filled = row * 6 + col < 22;
-          const delay = row * 6 + col;
+          const idx = row * 6 + col;
+          const filled = idx < 22;
+          // The story is the catalog filling in: empty outlines land first
+          // in a fast wave, then stock arrives cell by cell.
+          const delay = filled ? 350 + idx * 45 : idx * 18;
           return (
             <rect
               key={`${row}-${col}`}
+              className="diag-pop"
+              style={{ "--d": `${delay}ms` } as React.CSSProperties}
               x={24 + col * 64}
               y={28 + row * 40}
               width="48"
               height="28"
               rx="4"
               fill={filled ? "#3d9eff" : "transparent"}
-              fillOpacity={filled ? 0.18 + (delay % 5) * 0.08 : 0}
+              fillOpacity={filled ? 0.18 + (idx % 5) * 0.08 : 0}
               stroke={filled ? "#3d9eff" : "rgba(244,241,234,0.18)"}
               strokeWidth="1"
             />

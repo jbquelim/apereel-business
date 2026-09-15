@@ -16,7 +16,7 @@ export function ApproachAdvantageDiagram() {
     >
       {/* Building blocks */}
       {blocks.map((b, i) => (
-        <g key={b.label}>
+        <g key={b.label} className="diag-pop" style={{ "--d": `${i * 40}ms` } as React.CSSProperties}>
           <rect
             x={b.x}
             y={b.y}
@@ -40,9 +40,11 @@ export function ApproachAdvantageDiagram() {
         </g>
       ))}
       {/* Converging lines */}
-      {blocks.map((b) => (
+      {blocks.map((b, i) => (
         <line
           key={`line-${b.label}`}
+          className="diag-fade"
+          style={{ "--d": `${350 + i * 45}ms` } as React.CSSProperties}
           x1={b.x + b.w / 2}
           y1={b.y + 56}
           x2={210}
@@ -54,11 +56,11 @@ export function ApproachAdvantageDiagram() {
         />
       ))}
       {/* Result */}
-      <rect x="120" y="200" width="180" height="52" rx="6" fill="rgba(61,158,255,0.15)" stroke="#3d9eff" strokeWidth="1.5" />
-      <text x="210" y="222" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
+      <rect className="diag-pop" style={{ "--d": "650ms" } as React.CSSProperties} x="120" y="200" width="180" height="52" rx="6" fill="rgba(61,158,255,0.15)" stroke="#3d9eff" strokeWidth="1.5" />
+      <text className="diag-fade" style={{ "--d": "710ms" } as React.CSSProperties} x="210" y="222" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
         COMPETITIVE
       </text>
-      <text x="210" y="238" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
+      <text className="diag-fade" style={{ "--d": "740ms" } as React.CSSProperties} x="210" y="238" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
         ADVANTAGE
       </text>
     </svg>

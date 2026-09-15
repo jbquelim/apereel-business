@@ -6,19 +6,23 @@ export function DevelopmentDiagram() {
       aria-label="Abstract diagram comparing slow external queues with faster in-house development"
       className="h-auto w-full max-w-md"
     >
-      <text x="24" y="36" fill="#9aa4b8" fontSize="11" fontFamily="ui-monospace, monospace">
+      <text className="diag-fade" style={{ "--d": "0ms" } as React.CSSProperties} x="24" y="36" fill="#9aa4b8" fontSize="11" fontFamily="ui-monospace, monospace">
         EXTERNAL QUEUE
       </text>
-      <rect x="24" y="48" width="372" height="10" rx="5" fill="rgba(244,241,234,0.08)" />
-      <rect x="24" y="48" width="110" height="10" rx="5" fill="#d45a4e" fillOpacity="0.7" />
-      <text x="24" y="92" fill="#9aa4b8" fontSize="11" fontFamily="ui-monospace, monospace">
+      <rect className="diag-fade" style={{ "--d": "80ms" } as React.CSSProperties} x="24" y="48" width="372" height="10" rx="5" fill="rgba(244,241,234,0.08)" />
+      {/* Red bar lands first: short crawl through the external queue */}
+      <rect className="diag-grow-x" style={{ "--d": "350ms" } as React.CSSProperties} x="24" y="48" width="110" height="10" rx="5" fill="#d45a4e" fillOpacity="0.7" />
+      <text className="diag-fade" style={{ "--d": "40ms" } as React.CSSProperties} x="24" y="92" fill="#9aa4b8" fontSize="11" fontFamily="ui-monospace, monospace">
         AI-ASSISTED BUILD
       </text>
-      <rect x="24" y="104" width="372" height="10" rx="5" fill="rgba(244,241,234,0.08)" />
-      <rect x="24" y="104" width="310" height="10" rx="5" fill="#3d9eff" />
+      <rect className="diag-fade" style={{ "--d": "110ms" } as React.CSSProperties} x="24" y="104" width="372" height="10" rx="5" fill="rgba(244,241,234,0.08)" />
+      {/* Blue bar starts after and overtakes: the comparison */}
+      <rect className="diag-grow-x" style={{ "--d": "550ms" } as React.CSSProperties} x="24" y="104" width="310" height="10" rx="5" fill="#3d9eff" />
       {[0, 1, 2, 3, 4].map((i) => (
         <rect
           key={i}
+          className="diag-pop"
+          style={{ "--d": `${i > 2 ? 900 + (i - 3) * 65 : 700 + i * 40}ms` } as React.CSSProperties}
           x={24 + i * 76}
           y="140"
           width="64"

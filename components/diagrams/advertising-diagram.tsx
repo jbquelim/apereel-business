@@ -7,10 +7,10 @@ export function AdvertisingDiagram() {
       className="h-auto w-full max-w-md"
     >
       {/* Central target */}
-      <circle cx="210" cy="120" r="80" fill="none" stroke="rgba(244,241,234,0.08)" strokeWidth="1" />
-      <circle cx="210" cy="120" r="56" fill="none" stroke="rgba(244,241,234,0.12)" strokeWidth="1" />
-      <circle cx="210" cy="120" r="32" fill="none" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.3" />
-      <circle cx="210" cy="120" r="10" fill="#3d9eff" fillOpacity="0.5" />
+      <circle className="diag-fade" style={{ "--d": "0ms" } as React.CSSProperties} cx="210" cy="120" r="80" fill="none" stroke="rgba(244,241,234,0.08)" strokeWidth="1" />
+      <circle className="diag-fade" style={{ "--d": "30ms" } as React.CSSProperties} cx="210" cy="120" r="56" fill="none" stroke="rgba(244,241,234,0.12)" strokeWidth="1" />
+      <circle className="diag-fade" style={{ "--d": "60ms" } as React.CSSProperties} cx="210" cy="120" r="32" fill="none" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.3" />
+      <circle className="diag-pop" style={{ "--d": "950ms" } as React.CSSProperties} cx="210" cy="120" r="10" fill="#3d9eff" fillOpacity="0.5" />
       {/* Audience segments */}
       {[
         { x: 48, y: 44, w: 80 },
@@ -20,7 +20,7 @@ export function AdvertisingDiagram() {
         { x: 300, y: 104, w: 84 },
         { x: 300, y: 164, w: 68 },
       ].map((seg, i) => (
-        <g key={i}>
+        <g key={i} className="diag-pop" style={{ "--d": `${350 + i * 45}ms` } as React.CSSProperties}>
           <rect
             x={seg.x}
             y={seg.y}
@@ -43,12 +43,12 @@ export function AdvertisingDiagram() {
         </g>
       ))}
       {/* Connecting lines from segments to target */}
-      <line x1="128" y1="60" x2="178" y2="100" stroke="rgba(244,241,234,0.1)" strokeWidth="1" />
-      <line x1="112" y1="120" x2="178" y2="120" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.3" />
-      <line x1="120" y1="180" x2="178" y2="140" stroke="rgba(244,241,234,0.1)" strokeWidth="1" />
-      <line x1="300" y1="60" x2="242" y2="100" stroke="rgba(244,241,234,0.1)" strokeWidth="1" />
-      <line x1="300" y1="120" x2="242" y2="120" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.3" />
-      <line x1="300" y1="180" x2="242" y2="140" stroke="rgba(244,241,234,0.1)" strokeWidth="1" />
+      <line className="diag-fade" style={{ "--d": "680ms" } as React.CSSProperties} x1="128" y1="60" x2="178" y2="100" stroke="rgba(244,241,234,0.1)" strokeWidth="1" />
+      <line className="diag-fade" style={{ "--d": "710ms" } as React.CSSProperties} x1="112" y1="120" x2="178" y2="120" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.3" />
+      <line className="diag-fade" style={{ "--d": "740ms" } as React.CSSProperties} x1="120" y1="180" x2="178" y2="140" stroke="rgba(244,241,234,0.1)" strokeWidth="1" />
+      <line className="diag-fade" style={{ "--d": "770ms" } as React.CSSProperties} x1="300" y1="60" x2="242" y2="100" stroke="rgba(244,241,234,0.1)" strokeWidth="1" />
+      <line className="diag-fade" style={{ "--d": "800ms" } as React.CSSProperties} x1="300" y1="120" x2="242" y2="120" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.3" />
+      <line className="diag-fade" style={{ "--d": "830ms" } as React.CSSProperties} x1="300" y1="180" x2="242" y2="140" stroke="rgba(244,241,234,0.1)" strokeWidth="1" />
     </svg>
   );
 }

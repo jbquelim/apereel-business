@@ -14,17 +14,19 @@ export function ApproachTranslateDiagram() {
       className="h-auto w-full max-w-md"
     >
       {/* Core advantage */}
-      <rect x="40" y="100" width="120" height="72" rx="8" fill="rgba(61,158,255,0.15)" stroke="#3d9eff" strokeWidth="1.5" />
-      <text x="100" y="132" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
+      <rect className="diag-pop" style={{ "--d": "0ms" } as React.CSSProperties} x="40" y="100" width="120" height="72" rx="8" fill="rgba(61,158,255,0.15)" stroke="#3d9eff" strokeWidth="1.5" />
+      <text className="diag-fade" style={{ "--d": "70ms" } as React.CSSProperties} x="100" y="132" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
         BUSINESS
       </text>
-      <text x="100" y="148" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
+      <text className="diag-fade" style={{ "--d": "100ms" } as React.CSSProperties} x="100" y="148" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
         STRENGTH
       </text>
       {/* Channels */}
       {channels.map((ch, i) => (
         <g key={ch.label}>
           <line
+            className="diag-fade"
+            style={{ "--d": `${300 + i * 50}ms` } as React.CSSProperties}
             x1="160"
             y1="136"
             x2="260"
@@ -35,6 +37,8 @@ export function ApproachTranslateDiagram() {
             strokeDasharray="3 3"
           />
           <rect
+            className="diag-pop"
+            style={{ "--d": `${520 + i * 60}ms` } as React.CSSProperties}
             x="260"
             y={ch.y}
             width="120"
@@ -45,6 +49,8 @@ export function ApproachTranslateDiagram() {
             strokeOpacity={i < 2 ? 0.5 : 1}
           />
           <text
+            className="diag-fade"
+            style={{ "--d": `${550 + i * 60}ms` } as React.CSSProperties}
             x="320"
             y={ch.y + 26}
             fill={i < 2 ? "#3d9eff" : "#9aa4b8"}
@@ -58,7 +64,7 @@ export function ApproachTranslateDiagram() {
         </g>
       ))}
       {/* Consistency indicator */}
-      <text x="210" y="260" fill="rgba(244,241,234,0.3)" fontSize="9" fontFamily="ui-monospace, monospace" textAnchor="middle">
+      <text className="diag-fade" style={{ "--d": "860ms" } as React.CSSProperties} x="210" y="260" fill="rgba(244,241,234,0.3)" fontSize="9" fontFamily="ui-monospace, monospace" textAnchor="middle">
         ONE MESSAGE, EVERY TOUCHPOINT
       </text>
     </svg>

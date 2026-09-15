@@ -8,7 +8,7 @@ export function ApproachResearchDiagram() {
     >
       {/* Competitor cards */}
       {[0, 1, 2].map((i) => (
-        <g key={i}>
+        <g key={i} className="diag-pop" style={{ "--d": `${i * 40}ms` } as React.CSSProperties}>
           <rect
             x={40 + i * 120}
             y={24}
@@ -25,17 +25,17 @@ export function ApproachResearchDiagram() {
         </g>
       ))}
       {/* Arrow down */}
-      <line x1="210" y1="96" x2="210" y2="130" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="3 3" />
+      <line className="diag-fade" style={{ "--d": "350ms" } as React.CSSProperties} x1="210" y1="96" x2="210" y2="130" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="3 3" />
       {/* Analysis layer */}
-      <rect x="80" y="130" width="260" height="48" rx="6" fill="rgba(61,158,255,0.08)" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.3" />
-      <text x="210" y="158" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle" fillOpacity="0.7">
+      <rect className="diag-pop" style={{ "--d": "450ms" } as React.CSSProperties} x="80" y="130" width="260" height="48" rx="6" fill="rgba(61,158,255,0.08)" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.3" />
+      <text className="diag-fade" style={{ "--d": "510ms" } as React.CSSProperties} x="210" y="158" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle" fillOpacity="0.7">
         MARKET ANALYSIS
       </text>
       {/* Arrow down */}
-      <line x1="210" y1="186" x2="210" y2="210" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="3 3" />
+      <line className="diag-fade" style={{ "--d": "610ms" } as React.CSSProperties} x1="210" y1="186" x2="210" y2="210" stroke="#3d9eff" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="3 3" />
       {/* Insight output */}
-      <rect x="120" y="210" width="180" height="48" rx="6" fill="rgba(61,158,255,0.15)" stroke="#3d9eff" strokeWidth="1.5" />
-      <text x="210" y="238" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
+      <rect className="diag-pop" style={{ "--d": "720ms" } as React.CSSProperties} x="120" y="210" width="180" height="48" rx="6" fill="rgba(61,158,255,0.15)" stroke="#3d9eff" strokeWidth="1.5" />
+      <text className="diag-fade" style={{ "--d": "780ms" } as React.CSSProperties} x="210" y="238" fill="#3d9eff" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="middle">
         OPPORTUNITY MAP
       </text>
     </svg>

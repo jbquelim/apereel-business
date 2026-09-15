@@ -160,6 +160,96 @@ body {
   transform: none;
 }
 
+/* ── Diagram choreography ──────────────────────────────────────
+   SVG diagram elements animate when their section scrolls into view;
+   diagram panes remount on tab switch, so entrances replay there too.
+   Per-element order via style={{ "--d": "120ms" }}. */
+.diag-pop,
+.diag-fade,
+.diag-grow-x,
+.diag-grow-y {
+  opacity: 0;
+}
+
+.reveal-section.is-visible .diag-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: diag-pop 0.45s var(--ease-out) var(--d, 0ms) both;
+}
+
+.reveal-section.is-visible .diag-fade {
+  animation: diag-fade 0.4s var(--ease-out) var(--d, 0ms) both;
+}
+
+.reveal-section.is-visible .diag-grow-x {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: diag-grow-x 0.6s var(--ease-out) var(--d, 0ms) both;
+}
+
+.reveal-section.is-visible .diag-grow-y {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: diag-grow-y 0.6s var(--ease-out) var(--d, 0ms) both;
+}
+
+@keyframes diag-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes diag-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes diag-grow-x {
+  from {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes diag-grow-y {
+  from {
+    opacity: 1;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diag-pop,
+  .diag-fade,
+  .diag-grow-x,
+  .diag-grow-y,
+  .reveal-section.is-visible .diag-pop,
+  .reveal-section.is-visible .diag-fade,
+  .reveal-section.is-visible .diag-grow-x,
+  .reveal-section.is-visible .diag-grow-y {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
 .reveal-section.is-visible .reveal-stagger:nth-child(2) { transition-delay: 60ms; }
 .reveal-section.is-visible .reveal-stagger:nth-child(3) { transition-delay: 120ms; }
 .reveal-section.is-visible .reveal-stagger:nth-child(4) { transition-delay: 180ms; }

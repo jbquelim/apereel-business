@@ -18,7 +18,11 @@ export function LuxuryDiagram() {
         const isCenter = i === 4;
         const w = isCenter ? 170 : 160;
         return (
-          <g key={el.label}>
+          <g
+            key={el.label}
+            className="diag-pop"
+            style={{ "--d": `${isCenter ? 650 : i * 60}ms` } as React.CSSProperties}
+          >
             <rect
               x={el.x}
               y={el.y}
@@ -43,6 +47,8 @@ export function LuxuryDiagram() {
         );
       })}
       <line
+        className="diag-fade"
+        style={{ "--d": "350ms" } as React.CSSProperties}
         x1="110"
         y1="80"
         x2="180"
@@ -52,6 +58,8 @@ export function LuxuryDiagram() {
         strokeDasharray="3 3"
       />
       <line
+        className="diag-fade"
+        style={{ "--d": "395ms" } as React.CSSProperties}
         x1="300"
         y1="80"
         x2="240"
@@ -61,6 +69,8 @@ export function LuxuryDiagram() {
         strokeDasharray="3 3"
       />
       <line
+        className="diag-fade"
+        style={{ "--d": "440ms" } as React.CSSProperties}
         x1="110"
         y1="150"
         x2="180"
@@ -70,6 +80,8 @@ export function LuxuryDiagram() {
         strokeDasharray="3 3"
       />
       <line
+        className="diag-fade"
+        style={{ "--d": "485ms" } as React.CSSProperties}
         x1="300"
         y1="150"
         x2="240"
