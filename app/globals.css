@@ -13,6 +13,11 @@
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Depth comes from stepping navy -> navy-mid -> navy-lift. Never from
+     shadows, glows, or borders — see design-taste/apereel-direction.md */
+  --radius-parent: 10px;
+  --radius-child: 7px;
 }
 
 @theme inline {
@@ -28,6 +33,17 @@
   --font-sans: var(--font-plus-jakarta);
   --font-display: var(--font-plus-jakarta);
   --font-mono: var(--font-ibm-plex);
+  --radius-parent: var(--radius-parent);
+  --radius-child: var(--radius-child);
+}
+
+/* Monumental display tier: hierarchy by size at light weight, not by
+   weight or accent color. */
+.text-display {
+  font-size: clamp(3.25rem, 8.5vw, 7.75rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
 }
 
 html {
@@ -58,44 +74,6 @@ body {
 
 .hairline {
   border-color: var(--line);
-}
-
-.grid-overlay {
-  background-image:
-    linear-gradient(rgba(244, 241, 234, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(244, 241, 234, 0.035) 1px, transparent 1px);
-  background-size: 72px 72px;
-}
-
-.hero-glow {
-  inset: -15%;
-  background:
-    radial-gradient(ellipse 60% 45% at 70% 20%, rgba(61, 158, 255, 0.24), transparent 60%),
-    radial-gradient(ellipse 50% 40% at 20% 60%, rgba(61, 158, 255, 0.14), transparent 60%),
-    radial-gradient(ellipse 45% 35% at 55% 85%, rgba(61, 158, 255, 0.09), transparent 55%);
-  animation: glow-drift 16s ease-in-out infinite alternate;
-}
-
-@keyframes glow-drift {
-  0% {
-    transform: translate(0, 0) scale(1) rotate(0deg);
-  }
-  33% {
-    transform: translate(4%, -3%) scale(1.06) rotate(0.5deg);
-  }
-  66% {
-    transform: translate(-3%, 4%) scale(1.1) rotate(-0.5deg);
-  }
-  100% {
-    transform: translate(2%, -2%) scale(1.04) rotate(0.3deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-glow {
-    animation: none;
-    inset: 0;
-  }
 }
 
 @keyframes rise {

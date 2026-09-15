@@ -26,7 +26,7 @@ export function ButtonLink({
     <Link
       href={href}
       className={cn(
-        "press-scale group inline-flex h-12 items-center justify-center gap-2 rounded-full border px-6 text-[13px] font-semibold tracking-[0.08em] uppercase transition-colors duration-200",
+        "press-scale group inline-flex h-12 items-center justify-center gap-2 rounded-full border px-6 font-mono text-[13px] font-medium tracking-[0.08em] uppercase transition-colors duration-200",
         styles[variant],
         className,
       )}
