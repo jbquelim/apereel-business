@@ -18,7 +18,7 @@ export function ButtonLink({
     primary:
       "border-electric bg-electric text-navy hover:bg-electric-deep hover:border-electric-deep",
     secondary:
-      "border-white/20 bg-transparent text-ink hover:border-electric hover:text-electric",
+      "border-ink bg-ink text-navy hover:border-white hover:bg-white",
     ghost: "border-transparent bg-transparent text-ink hover:text-electric",
   } as const;
 
