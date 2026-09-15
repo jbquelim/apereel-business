@@ -12,9 +12,9 @@ export function HeroGraph() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute right-0 bottom-0 hidden w-[62%] max-w-[880px] sm:block"
+      className="pointer-events-none absolute right-0 bottom-0 hidden h-[88%] sm:block"
     >
-      <svg viewBox="0 0 880 640" className="h-auto w-full">
+      <svg viewBox="0 0 880 640" className="h-full w-auto" preserveAspectRatio="xMaxYMax meet">
         <defs>
           <linearGradient id="heroBarGrad" x1="0" y1="1" x2="0" y2="0">
             <stop offset="0%" stopColor="rgba(19, 34, 64, 0.55)" />
