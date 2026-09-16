@@ -1022,7 +1022,9 @@ export function SiteAudit() {
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 90000);
+      // The server may take up to 180s (live competitor crawls); aborting
+      // earlier than the server's own limit kills healthy audits.
+      const timeout = setTimeout(() => controller.abort(), 175000);
       const res = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1155,7 +1157,8 @@ export function SiteAudit() {
           <div className="mt-10 flex flex-col items-center gap-4 py-12">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-electric/30 border-t-electric" />
             <p className="text-sm text-muted">
-              Running performance and SEO analysis — this takes 15-30 seconds…
+              Analyzing your market — we crawl your competitors&apos; live
+              product data, so this takes a minute or two…
             </p>
           </div>
         )}
