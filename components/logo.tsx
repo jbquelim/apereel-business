@@ -4,6 +4,25 @@ type LogoProps = {
   className?: string;
 };
 
+export function LogoMark({ className }: LogoProps) {
+  return (
+    <svg
+      viewBox="38 19 185 167"
+      aria-hidden="true"
+      className={cn("h-5 w-auto", className)}
+    >
+      <path
+        d="M130.52,19.62c-20.39,54.96-55.19,123.15-92.04,165.42l92.04-33.29,92.02,33.29c-36.86-42.27-71.65-110.46-92.02-165.42Z"
+        className="fill-ink"
+      />
+      <polygon
+        points="114.87 121.04 130.51 93.96 146.14 121.04 114.87 121.04"
+        className="fill-navy"
+      />
+    </svg>
+  );
+}
+
 export function Logo({ className }: LogoProps) {
   return (
     <svg

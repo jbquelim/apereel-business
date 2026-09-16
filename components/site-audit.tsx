@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Container } from "@/components/container";
+import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
 
 type Scores = {
@@ -1155,7 +1156,10 @@ export function SiteAudit() {
 
         {status === "loading" && (
           <div className="mt-10 flex flex-col items-center gap-4 py-12">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-electric/30 border-t-electric" />
+            <div className="relative flex h-14 w-14 items-center justify-center">
+              <div className="absolute inset-0 animate-spin rounded-full border-2 border-electric/25 border-t-electric" />
+              <LogoMark className="h-6 animate-pulse" />
+            </div>
             <p className="text-sm text-muted">
               Analyzing your market — we crawl your competitors&apos; live
               product data, so this takes a minute or two…

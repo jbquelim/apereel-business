@@ -1,26 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Container } from "@/components/container";
 import { caseStudies } from "@/lib/site";
-import { InventoryDiagram } from "@/components/diagrams/inventory-diagram";
-import { UxDiagram } from "@/components/diagrams/ux-diagram";
-import { DevelopmentDiagram } from "@/components/diagrams/development-diagram";
-import { PricingDiagram } from "@/components/diagrams/pricing-diagram";
-import { LuxuryDiagram } from "@/components/diagrams/luxury-diagram";
 
-const diagrams = [
-  InventoryDiagram,
-  UxDiagram,
-  DevelopmentDiagram,
-  PricingDiagram,
-  LuxuryDiagram,
+type Visual = {
+  src: string;
+  width: number;
+  height: number;
+  alt: string;
+  /** When set, letterbox with this background instead of cropping. */
+  contain?: string;
+  /** Looping motion version of the still; the still remains the fallback. */
+  video?: string;
+};
+
+const visuals: Visual[] = [
+  {
+    src: "/images/case-inventory-seo.jpg",
+    width: 783,
+    height: 901,
+    alt: "Category ranking positions climbing from #48 to #3 as inventory depth grows",
+    video: "/videos/case-inventory-seo.mp4",
+  },
+  {
+    src: "/images/case-ecommerce-ux.jpg",
+    width: 838,
+    height: 758,
+    alt: "Product discovery interface with filters and navigation rebuilt around how customers shop",
+    // Callouts reach the image edges — letterbox on the image's own navy instead of cropping.
+    contain: "#0f1e3b",
+    video: "/videos/case-ecommerce-ux.mp4",
+  },
+  {
+    src: "/images/case-development-transformation.jpg",
+    width: 768,
+    height: 746,
+    alt: "Development cycle collapsing from weeks in an external queue to same-day internal shipping",
+    video: "/videos/case-development-transformation.mp4",
+  },
+  {
+    src: "/images/case-pricing-intelligence.jpg",
+    width: 868,
+    height: 753,
+    alt: "Competitive price comparison revealing a category priced above market",
+    video: "/videos/case-pricing-intelligence.mp4",
+  },
+  {
+    src: "/images/case-brand-compliance.jpg",
+    width: 817,
+    height: 727,
+    alt: "Brand standards and commercial goals converging into one e-commerce execution",
+    contain: "#081633",
+    video: "/videos/case-brand-compliance.mp4",
+  },
 ];
 
 export function CaseStudies() {
   const [active, setActive] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const study = caseStudies[active];
-  const Diagram = diagrams[active];
+  const visual = visuals[active];
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   return (
     <section
@@ -63,8 +112,36 @@ export function CaseStudies() {
 
         {/* Active case study */}
         <article key={active} className="tab-content grid overflow-hidden rounded-[var(--radius-parent)] bg-navy-mid mt-10 lg:grid-cols-2">
-          <div className="hidden min-h-[280px] items-center justify-center bg-navy-lift p-8 lg:flex">
-            <Diagram />
+          <div
+            className="relative hidden min-h-[280px] bg-navy-lift lg:block"
+            style={visual.contain ? { backgroundColor: visual.contain } : undefined}
+          >
+            {visual.video && !reducedMotion ? (
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                poster={visual.src}
+                aria-label={visual.alt}
+                className={`absolute inset-0 h-full w-full ${
+                  visual.contain ? "object-contain" : "object-cover"
+                }`}
+              >
+                <source src={visual.video} type="video/mp4" />
+              </video>
+            ) : (
+              <Image
+                src={visual.src}
+                alt={visual.alt}
+                width={visual.width}
+                height={visual.height}
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className={`absolute inset-0 h-full w-full ${
+                  visual.contain ? "object-contain" : "object-cover"
+                }`}
+              />
+            )}
           </div>
           <div className="flex flex-col justify-center p-8 sm:p-10">
             <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
