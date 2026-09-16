@@ -95,5 +95,25 @@ await sql`
   ON product_samples (business_id, captured_at)
 `;
 
+await sql`
+  CREATE TABLE IF NOT EXISTS leads (
+    id SERIAL PRIMARY KEY,
+    email TEXT NOT NULL,
+    name TEXT,
+    domain TEXT NOT NULL,
+    url TEXT,
+    industry TEXT,
+    sub_industry TEXT,
+    business_model TEXT,
+    headline TEXT,
+    insights JSONB,
+    competitors JSONB,
+    status TEXT NOT NULL DEFAULT 'new',
+    emailed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (email, domain)
+  )
+`;
+
 const [{ count }] = await sql`SELECT count(*)::int AS count FROM businesses`;
 console.log("Schema ready. businesses rows:", count);

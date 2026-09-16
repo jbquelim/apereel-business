@@ -1,5 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { recordAuditSnapshot } from "@/lib/marketdb";
+import { recordLeadAndSendEmail } from "@/lib/leads";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
 import {
   matchProducts,
@@ -1807,6 +1808,28 @@ Respond with ONLY a JSON array of exactly 5 competitors:
       industry: industry?.industry ?? null,
       competitorsDiscovered: industry?.competitors.length ?? 0,
     });
+  }
+
+  // A visitor who left an email becomes a lead, and gets one follow-up built
+  // from their audit's own findings. Runs after the response is sent.
+  if (email && email.includes("@")) {
+    after(() =>
+      recordLeadAndSendEmail({
+        email,
+        name: name ?? null,
+        domain,
+        url,
+        industry: industry?.industry ?? null,
+        subIndustry: industry?.subIndustry ?? null,
+        businessModel: industry?.businessModel ?? null,
+        headline: headline ?? null,
+        insights: inventoryInsights,
+        competitors: (industry?.competitors ?? []).map((c) => ({
+          name: c.name,
+          domain: c.domain,
+        })),
+      }),
+    );
   }
 
   const result: AuditResult = {
