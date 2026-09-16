@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-// Cinematic replacement for the vector HeroGraph, in two acts: the entrance
-// clip plays once (bars rise left-to-right, arrow draws to the top right),
-// then hands off to an ambient loop whose boundary frames match the entrance's
-// final frame — continuous motion with no visible jump. Static image under
-// prefers-reduced-motion.
+// Cinematic replacement for the vector HeroGraph: one seamlessly looping
+// cycle — bars rise left-to-right, the arrow draws to the top right, the
+// scene holds, then gracefully resets to the empty stage and rebuilds.
+// Static image under prefers-reduced-motion.
 export function HeroGraphVideo() {
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [entered, setEntered] = useState(false);
-  const loopRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -33,37 +30,18 @@ export function HeroGraphVideo() {
           className="h-full w-full object-cover object-[75%_100%]"
         />
       ) : (
-        <>
-          {/* Entrance — no poster: the clip opens on the empty scene, so a
-              final-frame poster would flash the full graph before it plays. */}
-          <video
-            autoPlay
-            muted
-            playsInline
-            preload="auto"
-            onEnded={() => {
-              loopRef.current?.play();
-              setEntered(true);
-            }}
-            className={`absolute inset-0 h-full w-full object-cover object-[75%_100%] ${
-              entered ? "invisible" : ""
-            }`}
-          >
-            <source src="/videos/hero-growth.mp4" type="video/mp4" />
-          </video>
-          <video
-            ref={loopRef}
-            muted
-            loop
-            playsInline
-            preload="auto"
-            className={`absolute inset-0 h-full w-full object-cover object-[75%_100%] ${
-              entered ? "" : "invisible"
-            }`}
-          >
-            <source src="/videos/hero-growth-loop.mp4" type="video/mp4" />
-          </video>
-        </>
+        // No poster: the cycle opens on the empty scene, so a final-frame
+        // poster would flash the full graph before the build-up plays.
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="h-full w-full object-cover object-[75%_100%]"
+        >
+          <source src="/videos/hero-growth.mp4" type="video/mp4" />
+        </video>
       )}
     </div>
   );
