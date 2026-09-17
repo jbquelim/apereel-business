@@ -1,9 +1,16 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/site";
+import { servicePages } from "@/lib/service-pages";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = getSiteUrl();
   return [
+    ...servicePages.map((s) => ({
+      url: `${base}/services/${s.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
     {
       url: base,
       lastModified: new Date(),

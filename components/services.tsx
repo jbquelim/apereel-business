@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Container } from "@/components/container";
 import { services } from "@/lib/site";
+import { servicePages } from "@/lib/service-pages";
 import { ResearchDiagram } from "@/components/diagrams/research-diagram";
 import { SeoDiagram } from "@/components/diagrams/seo-diagram";
 import { AdvertisingDiagram } from "@/components/diagrams/advertising-diagram";
@@ -80,6 +82,17 @@ export function Services() {
             <p className="mt-4 text-base leading-relaxed text-navy/60">
               {service.body}
             </p>
+            {(() => {
+              const page = servicePages.find((p) => p.tag === service.tag);
+              return page ? (
+                <Link
+                  href={`/services/${page.slug}`}
+                  className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-navy underline-offset-4 transition-colors hover:text-electric-deep hover:underline"
+                >
+                  More about {service.tag.toLowerCase()} →
+                </Link>
+              ) : null;
+            })()}
           </div>
         </article>
       </Container>
