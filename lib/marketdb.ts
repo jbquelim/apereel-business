@@ -58,6 +58,87 @@ function rangeToCents(s: string | null): [number | null, number | null] {
   return [Math.min(...nums), Math.max(...nums)];
 }
 
+export type SegmentBenchmark = {
+  segment: string;
+  storesTracked: number;
+  medianDepth: number | null; // median of each store's deepest tracked category
+  medianPriceCents: number | null; // median of per-store average price points
+  priceLowCents: number | null; // p25 of store price points
+  priceHighCents: number | null; // p75 of store price points
+};
+
+// Segment medians from each business's LATEST crawl. Depth uses the deepest
+// tracked category per store (categories overlap, so summing would
+// double-count); price uses each store's average price point. Only shown
+// when the segment has enough stores to make a median honest.
+const MIN_STORES_FOR_BENCHMARK = 5;
+
+export async function fetchSegmentBenchmark(
+  industry: string,
+  subIndustry: string,
+): Promise<SegmentBenchmark | null> {
+  try {
+    if (!process.env.DATABASE_URL) return null;
+    const sql = neon(process.env.DATABASE_URL);
+
+    const compute = async (bySub: boolean) => {
+      const rows = (await sql`
+        WITH latest AS (
+          SELECT s.business_id, max(s.captured_at) AS at
+          FROM inventory_snapshots s
+          JOIN businesses b ON b.id = s.business_id
+          WHERE b.industry = ${industry}
+            AND (${!bySub} OR b.sub_industry = ${subIndustry})
+          GROUP BY s.business_id
+        ),
+        per_store AS (
+          SELECT s.business_id,
+                 max(s.product_count) AS depth,
+                 avg(s.avg_price_cents) AS price
+          FROM inventory_snapshots s
+          JOIN latest l ON l.business_id = s.business_id AND l.at = s.captured_at
+          GROUP BY s.business_id
+        )
+        SELECT count(*)::int AS stores,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY depth)::int AS median_depth,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY price)::int AS median_price,
+               percentile_cont(0.25) WITHIN GROUP (ORDER BY price)::int AS price_low,
+               percentile_cont(0.75) WITHIN GROUP (ORDER BY price)::int AS price_high
+        FROM per_store
+        WHERE price IS NOT NULL OR depth IS NOT NULL
+      `) as {
+        stores: number;
+        median_depth: number | null;
+        median_price: number | null;
+        price_low: number | null;
+        price_high: number | null;
+      }[];
+      return rows[0] ?? null;
+    };
+
+    // Prefer the tight sub-segment; widen to the industry when it's thin.
+    let stats = await compute(true);
+    let segment = subIndustry;
+    if (!stats || stats.stores < MIN_STORES_FOR_BENCHMARK) {
+      stats = await compute(false);
+      segment = industry;
+    }
+    if (!stats || stats.stores < MIN_STORES_FOR_BENCHMARK) return null;
+
+    return {
+      segment,
+      storesTracked: stats.stores,
+      medianDepth: stats.median_depth,
+      medianPriceCents: stats.median_price,
+      priceLowCents: stats.price_low,
+      priceHighCents: stats.price_high,
+    };
+  } catch (err) {
+    console.error("fetchSegmentBenchmark failed:", err);
+    return null;
+  }
+}
+
 // Best-effort: dataset growth must never break or slow an audit, so every
 // failure is logged and swallowed.
 export async function recordAuditSnapshot(

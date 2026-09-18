@@ -26,6 +26,19 @@ export async function GET(request: Request) {
 
   const sql = neon(process.env.DATABASE_URL);
 
+  // Freshness policy: live-feed businesses with stale data re-enter the
+  // rotation, so price history accrues on a guaranteed cadence instead of
+  // whenever a domain happens to be re-audited.
+  await sql`
+    UPDATE crawl_queue SET status = 'pending', attempts = 0
+    WHERE status = 'done'
+      AND domain IN (
+        SELECT domain FROM businesses
+        WHERE platform = 'live'
+          AND last_crawled < now() - interval '14 days'
+      )
+  `;
+
   // Cron invocations arrive on the raw *.vercel.app deployment URL, which
   // sits behind deployment protection — self-calls through it get an auth
   // page, not the API. Route those through the public domain instead.

@@ -1,5 +1,8 @@
 import { NextResponse, after } from "next/server";
-import { recordAuditSnapshot } from "@/lib/marketdb";
+import {
+  recordAuditSnapshot,
+  fetchSegmentBenchmark,
+} from "@/lib/marketdb";
 import { recordLeadAndSendEmail } from "@/lib/leads";
 import {
   taxonomyPromptBlock,
@@ -129,6 +132,17 @@ type ProductComparison = {
   competitorDomain: string;
 };
 
+type MarketPosition = {
+  segment: string;
+  storesTracked: number;
+  medianDepth: number | null;
+  medianPrice: string | null;
+  priceLow: string | null;
+  priceHigh: string | null;
+  clientDepth: number | null;
+  clientPrice: string | null;
+};
+
 type AuditResult = {
   url: string;
   scores: {
@@ -164,6 +178,7 @@ type AuditResult = {
     imagesWithoutAlt: number;
   };
   experience?: ExperienceCheckResult | null;
+  marketPosition?: MarketPosition;
   industry: IndustryAnalysis;
   trends: TrendsData;
   credibility?: {
@@ -916,6 +931,7 @@ async function generateInventoryInsights(
   ownCategories: InventoryCategory[],
   competitorInventories: CompetitorInventory[],
   productMatches: ProductMatch[] = [],
+  marketPosition?: MarketPosition,
 ): Promise<string[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return [];
@@ -938,6 +954,11 @@ ${competitorInventories.map((c) => `${c.name} (${c.domain}):\n${fmt(c.categories
 ${productMatches.length > 0 ? `
 === MATCHED COMPARABLE PRODUCTS (exact prices from live product feeds) ===
 ${productMatches.map((m) => `- CLIENT'S "${m.clientTitle}" (${formatCents(m.clientPriceCents)}) vs ${m.competitorName}'s "${m.competitorTitle}" (${formatCents(m.competitorPriceCents)})`).join("\n")}` : ""}
+${marketPosition ? `
+=== SEGMENT BENCHMARK (our proprietary market index of ${marketPosition.storesTracked} ${marketPosition.segment} stores) ===
+- Median assortment depth (deepest tracked category per store): ${marketPosition.medianDepth ?? "n/a"} products
+- Median store price point: ${marketPosition.medianPrice ?? "n/a"}; middle half of stores range ${marketPosition.priceLow ?? "n/a"} to ${marketPosition.priceHigh ?? "n/a"}
+- The client's numbers: depth ${marketPosition.clientDepth ?? "unknown"}, price point ${marketPosition.clientPrice ?? "unknown"}` : ""}
 
 Write 3-4 sharp, specific insights comparing the client's inventory depth and price positioning against these competitors, and what that means for their search visibility and revenue opportunity. Categories with deeper inventory tend to rank better organically — use that lens where relevant.
 
@@ -947,6 +968,7 @@ Rules:
 - Each insight is one sentence, under 35 words, direct and confident, addressed to the client ("Your...")
 - Collections on the same site can overlap heavily — NEVER add product counts from different categories together or claim a combined total across categories
 - Individual products may ONLY be compared using the MATCHED COMPARABLE PRODUCTS pairs above, quoting both product names verbatim — never pair up products yourself
+- When the SEGMENT BENCHMARK block is present, ground at least one insight in it (e.g. "the median store in your segment carries...") using ONLY the numbers provided there — it is the strongest evidence available; never invent segment statistics
 - No hedging words like "may", "might", "could potentially"
 - If the client has no inventory data, focus on what competitors' depth means for them
 
@@ -1740,6 +1762,38 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     }
   }
 
+  // Segment benchmark from the market index: median depth and price points
+  // for the client's segment, with the client's own numbers alongside.
+  let marketPosition: MarketPosition | undefined;
+  if (industry) {
+    const bench = await fetchSegmentBenchmark(industry.industry, industry.subIndustry);
+    if (bench) {
+      const cats = industry.inventoryCategories;
+      const clientDepth =
+        cats.length > 0
+          ? cats.reduce((m, c) => Math.max(m, c.productCount ?? 0), 0) || null
+          : null;
+      const clientPrices = cats
+        .map((c) => parseFloat((c.avgPrice ?? "").replace(/[$,]/g, "")))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      const clientPriceCents =
+        clientPrices.length > 0
+          ? Math.round((clientPrices.reduce((a, b) => a + b, 0) / clientPrices.length) * 100)
+          : null;
+      marketPosition = {
+        segment: bench.segment,
+        storesTracked: bench.storesTracked,
+        medianDepth: bench.medianDepth,
+        medianPrice: bench.medianPriceCents != null ? formatCents(bench.medianPriceCents) : null,
+        priceLow: bench.priceLowCents != null ? formatCents(bench.priceLowCents) : null,
+        priceHigh: bench.priceHighCents != null ? formatCents(bench.priceHighCents) : null,
+        clientDepth,
+        clientPrice: clientPriceCents != null ? formatCents(clientPriceCents) : null,
+      };
+      console.log("Market position:", bench.segment, bench.storesTracked, "stores");
+    }
+  }
+
   let inventoryInsights: string[] = [];
   if (
     !isIngest &&
@@ -1752,6 +1806,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
       industry.inventoryCategories,
       competitorInventories,
       productMatches,
+      marketPosition,
     );
     console.log("Inventory insights generated:", inventoryInsights.length);
   }
@@ -1866,6 +1921,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     industry,
     trends,
     credibility,
+    marketPosition,
     competitorInventories:
       competitorInventories.length > 0
         ? competitorInventories.map((c) => ({

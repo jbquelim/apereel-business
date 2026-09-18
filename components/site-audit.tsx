@@ -142,6 +142,17 @@ type ProductComparison = {
   competitorDomain: string;
 };
 
+type MarketPosition = {
+  segment: string;
+  storesTracked: number;
+  medianDepth: number | null;
+  medianPrice: string | null;
+  priceLow: string | null;
+  priceHigh: string | null;
+  clientDepth: number | null;
+  clientPrice: string | null;
+};
+
 type AuditData = {
   url: string;
   scores: Scores;
@@ -151,6 +162,7 @@ type AuditData = {
   industry: IndustryAnalysis;
   trends: TrendsData;
   credibility?: Credibility;
+  marketPosition?: MarketPosition;
   competitorInventories?: CompetitorInventory[];
   productComparisons?: ProductComparison[];
   inventoryInsights?: string[];
@@ -633,6 +645,77 @@ function ExperienceSection({ experience }: { experience: ExperienceCheckResult }
   );
 }
 
+function positionDelta(client: string | number | null, median: string | number | null): string | null {
+  const parse = (v: string | number | null) =>
+    typeof v === "number" ? v : v ? parseFloat(v.replace(/[$,]/g, "")) : NaN;
+  const c = parse(client);
+  const m = parse(median);
+  if (!Number.isFinite(c) || !Number.isFinite(m) || m === 0) return null;
+  const pct = Math.round(((c - m) / m) * 100);
+  if (pct === 0) return "at the median";
+  return pct > 0 ? `${pct}% above median` : `${-pct}% below median`;
+}
+
+function MarketPositionSection({ mp }: { mp: MarketPosition }) {
+  const cells: { label: string; median: string; client: string; delta: string | null }[] = [
+    {
+      label: "Assortment depth (deepest category)",
+      median: mp.medianDepth != null ? `${mp.medianDepth.toLocaleString()} products` : "—",
+      client: mp.clientDepth != null ? `${mp.clientDepth.toLocaleString()} products` : "not measurable",
+      delta: positionDelta(mp.clientDepth, mp.medianDepth),
+    },
+    {
+      label: "Store price point",
+      median: mp.medianPrice ?? "—",
+      client: mp.clientPrice ?? "not measurable",
+      delta: positionDelta(mp.clientPrice, mp.medianPrice),
+    },
+  ];
+
+  return (
+    <div className="rounded-[var(--radius-parent)] bg-navy-mid p-6 sm:p-8">
+      <div className="flex items-center gap-3">
+        <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+          Your Market Position
+        </p>
+        <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+          Proprietary Index
+        </span>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-muted">
+        Benchmarked against the {mp.storesTracked.toLocaleString()} {mp.segment.toLowerCase()}{" "}
+        stores in our live market index
+        {mp.priceLow && mp.priceHigh
+          ? ` — the middle half of the segment prices between ${mp.priceLow} and ${mp.priceHigh}.`
+          : "."}
+      </p>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        {cells.map((c) => (
+          <div key={c.label} className="rounded-[var(--radius-child)] bg-navy-lift p-5">
+            <p className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">
+              {c.label}
+            </p>
+            <div className="mt-3 flex items-baseline justify-between gap-4">
+              <div>
+                <p className="font-mono text-[11px] text-muted/60 uppercase">Segment median</p>
+                <p className="mt-0.5 font-mono text-xl text-ink">{c.median}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-mono text-[11px] text-muted/60 uppercase">You</p>
+                <p className="mt-0.5 font-mono text-xl text-electric">{c.client}</p>
+              </div>
+            </div>
+            {c.delta && (
+              <p className="mt-2 text-right text-[12px] text-muted">{c.delta}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AuditResults({ data }: { data: AuditData }) {
   const hasScores = Object.values(data.scores).some((s) => s !== null);
   const hasVitals = Object.values(data.vitals).some((v) => v !== null);
@@ -767,6 +850,8 @@ function AuditResults({ data }: { data: AuditData }) {
 
         </div>
       )}
+
+      {data.marketPosition && <MarketPositionSection mp={data.marketPosition} />}
 
       {data.credibility && <CredibilitySection credibility={data.credibility} url={data.url} />}
 
