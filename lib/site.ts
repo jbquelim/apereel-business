@@ -30,6 +30,7 @@ export const site = {
     { href: "/#work", label: "Work" },
     { href: "/#approach", label: "Approach" },
     { href: "/#services", label: "Services" },
+    { href: "/insights", label: "Insights" },
     { href: "/#founder", label: "About" },
     { href: "/#contact", label: "Contact" },
   ],
