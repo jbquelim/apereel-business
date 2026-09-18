@@ -52,7 +52,7 @@ export const servicePages: ServicePage[] = [
           "A ranked list of moves: what to fix, what to build, and what to amplify — each tied to a revenue case, not a vanity metric.",
       },
     ],
-    fit: "For e-commerce businesses that suspect the real problem isn't marketing — and want evidence before spending another dollar on it.",
+    fit: "For businesses that suspect the real problem isn't marketing — and want evidence before spending another dollar on it.",
     proof:
       "This research-first method is how we found the inventory and pricing problems behind a client's flat SEO results — and drove 20X revenue growth in four years by fixing the business first.",
     faqs: [
@@ -113,7 +113,7 @@ export const servicePages: ServicePage[] = [
           "Content built from what you actually sell and know, not filler produced to feed a publishing quota.",
       },
     ],
-    fit: "For e-commerce businesses tired of paying for content that ranks for nothing commercial, or agencies that never once looked at the product catalog.",
+    fit: "For businesses tired of paying for content that ranks for nothing commercial, or agencies that never once looked at what the business actually sells.",
     proof:
       "This approach ranked a client in the top 5 for over 1,000 keywords — including commercial searches where established national retailers struggle to appear.",
     faqs: [
@@ -209,7 +209,7 @@ export const servicePages: ServicePage[] = [
       "Stop waiting in an agency's development queue. AI-assisted development ships website changes in hours and cuts cycles from weeks to days.",
     intro: [
       "Your last agency charged you three weeks of development to change a banner.",
-      "For most e-commerce teams the constraint is not ideas or strategy — it is the inability to execute without waiting in someone else's queue. Simple UX fixes sit for weeks. Feature requests take months. The compounding cost is every improvement that never ships.",
+      "For most teams the constraint is not ideas or strategy — it is the inability to execute without waiting in someone else's queue. Simple UX fixes sit for weeks. Feature requests take months. The compounding cost is every improvement that never ships.",
       "We build digital platforms with AI-assisted development so changes ship in hours. In one engagement, development cycles dropped from three-to-four weeks to under 24 hours — the team shipped more in one month than the previous agency delivered in six.",
     ],
     deliverablesLabel: "What the work covers",

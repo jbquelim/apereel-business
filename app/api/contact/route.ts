@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { validateContact } from "@/lib/contact";
 import { site } from "@/lib/site";
+import { renderEmail } from "@/lib/email-template";
 
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_REQUESTS = 8;
@@ -80,16 +81,14 @@ async function deliver(payload: {
         to: [payload.email.trim()],
         reply_to: site.email,
         subject: `Thanks for reaching out, ${firstName}`,
-        html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.6; color: #1a1a1a; max-width: 560px;">
-<p>Hi ${firstName},</p>
-<p>Thank you for getting in touch with Apereel. We've received your message and will get back to you within one business day.</p>
-<p>In the meantime, if anything is time-sensitive, feel free to reply directly to this email.</p>
-<p>
-John Lim<br>
-Founder, Apereel<br>
-<a href="https://apereel.com" style="color: #3d9eff;">apereel.com</a>
-</p>
-</div>`,
+        html: renderEmail({
+          preheader:
+            "We've received your message and will reply within one business day.",
+          bodyHtml: `<p style="margin:0 0 16px;">Hi ${firstName},</p>
+<p style="margin:0 0 16px;">Thanks for getting in touch with Apereel. Your message is in, and I'll get back to you within one business day.</p>
+<p style="margin:0 0 16px;">If anything is time-sensitive, just reply directly to this email — it reaches me.</p>
+<p style="margin:0;">Talk soon,</p>`,
+        }),
       }),
     }).catch((err) => console.error("Auto-reply failed:", err));
 

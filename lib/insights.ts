@@ -17,6 +17,31 @@ export type Insight = {
 
 export const insights: Insight[] = [
   {
+    slug: "why-we-crawl-competitor-catalogs-first",
+    tag: "Founder Essay",
+    title: "Why we crawl competitor catalogs before touching your ads",
+    metaTitle: "Why We Crawl Competitor Catalogs Before Touching Your Ads",
+    metaDescription:
+      "Most unprofitable ad accounts share a root cause that isn't in the ad account. Where we look first, and what the data decides.",
+    datePublished: "2026-09-18",
+    body: [
+      "“Our ads aren't working” is one of the most common things a business owner says to an agency. The usual response is to audit the campaigns. Better keywords, tighter audiences, new creative. Sometimes that helps. Often it doesn't, because the problem was never inside the ad account.",
+      "An ad does three jobs. It makes a promise, to the right person, about something you sell. Campaign settings control the second job. The first and third are decided by your business.",
+      "This is why we crawl competitors' live catalogs before we touch a campaign. Real products, real prices, real availability. Not survey estimates, not industry benchmarks. If your prices sit ten percent above the market in a category, no bidding strategy fixes that. If a competitor stocks three times your selection, their ad wins even when yours is better written. The click you paid for lands on a comparison you lose.",
+      "More budget makes that problem more expensive. Scaling spend into an offer that loses on price or selection buys you more of the losing comparisons.",
+      "The crawl data changes the conversation. Instead of “how do we improve the ads,” it becomes “where do we actually deserve to win.” Every business has categories where it holds a real advantage: price, selection, availability, expertise, experience. That is where spend concentrates. Categories that lose on fundamentals get fixed first or skipped, honestly, until they earn the right to be amplified.",
+      "This is the discipline behind the method that drove 20X revenue growth in four years. Advertising was one lever. It worked because it was pulled after pricing and inventory earned the right to amplify, not before.",
+      "Before your next budget increase, ask a simpler question: if a careful buyer put your offer next to the two competitors ranked above you, would you win? If the answer is no, that's what the ad budget is currently paying to reveal.",
+    ],
+    related: [
+      { href: "/services/advertising", label: "Advertising" },
+      {
+        href: "/services/research-competitive-analysis",
+        label: "Research & Competitive Analysis",
+      },
+    ],
+  },
+  {
     slug: "the-answer-wasnt-more-seo",
     tag: "Founder Essay",
     title: "The answer wasn't more SEO. It was a better business.",

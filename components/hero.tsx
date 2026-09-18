@@ -21,7 +21,7 @@ export function Hero() {
       <HeroGraphVideo />
       <Container className="relative">
         <p className="animate-rise font-mono text-[13px] tracking-[0.08em] text-muted uppercase">
-          A digital growth consultancy for e-commerce businesses
+          A business-first digital growth consultancy
         </p>
         <h1 className="animate-rise text-display mt-6 max-w-6xl text-ink text-balance">
           {site.headline}

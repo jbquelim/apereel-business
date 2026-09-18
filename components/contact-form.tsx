@@ -211,7 +211,7 @@ export function ContactForm() {
             className="mt-0.5 h-4 w-4 shrink-0 rounded border border-white/20 bg-navy accent-electric"
           />
           <span>
-            I&apos;d like to receive occasional insights on digital growth and e-commerce strategy. Unsubscribe anytime.
+            I&apos;d like to receive occasional insights on digital growth strategy. Unsubscribe anytime.
           </span>
         </label>
       </div>
