@@ -42,16 +42,19 @@ export function SiteHeader() {
         )}
       >
         <div className="mx-auto flex h-[4.25rem] w-full max-w-[1120px] items-center justify-between px-6 sm:px-8">
-          <Link href="/" aria-label="Apereel home" className="relative z-50">
+          <Link href="/" aria-label="Apereel home" className="relative z-50 shrink-0">
             <Logo />
           </Link>
 
-          <nav className="hidden items-center gap-8 lg:flex" aria-label="Primary">
+          <nav
+            className="hidden items-center gap-4 px-4 lg:flex xl:gap-7"
+            aria-label="Primary"
+          >
             {site.nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-[12px] font-medium tracking-[0.16em] text-muted uppercase transition-colors hover:text-ink"
+                className="text-[11px] font-medium tracking-[0.12em] whitespace-nowrap text-muted uppercase transition-colors hover:text-ink xl:text-[12px] xl:tracking-[0.16em]"
               >
                 {item.label}
               </Link>
@@ -60,7 +63,7 @@ export function SiteHeader() {
 
           <Link
             href="/#contact"
-            className="press-scale hidden h-10 items-center rounded-full border border-electric/40 px-4 text-[11px] font-semibold tracking-[0.14em] text-electric uppercase transition-colors duration-200 hover:border-electric hover:bg-electric hover:text-navy lg:inline-flex"
+            className="press-scale hidden h-10 shrink-0 items-center rounded-full border border-electric/40 px-4 text-[11px] font-semibold tracking-[0.14em] whitespace-nowrap text-electric uppercase transition-colors duration-200 hover:border-electric hover:bg-electric hover:text-navy lg:inline-flex"
           >
             Work With Apereel
           </Link>
