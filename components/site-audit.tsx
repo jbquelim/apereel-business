@@ -1257,10 +1257,10 @@ export function SiteAudit() {
     <section
       id="audit"
       aria-labelledby="audit-heading"
-      className="reveal-section bg-ink pt-12 pb-16 sm:pt-16 sm:pb-20"
+      className="reveal-section bg-navy pt-12 pb-16 sm:pt-16 sm:pb-20"
     >
       <div className="mx-auto max-w-[1400px] px-6 sm:px-8">
-        <div className="rounded-3xl bg-navy p-8 sm:p-10 lg:p-14">
+        <div className="rounded-3xl border border-white/10 bg-navy p-8 sm:p-10 lg:p-14">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
             Free Website Audit
