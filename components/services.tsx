@@ -41,7 +41,7 @@ export function Services() {
           </p>
           <h2
             id="services-heading"
-            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-6xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-6xl"
           >
             Each capability solves a specific growth constraint.
           </h2>

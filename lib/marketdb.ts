@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import type { ProofSignals } from "./proofSignals";
 import type { RawProduct } from "./productMatch";
+import { isBlockedDomain } from "./taxonomy";
 
 // Market-intelligence dataset: every audit persists the businesses it touched,
 // their industry classification, and an inventory snapshot per category. The
@@ -70,6 +71,8 @@ export async function recordAuditSnapshot(
       // One business, one row — "www.example.com" and "example.com" must not
       // split into two identities.
       const domain = b.domain.replace(/^www\./, "");
+      // Marketplaces and mass giants never enter the dataset.
+      if (isBlockedDomain(domain)) continue;
       const discoveredFrom = b.discoveredFrom?.replace(/^www\./, "") ?? null;
       const rows = (await sql`
         INSERT INTO businesses (domain, name, industry, sub_industry, country, platform, discovered_from, business_model, last_crawled)

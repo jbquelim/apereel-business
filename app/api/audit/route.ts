@@ -1,6 +1,11 @@
 import { NextResponse, after } from "next/server";
 import { recordAuditSnapshot } from "@/lib/marketdb";
 import { recordLeadAndSendEmail } from "@/lib/leads";
+import {
+  taxonomyPromptBlock,
+  normalizeClassification,
+  isBlockedDomain,
+} from "@/lib/taxonomy";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
 import {
   matchProducts,
@@ -87,6 +92,7 @@ type CompetitorInventory = {
 type IndustryAnalysis = {
   industry: string;
   subIndustry: string;
+  detectedCountry?: string | null;
   businessModel: string | null;
   competitors: Competitor[];
   insight: string;
@@ -1279,13 +1285,17 @@ Examples of correct competitor identification:
 - A restaurant's competitors are other restaurants, NOT food suppliers
 - A clothing BOUTIQUE's competitors are other boutiques, NOT fashion brands like Gucci
 
+CLASSIFICATION TAXONOMY — you MUST pick "industry" from the left side and "subIndustry" from that industry's options. Never invent a label:
+${taxonomyPromptBlock()}
+
 Respond with ONLY valid JSON, no markdown formatting:
 {
-  "industry": "broad industry name",
-  "subIndustry": "specific niche or sub-category",
+  "industry": "EXACTLY one industry from the taxonomy above",
+  "subIndustry": "EXACTLY one of that industry's sub-segments",
+  "country": "country where this business is based/primarily operates, from page signals (currency, address, TLD, shipping) — or null if genuinely unclear",
   "businessModel": "retail | b2b | hybrid — 'retail' sells to consumers at listed prices; 'b2b' sells to businesses via quotes, RFQs, or sales conversations (manufacturers, distributors, professional services); 'hybrid' does both",
   "competitors": [
-    { "name": "Company Name", "domain": "example.com", "strength": "What they do well that makes them a strong competitor" }
+    { "name": "Brand name ONLY — never a page title, tagline, or product description", "domain": "example.com", "strength": "What they do well that makes them a strong competitor" }
   ],
   "insight": "2-3 sentences analyzing the competitive landscape. What do the top competitors have in common? Where are customers potentially underserved? Where does this business have an opportunity to differentiate and win?",
   "channels": [
@@ -1367,14 +1377,24 @@ Rules:
 
     if (!parsed.industry || !Array.isArray(parsed.competitors)) return null;
 
+    // Snap free text onto the pinned taxonomy and drop marketplace/giant
+    // "competitors" — peer groups must contain peers.
+    const classified = normalizeClassification(parsed.industry, parsed.subIndustry);
+
     return {
-      industry: parsed.industry,
-      subIndustry: parsed.subIndustry ?? parsed.industry,
-      competitors: parsed.competitors.slice(0, 5).map((c: { name: string; domain: string; strength: string }) => ({
-        name: c.name,
-        domain: c.domain,
-        strength: c.strength,
-      })),
+      industry: classified.industry,
+      subIndustry: classified.subIndustry,
+      detectedCountry: typeof parsed.country === "string" && parsed.country.trim() && parsed.country.length < 40
+        ? parsed.country.trim()
+        : null,
+      competitors: parsed.competitors
+        .filter((c: { domain?: string }) => c.domain && !isBlockedDomain(c.domain))
+        .slice(0, 5)
+        .map((c: { name: string; domain: string; strength: string }) => ({
+          name: c.name,
+          domain: c.domain,
+          strength: c.strength,
+        })),
       insight: parsed.insight ?? "",
       channels: Array.isArray(parsed.channels)
         ? parsed.channels.map((ch: { name: string; percentage: number }) => ({
@@ -1760,7 +1780,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
         name: brandName ?? null,
         industry: industry?.industry ?? null,
         subIndustry: industry?.subIndustry ?? null,
-        country: country ?? null,
+        country: country ?? industry?.detectedCountry ?? null,
         source: inventorySearchData?.source ?? null,
         discoveredFrom: null,
         categories: industry?.inventoryCategories ?? [],
@@ -1773,7 +1793,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
         name: c.name as string | null,
         industry: industry?.industry ?? null,
         subIndustry: industry?.subIndustry ?? null,
-        country: country ?? null,
+        country: country ?? industry?.detectedCountry ?? null,
         source: c.source ?? null,
         discoveredFrom: domain,
         categories: c.categories,
@@ -1791,7 +1811,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
           name: c.name as string | null,
           industry: industry?.industry ?? null,
           subIndustry: industry?.subIndustry ?? null,
-          country: country ?? null,
+          country: country ?? industry?.detectedCountry ?? null,
           source: null,
           discoveredFrom: domain,
           categories: [],
