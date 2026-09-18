@@ -25,7 +25,7 @@ export function ProofSection() {
               </p>
               <h2
                 id="proof-heading"
-                className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink sm:text-5xl lg:text-6xl"
+                className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-5xl lg:text-6xl"
               >
                 Proof, Not Promises.
               </h2>

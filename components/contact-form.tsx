@@ -34,6 +34,12 @@ export function ContactForm() {
     if (!result.ok) {
       setErrors(result.errors);
       setStatus("idle");
+      const first = (
+        ["name", "email", "phone", "company", "website", "message", "acceptTerms"] as const
+      ).find((k) => k in result.errors);
+      if (first) {
+        (form.elements.namedItem(first) as HTMLElement | null)?.focus();
+      }
       return;
     }
 
@@ -111,6 +117,7 @@ export function ContactForm() {
             name="email"
             type="email"
             autoComplete="email"
+            spellCheck={false}
             required
             className={fieldClass}
             aria-invalid={Boolean(errors.email)}
@@ -155,7 +162,8 @@ export function ContactForm() {
             name="website"
             type="url"
             autoComplete="url"
-            placeholder="https://"
+            spellCheck={false}
+            placeholder="https://yourstore.com"
             className={fieldClass}
             aria-invalid={Boolean(errors.website)}
           />

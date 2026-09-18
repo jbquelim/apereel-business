@@ -20,7 +20,7 @@ export function Perspectives() {
           </p>
           <h2
             id="perspectives-heading"
-            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-5xl"
           >
             The questions your current agency isn&apos;t asking.
           </h2>
@@ -35,15 +35,15 @@ export function Perspectives() {
               <li key={item.title}>
                 <button
                   onClick={() => setOpen(isOpen ? null : i)}
-                  className="flex w-full items-start gap-4 py-6 text-left sm:py-8"
+                  className="group flex w-full items-start gap-4 py-6 text-left sm:py-8"
                   aria-expanded={isOpen}
                 >
                   <span
-                    className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-navy/40"
+                    className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-navy/40 transition-colors group-hover:bg-navy"
                     aria-hidden="true"
                   />
                   <div className="flex flex-1 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
-                    <p className="font-display text-lg text-navy sm:text-xl">
+                    <p className="font-display text-lg text-navy transition-colors group-hover:text-navy/70 sm:text-xl">
                       {item.title}
                     </p>
                     <span className="shrink-0 font-mono text-[10px] tracking-[0.18em] text-navy/60 uppercase sm:mt-1.5">

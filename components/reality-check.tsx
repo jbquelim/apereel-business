@@ -13,12 +13,12 @@ export function RealityCheck() {
         <Container>
           <div className="grid lg:grid-cols-2">
             <div className="py-24 pr-12 sm:py-32">
-              <h3
+              <h2
                 id="reality-check-heading"
-                className="font-display text-4xl font-normal tracking-[-0.02em] text-ink sm:text-5xl"
+                className="font-display text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-5xl"
               >
                 You were promised better rankings and more business.
-              </h3>
+              </h2>
 
               <p className="mt-8 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
                 Months later, you&apos;re getting reports, keyword charts, and
@@ -48,7 +48,7 @@ export function RealityCheck() {
       {/* --- Three principles (white background) --- */}
       <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
         <Container>
-          <h2 className="font-display mb-12 text-center text-4xl font-normal tracking-[-0.02em] text-navy sm:mb-16 sm:text-5xl">
+          <h2 className="font-display mb-12 text-center text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:mb-16 sm:text-5xl">
             What to Know. What to Look For.
           </h2>
           <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">

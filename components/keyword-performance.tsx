@@ -63,22 +63,19 @@ export function KeywordPerformance() {
             </p>
             <h2
               id="kd-heading"
-              className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl"
+              className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-5xl"
             >
               Ranking Against the Market Leaders
             </h2>
-            <div className="mt-5 space-y-4 text-base leading-relaxed text-muted">
+            <div className="mt-5 max-w-xl space-y-4 text-base leading-relaxed text-muted">
               <p>
                 Ranking on page 1 for the searches that drive revenue,
-                <br />
-                including terms where even established retailers
-                <br />
-                struggle to appear.
+                including terms where even established retailers struggle to
+                appear.
               </p>
               <p>
-                These rankings were built with inventory depth
-                <br />
-                and business strength, not backlink campaigns.
+                These rankings were built with inventory depth and business
+                strength, not backlink campaigns.
               </p>
             </div>
             <div className="mt-8 grid grid-cols-2 gap-4">

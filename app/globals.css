@@ -47,6 +47,7 @@
 }
 
 html {
+  color-scheme: dark;
   scroll-behavior: smooth;
   scroll-padding-top: 5.5rem;
   overflow-x: hidden;

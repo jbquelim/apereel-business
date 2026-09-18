@@ -84,7 +84,7 @@ export function CaseStudies() {
           </p>
           <h2
             id="work-heading"
-            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink sm:text-6xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-6xl"
           >
             What we found. And what we changed.
           </h2>

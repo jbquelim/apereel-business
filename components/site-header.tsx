@@ -99,7 +99,7 @@ export function SiteHeader() {
       {open && (
         <div
           id={menuId}
-          className="fixed inset-0 z-[45] overflow-y-auto lg:hidden"
+          className="fixed inset-0 z-[45] overflow-y-auto overscroll-contain lg:hidden"
           style={{ backgroundColor: "#070e1c" }}
           aria-hidden={!open}
         >

@@ -36,7 +36,7 @@ export function Approach() {
           </p>
           <h2
             id="approach-heading"
-            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink sm:text-6xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-6xl"
           >
             Fix the business first. Then amplify it with digital.
           </h2>

@@ -18,7 +18,7 @@ export function GrowthProof() {
                 viewBox="0 0 580 270"
                 className="w-full"
                 role="img"
-                aria-label="Organic traffic growth chart showing 268% growth from September 2022 to August 2026"
+                aria-label="Organic traffic growth chart showing 270% growth from September 2022 to August 2026"
               >
                 <defs>
                   <linearGradient
@@ -181,7 +181,7 @@ export function GrowthProof() {
             </p>
             <h2
               id="growth-proof-heading"
-              className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl"
+              className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-5xl"
             >
               Traffic grew 270%.
               <br />

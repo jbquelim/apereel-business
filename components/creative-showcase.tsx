@@ -78,7 +78,7 @@ export function CreativeShowcase() {
           </p>
           <h2
             id="creative-heading"
-            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink sm:text-5xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-5xl"
           >
             Creative production without the six-figure budget.
           </h2>
