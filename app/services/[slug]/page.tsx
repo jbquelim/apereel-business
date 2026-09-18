@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ButtonLink } from "@/components/button-link";
 import { Container } from "@/components/container";
 import { getServicePage, servicePages } from "@/lib/service-pages";
+import { getSiteUrl } from "@/lib/site";
 
 export function generateStaticParams() {
   return servicePages.map((s) => ({ slug: s.slug }));
@@ -39,8 +40,53 @@ export default async function ServicePage({
 
   const others = servicePages.filter((s) => s.slug !== page.slug);
 
+  const base = getSiteUrl();
+  const pageUrl = `${base}/services/${page.slug}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Service",
+        "@id": `${pageUrl}/#service`,
+        name: page.tag,
+        description: page.metaDescription,
+        url: pageUrl,
+        serviceType: page.tag,
+        provider: { "@id": `${base}/#organization` },
+        areaServed: "CA",
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${pageUrl}/#faq`,
+        mainEntity: page.faqs.map((f) => ({
+          "@type": "Question",
+          name: f.question,
+          acceptedAnswer: { "@type": "Answer", text: f.answer },
+        })),
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${pageUrl}/#breadcrumbs`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Apereel", item: base },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Services",
+            item: `${base}/#services`,
+          },
+          { "@type": "ListItem", position: 3, name: page.tag, item: pageUrl },
+        ],
+      },
+    ],
+  };
+
   return (
     <main id="main">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <section className="pt-36 pb-20 sm:pb-28">
         <Container>
           <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
@@ -93,7 +139,28 @@ export default async function ServicePage({
         </Container>
       </section>
 
-      <section className="bg-navy-mid py-16 sm:py-20">
+      <section className="bg-navy-mid py-20 sm:py-28">
+        <Container>
+          <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
+            Questions Worth Asking
+          </p>
+          <h2 className="font-display mt-6 text-3xl font-normal tracking-[-0.02em] text-ink sm:text-4xl">
+            Straight answers
+          </h2>
+          <div className="mt-12 grid max-w-4xl gap-x-12 gap-y-10 sm:grid-cols-1">
+            {page.faqs.map((f) => (
+              <div key={f.question} className="border-t border-white/10 pt-8">
+                <h3 className="text-lg font-medium text-ink">{f.question}</h3>
+                <p className="mt-3 max-w-2xl leading-relaxed text-muted">
+                  {f.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      <section className="py-16 sm:py-20">
         <Container>
           <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
             Other Capabilities
