@@ -7,6 +7,7 @@ import {
   isBlockedDomain,
 } from "@/lib/taxonomy";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
+import { runExperienceChecks, type ExperienceCheckResult } from "@/lib/experience-check";
 import {
   matchProducts,
   formatCents,
@@ -162,6 +163,7 @@ type AuditResult = {
     imagesWithAlt: number;
     imagesWithoutAlt: number;
   };
+  experience?: ExperienceCheckResult | null;
   industry: IndustryAnalysis;
   trends: TrendsData;
   credibility?: {
@@ -272,6 +274,8 @@ async function fetchPageMeta(url: string) {
     );
     const structuredData = jsonLdBlocks.length > 0 ? jsonLdBlocks.join("\n") : null;
 
+    const experience = runExperienceChecks(doc, url.startsWith("https"));
+
     return {
       title,
       titleLength: title?.length ?? 0,
@@ -291,6 +295,7 @@ async function fetchPageMeta(url: string) {
       imagesWithoutAlt,
       bodyText,
       structuredData,
+      experience,
     };
   } catch {
     clearTimeout(timeout);
@@ -1857,6 +1862,7 @@ Respond with ONLY a JSON array of exactly 5 competitors:
     scores,
     vitals,
     meta: metaData,
+    experience: meta?.experience ?? null,
     industry,
     trends,
     credibility,
@@ -1901,6 +1907,19 @@ Respond with ONLY a JSON array of exactly 5 competitors:
           `Performance: ${scores.performance ?? "N/A"}`,
           `SEO: ${scores.seo ?? "N/A"}`,
           `Accessibility: ${scores.accessibility ?? "N/A"}`,
+          ``,
+          `Experience checks: ${
+            result.experience
+              ? `${result.experience.passed}/${result.experience.findings.length} passed${
+                  result.experience.failed + result.experience.warned > 0
+                    ? ` — flagged: ${result.experience.findings
+                        .filter((f) => f.status !== "pass")
+                        .map((f) => f.label)
+                        .join("; ")}`
+                    : ""
+                }`
+              : "N/A"
+          }`,
         ].join("\n"),
       }),
     }).catch((err) => console.error("Audit notification email failed:", err));

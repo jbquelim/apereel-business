@@ -73,6 +73,21 @@ type CompetitorInventory = {
   categories: InventoryCategory[];
 };
 
+type ExperienceFinding = {
+  id: string;
+  label: string;
+  status: "pass" | "fail" | "warn";
+  detail: string | null;
+  impact: string | null;
+};
+
+type ExperienceCheckResult = {
+  findings: ExperienceFinding[];
+  passed: number;
+  failed: number;
+  warned: number;
+};
+
 type ProofSignals = {
   sitemapFound: boolean;
   caseStudies: number;
@@ -132,6 +147,7 @@ type AuditData = {
   scores: Scores;
   vitals: Vitals;
   meta: Meta;
+  experience?: ExperienceCheckResult | null;
   industry: IndustryAnalysis;
   trends: TrendsData;
   credibility?: Credibility;
@@ -188,7 +204,7 @@ function ScoreRing({ score, label }: { score: number | null; label: string }) {
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
-            className={cn("transition-all duration-1000", strokeColor)}
+            className={cn("transition-[stroke-dashoffset] duration-1000", strokeColor)}
             style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
           />
         </svg>
@@ -245,7 +261,7 @@ function ChannelBar({ channel, maxPct }: { channel: Channel; maxPct: number }) {
       </div>
       <div className="h-2.5 w-full rounded-full bg-white/5">
         <div
-          className={cn("h-2.5 rounded-full transition-all duration-1000", barColor)}
+          className={cn("h-2.5 rounded-full transition-[width] duration-1000", barColor)}
           style={{
             width: `${widthPct}%`,
             transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
@@ -525,6 +541,94 @@ function ProductComparisonSection({ comparisons }: { comparisons: ProductCompari
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+const EXPERIENCE_STATUS: Record<
+  ExperienceFinding["status"],
+  { symbol: string; srLabel: string; color: string }
+> = {
+  pass: { symbol: "✓", srLabel: "Pass", color: "text-electric" },
+  warn: { symbol: "!", srLabel: "Needs attention", color: "text-amber-400" },
+  fail: { symbol: "✕", srLabel: "Failing", color: "text-signal" },
+};
+
+function ExperienceSection({ experience }: { experience: ExperienceCheckResult }) {
+  const issues = experience.findings.filter((f) => f.status !== "pass");
+  const passes = experience.findings.filter((f) => f.status === "pass");
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+            Buyer Experience Check
+          </p>
+          <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+            Crawled Data
+          </span>
+        </div>
+        <p className="shrink-0 font-mono text-[12px] text-muted">
+          <span className="font-medium text-ink">{experience.passed}</span>
+          {" / "}
+          {experience.findings.length} passed
+        </p>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-muted">
+        How the site behaves for a real buyer — checked directly against your
+        page, the same details we fix on every engagement.
+      </p>
+
+      {issues.length > 0 && (
+        <ul className="mt-5 space-y-4">
+          {issues.map((f) => {
+            const s = EXPERIENCE_STATUS[f.status];
+            return (
+              <li key={f.id} className="flex gap-3">
+                <span
+                  className={cn(
+                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/5 font-mono text-[11px] font-bold",
+                    s.color,
+                  )}
+                >
+                  <span aria-hidden>{s.symbol}</span>
+                  <span className="sr-only">{s.srLabel}:</span>
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink">
+                    {f.label}
+                    {f.detail && (
+                      <span className="ml-2 font-mono text-[11px] font-normal text-muted/60">
+                        {f.detail}
+                      </span>
+                    )}
+                  </p>
+                  {f.impact && (
+                    <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                      {f.impact}
+                    </p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {passes.length > 0 && (
+        <ul className="mt-5 grid gap-x-6 gap-y-2 border-t border-white/5 pt-5 sm:grid-cols-2">
+          {passes.map((f) => (
+            <li key={f.id} className="flex items-baseline gap-2.5 text-[13px] text-muted">
+              <span className="font-mono text-[11px] font-bold text-electric">
+                <span aria-hidden>✓</span>
+                <span className="sr-only">Pass:</span>
+              </span>
+              {f.label}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -895,6 +999,10 @@ function AuditResults({ data }: { data: AuditData }) {
         </div>
       )}
 
+      {data.experience && data.experience.findings.length > 0 && (
+        <ExperienceSection experience={data.experience} />
+      )}
+
       {data.meta.title && (
         <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
           <p className="mb-4 text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
@@ -1001,21 +1109,26 @@ export function SiteAudit() {
   >("idle");
   const [data, setData] = useState<AuditData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; url?: string }>({});
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const errors: { name?: string; email?: string } = {};
+    const form = e.currentTarget;
+    const errors: { name?: string; email?: string; url?: string } = {};
     if (!name.trim()) errors.name = "Name is required";
     if (!email.trim()) errors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
       errors.email = "Enter a valid email";
+    if (!url.trim()) errors.url = "Website URL is required";
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      const first = (["name", "email", "url"] as const).find((k) => errors[k]);
+      if (first) {
+        (form.elements.namedItem(first) as HTMLInputElement | null)?.focus();
+      }
       return;
     }
     setFieldErrors({});
-    if (!url.trim()) return;
 
     setStatus("loading");
     setData(null);
@@ -1069,7 +1182,7 @@ export function SiteAudit() {
           </p>
           <h2
             id="audit-heading"
-            className="font-display mt-4 text-3xl text-ink sm:text-5xl"
+            className="font-display mt-4 text-3xl text-ink text-balance sm:text-5xl"
           >
             Find out what&apos;s actually limiting your website&apos;s revenue.
           </h2>
@@ -1080,46 +1193,64 @@ export function SiteAudit() {
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="mt-10 space-y-4">
+        <form onSubmit={onSubmit} className="mt-10 space-y-4" noValidate>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <input
                 type="text"
+                name="name"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name *"
                 className="h-12 w-full rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
                 aria-label="Your name"
                 aria-invalid={Boolean(fieldErrors.name)}
+                aria-describedby={fieldErrors.name ? "audit-name-error" : undefined}
               />
               {fieldErrors.name && (
-                <p className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.name}</p>
+                <p id="audit-name-error" className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.name}</p>
               )}
             </div>
             <div>
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
+                spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Your email *"
                 className="h-12 w-full rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
                 aria-label="Your email"
                 aria-invalid={Boolean(fieldErrors.email)}
+                aria-describedby={fieldErrors.email ? "audit-email-error" : undefined}
               />
               {fieldErrors.email && (
-                <p className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.email}</p>
+                <p id="audit-email-error" className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.email}</p>
               )}
             </div>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="Enter your website URL"
-              className="h-12 w-full sm:flex-1 rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
-              aria-label="Website URL"
-            />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="w-full sm:flex-1">
+              <input
+                type="url"
+                name="url"
+                inputMode="url"
+                autoComplete="url"
+                spellCheck={false}
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://yourstore.com"
+                className="h-12 w-full rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+                aria-label="Website URL"
+                aria-invalid={Boolean(fieldErrors.url)}
+                aria-describedby={fieldErrors.url ? "audit-url-error" : undefined}
+              />
+              {fieldErrors.url && (
+                <p id="audit-url-error" className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.url}</p>
+              )}
+            </div>
             <button
               type="submit"
               disabled={status === "loading"}
@@ -1153,6 +1284,14 @@ export function SiteAudit() {
           </div>
           <p className="pl-5 text-[11px] text-muted/50">* Required</p>
         </form>
+
+        <p className="sr-only" role="status">
+          {status === "loading"
+            ? "Analyzing your website…"
+            : status === "done"
+              ? "Audit complete. Results are shown below."
+              : ""}
+        </p>
 
         {status === "loading" && (
           <div className="mt-10 flex flex-col items-center gap-4 py-12">
