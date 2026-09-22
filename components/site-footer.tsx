@@ -20,16 +20,20 @@ export function SiteFooter() {
             Navigate
           </p>
           <ul className="mt-4 space-y-3">
-            {site.nav.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="text-sm text-ink/90 transition-colors hover:text-electric"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
+            {/* Header nav plus Insights — trimmed from the header, but the
+                essays stay internally linked for discovery and SEO. */}
+            {[...site.nav, { href: "/insights", label: "Insights" }].map(
+              (item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="text-sm text-ink/90 transition-colors hover:text-electric"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ),
+            )}
           </ul>
         </div>
         <div className="md:col-span-4">
