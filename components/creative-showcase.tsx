@@ -21,7 +21,7 @@ function TransformationVisual() {
         <div className="flex flex-col items-center gap-2 sm:gap-3">
           <svg
             viewBox="0 0 48 48"
-            className="h-12 w-12 text-muted sm:h-14 sm:w-14"
+            className="h-12 w-12 text-navy/50 sm:h-14 sm:w-14"
             aria-hidden="true"
           >
             <circle
@@ -42,7 +42,7 @@ function TransformationVisual() {
               strokeLinejoin="round"
             />
           </svg>
-          <p className="text-center font-mono text-[11px] tracking-[0.18em] text-muted uppercase">
+          <p className="text-center font-mono text-[11px] tracking-[0.18em] text-navy/60 uppercase">
             AI Creative
             <br />
             Direction
@@ -69,20 +69,20 @@ export function CreativeShowcase() {
     <section
       id="creative"
       aria-labelledby="creative-heading"
-      className="reveal-section py-24 sm:py-32"
+      className="reveal-section bg-ink py-24 sm:py-32"
     >
       <Container>
         <div>
-          <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
+          <p className="font-mono text-[11px] tracking-[0.24em] text-navy/60 uppercase">
             AI-Powered Creative Production
           </p>
           <h2
             id="creative-heading"
-            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-5xl"
+            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-5xl"
           >
             Creative production without the six-figure budget.
           </h2>
-          <div className="mt-5 space-y-4 text-base leading-relaxed text-muted">
+          <div className="mt-5 space-y-4 text-base leading-relaxed text-navy/60">
             <p>
               AI-assisted creative workflows produce campaign-quality visuals
               at a fraction of traditional cost, so you compete visually with
@@ -101,18 +101,18 @@ export function CreativeShowcase() {
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_auto]">
-          <div className="rounded-[var(--radius-parent)] bg-navy-mid p-6 sm:p-8">
-            <p className="font-mono text-[11px] tracking-[0.18em] text-muted uppercase">
+          <div className="rounded-[var(--radius-parent)] bg-white p-6 sm:p-8">
+            <p className="font-mono text-[11px] tracking-[0.18em] text-navy/60 uppercase">
               Capabilities
             </p>
             <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-3">
               {creativeCapabilities.map((item) => (
                 <li
                   key={item}
-                  className="flex items-start gap-2 text-[13px] text-ink/80"
+                  className="flex items-start gap-2 text-[13px] text-navy/80"
                 >
                   <span
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted"
+                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy/40"
                     aria-hidden="true"
                   />
                   {item}
@@ -121,13 +121,13 @@ export function CreativeShowcase() {
             </ul>
           </div>
           <div className="flex items-center">
-            <ButtonLink href="#contact" variant="secondary">
+            <ButtonLink href="#contact">
               Talk to Apereel
             </ButtonLink>
           </div>
         </div>
 
-        <p className="mt-4 text-[12px] leading-relaxed text-muted">
+        <p className="mt-4 text-[12px] leading-relaxed text-navy/60">
           All creative examples shown are concept demonstrations unless
           otherwise noted.
         </p>
