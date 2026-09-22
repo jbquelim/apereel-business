@@ -1,142 +1,132 @@
+import Link from "next/link";
 import { Container } from "@/components/container";
-import Image from "next/image";
+
+const PILLARS = [
+  {
+    kicker: "Business Fundamentals",
+    title: "More content is not the answer.",
+    body: "Pricing, product selection, and customer experience matter. A content plan should support a stronger business.",
+    footerKicker: "Start here",
+    footer: "Fix what limits the buying decision.",
+    icon: (
+      // Document
+      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
+        <path
+          d="M7 3.5h6.5L18 8v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5a1.5 1.5 0 0 1 1-1.5Z"
+          className="stroke-electric-deep"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M13.5 3.5V8H18M9 12h6M9 15.5h6"
+          className="stroke-electric-deep"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    kicker: "Competitive Advantage",
+    title: "Give people a reason to choose you.",
+    body: "Before asking how to rank higher, understand what makes your business the better choice.",
+    footerKicker: "Ask this",
+    footer: "Why should customers choose us?",
+    icon: (
+      // People
+      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
+        <circle cx="12" cy="8.5" r="2.6" className="stroke-electric-deep" strokeWidth="1.6" />
+        <circle cx="5.8" cy="10" r="2" className="stroke-electric-deep" strokeWidth="1.6" />
+        <circle cx="18.2" cy="10" r="2" className="stroke-electric-deep" strokeWidth="1.6" />
+        <path
+          d="M7.5 18.5a4.6 4.6 0 0 1 9 0M2.8 17.5a3.4 3.4 0 0 1 3-2.4M21.2 17.5a3.4 3.4 0 0 0-3-2.4"
+          className="stroke-electric-deep"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    kicker: "Measurable Results",
+    title: "Look for proof that matters.",
+    body: "Connect search demand and relevant traffic to real outcomes. Rankings alone do not tell the whole story.",
+    footerKicker: "Measure this",
+    footer: "Qualified leads, conversions, and sales.",
+    icon: (
+      // Bar chart
+      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
+        <path
+          d="M5.5 19.5v-6M10.5 19.5V9M15.5 19.5v-8.5M20 19.5V4.5"
+          className="stroke-electric-deep"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+];
 
 export function RealityCheck() {
   return (
-    <>
-      {/* --- Main content --- */}
-<section
-        id="reality-check"
-        aria-labelledby="reality-check-heading"
-        className="reveal-section py-24 sm:py-32"
-      >
-        <Container>
-          <div className="grid lg:grid-cols-2">
-            <div className="py-24 pr-12 sm:py-32">
-              <h2
-                id="reality-check-heading"
-                className="font-display text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-5xl"
-              >
-                You were promised better rankings and more business.
-              </h2>
-
-              <p className="mt-8 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
-                Months later, you&apos;re getting reports, keyword charts, and
-                another batch of generic blog posts that your customers probably
-                never asked for.
-              </p>
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-muted/70">
-                Whether you&apos;ve been relying on an agency, managing it
-                in-house, or not doing digital marketing at all, the starting
-                question is the same: what&apos;s actually limiting the business?
-              </p>
-            </div>
-            <div className="relative lg:min-h-full">
-              <Image
-                src="/images/reality-check.png"
-                alt="SEO reports and keyword charts"
-                width={1537}
-                height={1023}
-                className="h-full w-full object-contain object-left"
-                sizes="(min-width: 1024px) 50vw, 100vw"
-              />
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* --- Three principles (white background) --- */}
-      <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
-        <Container>
-          <h2 className="font-display mb-12 text-center text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:mb-16 sm:text-5xl">
-            What to Know. What to Look For.
+    <section
+      id="reality-check"
+      aria-labelledby="reality-check-heading"
+      className="reveal-section bg-ink py-16 sm:py-20 lg:py-24"
+    >
+      <Container>
+        <div className="mx-auto max-w-3xl text-center">
+          <h2
+            id="reality-check-heading"
+            className="font-display text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-5xl"
+          >
+            What good digital growth looks like.
           </h2>
-          <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
-            {/* 01 */}
-            <div className="rounded-[var(--radius-parent)] bg-white p-8 sm:p-10">
-              <p className="font-mono text-[12px] tracking-[0.22em] text-navy/60">
-                01
-              </p>
-              <h3 className="font-display mt-4 text-xl text-navy sm:text-2xl">
-                Content isn&apos;t a strategy.
-              </h3>
-              <p className="mt-4 text-sm leading-relaxed text-navy/60">
-                Publishing another AI-assisted blog every week does not solve
-                weak pricing, poor product selection, bad UX, slow inventory
-                updates, or an uncompetitive business.
-              </p>
-            </div>
+          <p className="mt-4 text-lg text-navy/60 sm:text-xl">
+            Three things to look for before investing more in marketing.
+          </p>
+        </div>
 
-            {/* 02 */}
-            <div className="rounded-[var(--radius-parent)] bg-white p-8 sm:p-10">
-              <p className="font-mono text-[12px] tracking-[0.22em] text-navy/60">
-                02
-              </p>
-              <h3 className="font-display mt-4 text-xl text-navy sm:text-2xl">
-                Rankings need a reason.
-              </h3>
-              <div className="mt-4 text-sm leading-relaxed text-navy/60">
-                <p>Before asking:</p>
-                <p className="mt-2 text-base text-navy">
-                  &ldquo;How do we rank higher?&rdquo;
-                </p>
-                <p className="mt-3">Apereel asks:</p>
+        <div className="mt-12 grid gap-6 sm:mt-16 lg:grid-cols-3 lg:gap-8">
+          {PILLARS.map((pillar) => (
+            <div
+              key={pillar.kicker}
+              className="reveal-stagger flex flex-col rounded-[var(--radius-parent)] border border-navy/8 bg-white p-8 sm:p-10"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-electric/10">
+                {pillar.icon}
               </div>
-              <blockquote className="mt-3 border-l-2 border-navy/20 pl-4">
-                <p className="font-display text-lg text-navy sm:text-xl">
-                  &ldquo;Why should this business rank ahead of everyone
-                  else?&rdquo;
-                </p>
-              </blockquote>
-              <p className="mt-4 text-sm leading-relaxed text-navy/60">
-                Once we understand the answer, we build the digital strategy
-                around it.
+              <p className="mt-6 text-[11px] font-semibold tracking-[0.18em] text-electric-deep uppercase">
+                {pillar.kicker}
               </p>
-            </div>
-
-            {/* 03 */}
-            <div className="rounded-[var(--radius-parent)] bg-white p-8 sm:p-10">
-              <p className="font-mono text-[12px] tracking-[0.22em] text-navy/60">
-                03
-              </p>
-              <h3 className="font-display mt-4 text-xl text-navy sm:text-2xl">
-                Ask for proof.
+              <h3 className="font-display mt-3 text-2xl text-navy sm:text-[26px]">
+                {pillar.title}
               </h3>
-              <p className="mt-4 text-sm leading-relaxed text-navy/60">
-                If an agency says its SEO works, ask them to show you a real
-                client example.
+              <p className="mt-4 mb-6 text-sm leading-relaxed text-navy/60 sm:text-base">
+                {pillar.body}
               </p>
-              <p className="mt-4 text-sm leading-relaxed text-navy/60">
-                Check:
-              </p>
-              <ul className="mt-3 space-y-2">
-                {[
-                  "What keywords are ranking?",
-                  "Do those keywords have real search volume?",
-                  "Have rankings improved over time?",
-                  "Is the traffic relevant to the business?",
-                  "Did it lead to leads, conversions, or sales?",
-                ].map((q) => (
-                  <li
-                    key={q}
-                    className="flex items-start gap-2.5 text-sm text-navy/60"
-                  >
-                    <span
-                      className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy/40"
-                      aria-hidden="true"
-                    />
-                    {q}
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-4 text-sm font-medium leading-relaxed text-navy">
-                A ranking means little if nobody searches for it.
-              </p>
+              <div className="mt-auto border-t border-navy/10 pt-5">
+                <p className="pt-1 text-[11px] font-semibold tracking-[0.18em] text-electric-deep uppercase">
+                  {pillar.footerKicker}
+                </p>
+                <p className="mt-2 text-sm font-medium text-navy sm:text-base">
+                  {pillar.footer}
+                </p>
+              </div>
             </div>
-          </div>
-        </Container>
-      </div>
+          ))}
+        </div>
 
-    </>
+        <div className="mt-12 text-center">
+          <Link
+            href="/#proof"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-electric-deep transition-colors hover:text-navy sm:text-base"
+          >
+            See the results behind our approach
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      </Container>
+    </section>
   );
 }
