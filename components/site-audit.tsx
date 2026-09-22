@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Container } from "@/components/container";
+import { CountUp } from "@/components/count-up";
+import { HeroGraphVideo } from "@/components/hero-graph-video";
 import { LogoMark } from "@/components/logo";
 import { cn } from "@/lib/cn";
 
@@ -1255,149 +1256,255 @@ export function SiteAudit() {
 
   return (
     <section
-      id="audit"
-      aria-labelledby="audit-heading"
-      className="reveal-section bg-navy pt-12 pb-16 sm:pt-16 sm:pb-20"
+      id="top"
+      aria-labelledby="hero-heading"
+      className="relative isolate flex min-h-screen flex-col justify-center overflow-hidden pt-28 pb-16 sm:pb-20"
     >
-      <div className="mx-auto max-w-[1400px] px-6 sm:px-8">
-        <div className="rounded-3xl border border-white/10 bg-navy p-8 sm:p-10 lg:p-14">
-        <div className="max-w-2xl">
-          <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
-            Free Website Audit
+      <HeroGraphVideo />
+      <div className="relative mx-auto w-full max-w-[1180px] px-6 sm:px-8">
+        {/* Centered headline over the video */}
+        <div className="mx-auto max-w-4xl text-center">
+          <p className="animate-rise font-mono text-[13px] tracking-[0.24em] text-muted uppercase">
+            Find your competitive advantage
           </p>
-          <h2
-            id="audit-heading"
-            className="font-display mt-4 text-3xl text-ink text-balance sm:text-5xl"
+          <h1
+            id="hero-heading"
+            className="animate-rise font-display mt-5 text-4xl leading-[1.08] tracking-[-0.02em] text-ink sm:text-6xl lg:text-[64px]"
           >
-            Find out what&apos;s actually limiting your website&apos;s revenue.
-          </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted">
-            Enter your URL for an instant competitive analysis — see where
-            you stand in your market, what channels drive your industry, and
-            where the real growth opportunities are. No account needed.
+            Give customers more reasons
+            <br />
+            <span className="text-electric">to choose you.</span>
+          </h1>
+          <p className="animate-rise-delay-1 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl">
+            Discover how your business compares and where a stronger offer,
+            better experience, or greater visibility could make a difference.
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="mt-10 space-y-4" noValidate>
-          <div className="grid gap-4 sm:grid-cols-2">
+        {/* Audit card */}
+        <div
+          id="audit"
+          className="animate-rise-delay-2 mt-12 scroll-mt-24 rounded-2xl border border-white/10 bg-navy/70 p-6 backdrop-blur-md sm:p-8"
+        >
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <input
-                type="text"
-                name="name"
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name *"
-                className="h-12 w-full rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
-                aria-label="Your name"
-                aria-invalid={Boolean(fieldErrors.name)}
-                aria-describedby={fieldErrors.name ? "audit-name-error" : undefined}
-              />
-              {fieldErrors.name && (
-                <p id="audit-name-error" className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.name}</p>
-              )}
+              <p className="text-[11px] font-semibold tracking-[0.24em] text-electric uppercase">
+                Free Website Insights
+              </p>
+              <h2
+                id="audit-heading"
+                className="font-display mt-2 text-2xl text-ink sm:text-3xl"
+              >
+                See where you stand.
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
+                Start with your website to explore your competitive position.
+              </p>
             </div>
-            <div>
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                spellCheck={false}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Your email *"
-                className="h-12 w-full rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
-                aria-label="Your email"
-                aria-invalid={Boolean(fieldErrors.email)}
-                aria-describedby={fieldErrors.email ? "audit-email-error" : undefined}
-              />
-              {fieldErrors.email && (
-                <p id="audit-email-error" className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.email}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <div className="w-full sm:flex-1">
-              <input
-                type="url"
-                name="url"
-                inputMode="url"
-                autoComplete="url"
-                spellCheck={false}
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://yourstore.com"
-                className="h-12 w-full rounded-full border border-white/12 bg-white/5 px-5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
-                aria-label="Website URL"
-                aria-invalid={Boolean(fieldErrors.url)}
-                aria-describedby={fieldErrors.url ? "audit-url-error" : undefined}
-              />
-              {fieldErrors.url && (
-                <p id="audit-url-error" className="mt-1.5 pl-5 text-[12px] text-signal">{fieldErrors.url}</p>
-              )}
-            </div>
-            <button
-              type="submit"
-              disabled={status === "loading"}
-              className="press-scale inline-flex h-12 items-center justify-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors duration-200 hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {status === "loading" ? (
-                <span className="flex items-center gap-2">
+            <ul className="flex flex-wrap gap-x-7 gap-y-3 lg:mt-2 lg:shrink-0 lg:justify-end">
+              {[
+                "Competitive positioning",
+                "Customer experience",
+                "Search visibility",
+              ].map((benefit) => (
+                <li key={benefit} className="flex items-center gap-2.5">
                   <svg
-                    className="h-4 w-4 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
+                    viewBox="0 0 20 20"
+                    className="h-5 w-5 shrink-0"
                     aria-hidden="true"
                   >
                     <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeDasharray="60"
-                      strokeDashoffset="15"
+                      cx="10"
+                      cy="10"
+                      r="9"
+                      fill="none"
+                      className="stroke-electric/60"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M6 10.2l2.6 2.6L14 7.4"
+                      fill="none"
+                      className="stroke-electric"
+                      strokeWidth="1.8"
                       strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                   </svg>
-                  Analyzing…
-                </span>
-              ) : (
-                "Analyze Site"
-              )}
-            </button>
+                  <span className="text-sm text-ink/90">{benefit}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <p className="pl-5 text-[11px] text-muted/50">* Required</p>
-        </form>
 
-        <p className="sr-only" role="status">
-          {status === "loading"
-            ? "Analyzing your website…"
-            : status === "done"
-              ? "Audit complete. Results are shown below."
-              : ""}
-        </p>
-
-        {status === "loading" && (
-          <div className="mt-10 flex flex-col items-center gap-4 py-12">
-            <div className="relative flex h-14 w-14 items-center justify-center">
-              <div className="absolute inset-0 animate-spin rounded-full border-2 border-electric/25 border-t-electric" />
-              <LogoMark className="h-6 animate-pulse" />
+          <form onSubmit={onSubmit} className="mt-8" noValidate>
+            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_auto]">
+              <div>
+                <label
+                  htmlFor="audit-url"
+                  className="mb-1.5 block text-[13px] font-medium text-ink/90"
+                >
+                  Website URL
+                </label>
+                <input
+                  id="audit-url"
+                  type="url"
+                  name="url"
+                  inputMode="url"
+                  autoComplete="url"
+                  spellCheck={false}
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://yourwebsite.com"
+                  className="h-12 w-full rounded-lg border border-white/12 bg-white/5 px-4 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+                  aria-invalid={Boolean(fieldErrors.url)}
+                  aria-describedby={fieldErrors.url ? "audit-url-error" : undefined}
+                />
+                {fieldErrors.url && (
+                  <p id="audit-url-error" className="mt-1.5 text-[12px] text-signal">{fieldErrors.url}</p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="audit-name"
+                  className="mb-1.5 block text-[13px] font-medium text-ink/90"
+                >
+                  Your name
+                </label>
+                <input
+                  id="audit-name"
+                  type="text"
+                  name="name"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Name"
+                  className="h-12 w-full rounded-lg border border-white/12 bg-white/5 px-4 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? "audit-name-error" : undefined}
+                />
+                {fieldErrors.name && (
+                  <p id="audit-name-error" className="mt-1.5 text-[12px] text-signal">{fieldErrors.name}</p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="audit-email"
+                  className="mb-1.5 block text-[13px] font-medium text-ink/90"
+                >
+                  Your email
+                </label>
+                <input
+                  id="audit-email"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  spellCheck={false}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="h-12 w-full rounded-lg border border-white/12 bg-white/5 px-4 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-electric"
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? "audit-email-error" : undefined}
+                />
+                {fieldErrors.email && (
+                  <p id="audit-email-error" className="mt-1.5 text-[12px] text-signal">{fieldErrors.email}</p>
+                )}
+              </div>
+              <div className="sm:col-span-2 lg:col-span-1 lg:pt-[26px]">
+                <button
+                  type="submit"
+                  disabled={status === "loading"}
+                  className="press-scale inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-electric px-6 text-[14px] font-semibold whitespace-nowrap text-navy transition-colors duration-200 hover:bg-electric-deep disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto"
+                >
+                  {status === "loading" ? (
+                    <>
+                      <svg
+                        className="h-4 w-4 animate-spin"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeDasharray="60"
+                          strokeDashoffset="15"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      Analyzing…
+                    </>
+                  ) : (
+                    <>
+                      Explore my opportunities
+                      <span aria-hidden="true">→</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-            <p className="text-sm text-muted">
-              Analyzing your market — we crawl your competitors&apos; live
-              product data, so this takes a minute or two…
+            <p className="mt-4 text-center text-[13px] text-muted/70">
+              Free to use. No account needed.
             </p>
-          </div>
-        )}
+          </form>
 
-        {status === "error" && (
-          <p className="mt-6 text-sm text-signal" role="alert">
-            {errorMessage}
+          <p className="sr-only" role="status">
+            {status === "loading"
+              ? "Analyzing your website…"
+              : status === "done"
+                ? "Audit complete. Results are shown below."
+                : ""}
           </p>
-        )}
 
-        {status === "done" && data && <AuditResults data={data} />}
+          {status === "loading" && (
+            <div className="mt-6 flex flex-col items-center gap-4 border-t border-white/10 py-10">
+              <div className="relative flex h-14 w-14 items-center justify-center">
+                <div className="absolute inset-0 animate-spin rounded-full border-2 border-electric/25 border-t-electric" />
+                <LogoMark className="h-6 animate-pulse" />
+              </div>
+              <p className="text-sm text-muted">
+                Analyzing your market — we crawl your competitors&apos; live
+                product data, so this takes a minute or two…
+              </p>
+            </div>
+          )}
+
+          {status === "error" && (
+            <p className="mt-4 text-sm text-signal" role="alert">
+              {errorMessage}
+            </p>
+          )}
+
+          {status === "done" && data && <AuditResults data={data} />}
+        </div>
+
+        {/* Proof stats */}
+        <div className="animate-rise-delay-3 mx-auto mt-10 max-w-3xl border-t border-white/10 pt-8">
+          <div className="flex items-stretch justify-center gap-10 sm:gap-16">
+            <div className="text-center">
+              <p className="font-display text-4xl text-ink sm:text-5xl">
+                <CountUp value="1,000+" />
+              </p>
+              <p className="mt-2 font-mono text-[12px] tracking-[0.08em] text-muted uppercase">
+                Keywords Ranked in the Top 5
+              </p>
+            </div>
+            <div className="w-px bg-white/10" aria-hidden="true" />
+            <div className="text-center">
+              <p className="font-display text-4xl text-ink sm:text-5xl">
+                <CountUp value="20X" />
+              </p>
+              <p className="mt-2 font-mono text-[12px] tracking-[0.08em] text-muted uppercase">
+                Revenue Growth
+              </p>
+            </div>
+          </div>
+          <p className="mt-6 text-center text-[12px] text-muted/60">
+            Revenue result from one retail business over four years.
+          </p>
         </div>
       </div>
     </section>
