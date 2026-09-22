@@ -39,19 +39,23 @@ export function Services() {
           <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
             Services
           </p>
-          <h2
+          <h1
             id="services-heading"
             className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-6xl"
           >
             Each capability solves a specific growth constraint.
-          </h2>
+          </h1>
         </div>
 
         {/* Tab bar */}
-        <div className="mt-14 flex gap-1 overflow-x-auto border-b border-white/10">
+        <div role="tablist" aria-label="Services" className="mt-14 flex gap-1 overflow-x-auto border-b border-white/10">
           {visibleServices.map((s, i) => (
             <button
               key={s.tag}
+              role="tab"
+              id={`service-tab-${i}`}
+              aria-selected={i === active}
+              aria-controls="service-panel"
               onClick={() => setActive(i)}
               className={`press-scale relative shrink-0 px-5 py-4 text-sm font-medium tracking-wide transition-colors ${
                 i === active
@@ -59,7 +63,7 @@ export function Services() {
                   : "text-muted hover:text-ink/70"
               }`}
             >
-              {s.title}
+              {s.tag}
               {i === active && (
                 <span className="absolute bottom-0 left-0 h-[2px] w-full bg-ink" />
               )}
@@ -68,7 +72,7 @@ export function Services() {
         </div>
 
         {/* Active service */}
-        <article key={active} className="tab-content grid overflow-hidden rounded-[var(--radius-parent)] bg-navy-mid mt-10 lg:grid-cols-2">
+        <article key={active} role="tabpanel" id="service-panel" aria-labelledby={`service-tab-${active}`} className="tab-content grid overflow-hidden rounded-[var(--radius-parent)] bg-navy-mid mt-10 lg:grid-cols-2">
           <div className="hidden min-h-[280px] items-center justify-center bg-navy-lift p-8 lg:flex">
             <Diagram />
           </div>
@@ -76,9 +80,9 @@ export function Services() {
             <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
               {service.tag}
             </p>
-            <h3 className="font-display mt-3 text-2xl text-ink sm:text-3xl">
+            <h2 className="font-display mt-3 text-2xl text-ink sm:text-3xl">
               {service.title}
-            </h3>
+            </h2>
             <p className="mt-4 text-base leading-relaxed text-muted">
               {service.body}
             </p>

@@ -82,19 +82,23 @@ export function CaseStudies() {
           <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
             Real Business Problems. Real Fixes.
           </p>
-          <h2
+          <h1
             id="work-heading"
             className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-6xl"
           >
             What we found. And what we changed.
-          </h2>
+          </h1>
         </div>
 
         {/* Tab bar */}
-        <div className="mt-14 flex gap-1 overflow-x-auto border-b border-white/10">
+        <div role="tablist" aria-label="Case studies" className="mt-14 flex gap-1 overflow-x-auto border-b border-white/10">
           {caseStudies.map((s, i) => (
             <button
               key={s.id}
+              role="tab"
+              id={`work-tab-${i}`}
+              aria-selected={i === active}
+              aria-controls="work-panel"
               onClick={() => setActive(i)}
               className={`press-scale relative shrink-0 px-5 py-4 text-sm font-medium tracking-wide transition-colors ${
                 i === active
@@ -111,7 +115,7 @@ export function CaseStudies() {
         </div>
 
         {/* Active case study */}
-        <article key={active} className="tab-content grid overflow-hidden rounded-[var(--radius-parent)] bg-navy-mid mt-10 lg:grid-cols-2">
+        <article key={active} role="tabpanel" id="work-panel" aria-labelledby={`work-tab-${active}`} className="tab-content grid overflow-hidden rounded-[var(--radius-parent)] bg-navy-mid mt-10 lg:grid-cols-2">
           <div
             className="relative hidden min-h-[280px] bg-navy-lift lg:block"
             style={visual.contain ? { backgroundColor: visual.contain } : undefined}
@@ -147,9 +151,9 @@ export function CaseStudies() {
             <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
               {study.kicker}
             </p>
-            <h3 className="font-display mt-3 text-2xl text-ink sm:text-3xl">
+            <h2 className="font-display mt-3 text-2xl text-ink sm:text-3xl">
               {study.title}
-            </h3>
+            </h2>
             <div className="mt-4 space-y-3">
               {study.body.map((paragraph) => (
                 <p

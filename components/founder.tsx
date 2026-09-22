@@ -22,43 +22,17 @@ export function Founder() {
               priority={false}
             />
           </div>
-          <ul className="mt-6 space-y-4 text-sm">
-            <li>
-              <p className="text-[11px] tracking-[0.18em] text-navy/40 uppercase">
-                Email
-              </p>
-              <a
-                href={`mailto:${site.email}`}
-                className="mt-1 inline-block text-navy transition-colors hover:text-electric"
-              >
-                {site.email}
-              </a>
-            </li>
-            <li>
-              <p className="text-[11px] tracking-[0.18em] text-navy/40 uppercase">
-                LinkedIn
-              </p>
-              <a
-                href={site.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 inline-block text-navy transition-colors hover:text-electric"
-              >
-                linkedin.com/in/jblim
-              </a>
-            </li>
-          </ul>
         </div>
         <div className="lg:col-span-7 lg:pt-4">
           <p className="font-mono text-[11px] tracking-[0.24em] text-navy/60 uppercase">
             About
           </p>
-          <h2
+          <h1
             id="founder-heading"
             className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl"
           >
             {site.founder.name}
-          </h2>
+          </h1>
           <p className="mt-2 text-sm tracking-wide text-navy/60">
             {site.founder.title}
           </p>

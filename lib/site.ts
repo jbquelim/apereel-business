@@ -1,8 +1,8 @@
 export const site = {
   name: "Apereel",
   tagline: "Business-First Digital Growth",
-  headline: "The method behind",
-  headlineLine2: "20X revenue growth.",
+  headline: "Give customers more reasons",
+  headlineLine2: "to choose you.",
   supporting:
     "Digital growth consultancy that drove 20X e-commerce revenue growth in four years. We fix what's actually limiting your business: pricing, inventory, product discovery. Then amplify it with SEO, advertising, and conversion optimization.",
   email: "john@apereel.com",

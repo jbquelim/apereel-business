@@ -34,12 +34,12 @@ export function Approach() {
           <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
             The Apereel Method
           </p>
-          <h2
+          <h1
             id="approach-heading"
             className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-6xl"
           >
             Fix the business first. Then amplify it with digital.
-          </h2>
+          </h1>
         </div>
 
         {/* Tab bar */}
