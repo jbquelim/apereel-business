@@ -121,7 +121,7 @@ export function CreativeShowcase() {
             </ul>
           </div>
           <div className="flex items-center">
-            <ButtonLink href="/#contact" variant="secondary">
+            <ButtonLink href="#contact" variant="secondary">
               Talk to Apereel
             </ButtonLink>
           </div>

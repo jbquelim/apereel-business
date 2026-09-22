@@ -62,7 +62,7 @@ export function SiteHeader() {
           </nav>
 
           <Link
-            href="/#contact"
+            href="#contact"
             className="press-scale hidden h-10 shrink-0 items-center rounded-full border border-electric/40 px-4 text-[11px] font-semibold tracking-[0.14em] whitespace-nowrap text-electric uppercase transition-colors duration-200 hover:border-electric hover:bg-electric hover:text-navy lg:inline-flex"
           >
             Work With Apereel
@@ -121,7 +121,7 @@ export function SiteHeader() {
               </Link>
             ))}
             <Link
-              href="/#contact"
+              href="#contact"
               onClick={() => setOpen(false)}
               className="pt-4 text-[12px] tracking-[0.18em] text-electric uppercase"
             >

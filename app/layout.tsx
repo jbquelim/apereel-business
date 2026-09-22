@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { IBM_Plex_Mono, Instrument_Serif, Plus_Jakarta_Sans } from "next/font/google";
 import { JsonLd } from "@/components/json-ld";
+import { Contact } from "@/components/contact";
 import { SiteFooter } from "@/components/site-footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { SiteHeader } from "@/components/site-header";
@@ -94,6 +95,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteHeader />
         <ScrollReveal />
         {children}
+        <Contact />
         <SiteFooter />
         {process.env.GA_MEASUREMENT_ID && (
           <>

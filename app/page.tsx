@@ -1,4 +1,3 @@
-import { Contact } from "@/components/contact";
 import { GrowthProof } from "@/components/growth-proof";
 import { KeywordPerformance } from "@/components/keyword-performance";
 import { ProofSection } from "@/components/proof-section";
@@ -13,7 +12,6 @@ export default function Home() {
       <ProofSection />
       <KeywordPerformance />
       <GrowthProof />
-      <Contact />
     </main>
   );
 }

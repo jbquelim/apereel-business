@@ -132,7 +132,7 @@ export default async function ServicePage({
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href="/#audit">Run Your Free Website Audit</ButtonLink>
-            <ButtonLink href="/#contact" variant="secondary">
+            <ButtonLink href="#contact" variant="secondary">
               Talk About Growth
             </ButtonLink>
           </div>

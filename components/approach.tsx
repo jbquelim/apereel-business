@@ -105,7 +105,7 @@ export function Approach() {
         </article>
 
         <div className="mt-10">
-          <ButtonLink href="/#contact" variant="secondary">
+          <ButtonLink href="#contact" variant="secondary">
             Talk to Us About Your Business
           </ButtonLink>
         </div>
