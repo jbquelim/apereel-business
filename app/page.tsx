@@ -4,7 +4,6 @@ import { Contact } from "@/components/contact";
 import { CreativeShowcase } from "@/components/creative-showcase";
 import { Founder } from "@/components/founder";
 import { GrowthProof } from "@/components/growth-proof";
-import { RealityCheck } from "@/components/reality-check";
 import { KeywordPerformance } from "@/components/keyword-performance";
 import { Perspectives } from "@/components/insights";
 import { ProofSection } from "@/components/proof-section";
@@ -15,7 +14,6 @@ export default function Home() {
   return (
     <main id="main">
       <SiteAudit />
-      <RealityCheck />
       <ProofSection />
       <CaseStudies />
       <Perspectives />

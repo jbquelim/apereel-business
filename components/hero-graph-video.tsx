@@ -18,10 +18,7 @@ export function HeroGraphVideo() {
   }, []);
 
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 hidden sm:block"
-    >
+    <div aria-hidden className="pointer-events-none absolute inset-0">
       {reducedMotion ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
