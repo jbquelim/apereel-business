@@ -1512,9 +1512,6 @@ export function SiteAudit() {
               </p>
             </div>
           </div>
-          <p className="mt-6 text-center text-[12px] text-muted/60">
-            Revenue result from one retail business over four years.
-          </p>
         </div>
       </div>
     </section>
