@@ -1258,10 +1258,17 @@ export function SiteAudit() {
     <section
       id="top"
       aria-labelledby="hero-heading"
-      className="relative isolate flex min-h-screen flex-col justify-center overflow-hidden pt-28 pb-16 sm:pb-20"
+      className="relative isolate flex min-h-screen flex-col justify-center overflow-hidden bg-navy pb-16 sm:pb-20"
     >
-      <HeroGraphVideo />
-      <div className="relative mx-auto w-full max-w-[1180px] px-6 sm:px-8">
+      {/* Video is confined to the headline + card zone; the stats below sit
+          on solid navy so the numbers never fight the bright graph. */}
+      <div className="relative flex flex-1 flex-col justify-center pt-28 pb-14">
+        <HeroGraphVideo />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-transparent to-navy"
+        />
+        <div className="relative mx-auto w-full max-w-[1180px] px-6 sm:px-8">
         {/* Centered headline over the video */}
         <div className="mx-auto max-w-4xl text-center">
           <p className="animate-rise font-mono text-[13px] tracking-[0.24em] text-muted uppercase">
@@ -1480,9 +1487,12 @@ export function SiteAudit() {
 
           {status === "done" && data && <AuditResults data={data} />}
         </div>
+        </div>
+      </div>
 
-        {/* Proof stats */}
-        <div className="animate-rise-delay-3 mx-auto mt-10 max-w-3xl border-t border-white/10 pt-8">
+      {/* Proof stats — solid navy, below the video zone */}
+      <div className="relative mx-auto w-full max-w-[1180px] px-6 sm:px-8">
+        <div className="animate-rise-delay-3 mx-auto max-w-3xl border-t border-white/10 pt-8">
           <div className="flex items-stretch justify-center gap-10 sm:gap-16">
             <div className="text-center">
               <p className="font-display text-4xl text-ink sm:text-5xl">
