@@ -24,7 +24,7 @@ export function HeroGraphVideo() {
         <img
           src="/images/hero-growth.jpg"
           alt=""
-          className="h-full w-full object-cover object-[75%_100%]"
+          className="h-full w-full object-cover object-[75%_50%]"
         />
       ) : (
         // No poster: the cycle opens on the empty scene, so a final-frame
@@ -35,7 +35,7 @@ export function HeroGraphVideo() {
           loop
           playsInline
           preload="auto"
-          className="h-full w-full object-cover object-[75%_100%]"
+          className="h-full w-full object-cover object-[75%_50%]"
         >
           <source src="/videos/hero-growth.mp4" type="video/mp4" />
         </video>
