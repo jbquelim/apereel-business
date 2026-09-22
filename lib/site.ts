@@ -25,7 +25,7 @@ export const site = {
     "AI-Powered Development & Creative",
   ],
   nav: [
-    { href: "/work", label: "Work" },
+    { href: "/work", label: "Case Studies" },
     { href: "/approach", label: "Approach" },
     { href: "/services", label: "Services" },
     { href: "/contact", label: "Contact" },
