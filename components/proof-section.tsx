@@ -93,18 +93,22 @@ export function ProofSection() {
         </Container>
       </section>
 
-      {/* --- Bottom statement --- */}
-      <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
-        <Container className="text-center">
-          <h3 className="font-display mx-auto max-w-4xl text-3xl font-normal leading-tight tracking-[-0.02em] text-navy sm:text-4xl lg:text-5xl">
-            One pricing adjustment outperformed six months of marketing
-            spend. That&apos;s what we measure.
-          </h3>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-navy/60">
-            The only question that matters: did the business get stronger?
-          </p>
-        </Container>
-      </div>
     </>
+  );
+}
+
+export function MeasureStatement() {
+  return (
+    <div className="reveal-section bg-ink py-16 sm:py-20 lg:py-24">
+      <Container className="text-center">
+        <h3 className="font-display mx-auto max-w-4xl text-3xl font-normal leading-tight tracking-[-0.02em] text-navy sm:text-4xl lg:text-5xl">
+          One pricing adjustment outperformed six months of marketing
+          spend. That&apos;s what we measure.
+        </h3>
+        <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-navy/60">
+          The only question that matters: did the business get stronger?
+        </p>
+      </Container>
+    </div>
   );
 }

@@ -27,11 +27,11 @@ export const site = {
   nav: [
     { href: "/#audit", label: "Free Audit" },
     { href: "/#proof", label: "Proof" },
-    { href: "/#work", label: "Work" },
-    { href: "/#approach", label: "Approach" },
-    { href: "/#services", label: "Services" },
+    { href: "/work", label: "Work" },
+    { href: "/approach", label: "Approach" },
+    { href: "/services", label: "Services" },
     { href: "/insights", label: "Insights" },
-    { href: "/#founder", label: "About" },
+    { href: "/about", label: "About" },
     { href: "/#contact", label: "Contact" },
   ],
 } as const;

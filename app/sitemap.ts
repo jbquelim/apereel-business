@@ -6,6 +6,12 @@ import { insights } from "@/lib/insights";
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = getSiteUrl();
   return [
+    ...["work", "approach", "services", "about"].map((path) => ({
+      url: `${base}/${path}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
     ...servicePages.map((s) => ({
       url: `${base}/services/${s.slug}`,
       lastModified: new Date(),

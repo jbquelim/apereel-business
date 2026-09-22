@@ -1,14 +1,8 @@
-import { Approach } from "@/components/approach";
-import { CaseStudies } from "@/components/case-studies";
 import { Contact } from "@/components/contact";
-import { CreativeShowcase } from "@/components/creative-showcase";
-import { Founder } from "@/components/founder";
 import { GrowthProof } from "@/components/growth-proof";
-import { RealityCheck } from "@/components/reality-check";
 import { KeywordPerformance } from "@/components/keyword-performance";
-import { Perspectives } from "@/components/insights";
 import { ProofSection } from "@/components/proof-section";
-import { Services } from "@/components/services";
+import { RealityCheck } from "@/components/reality-check";
 import { SiteAudit } from "@/components/site-audit";
 
 export default function Home() {
@@ -17,14 +11,8 @@ export default function Home() {
       <SiteAudit />
       <RealityCheck />
       <ProofSection />
-      <CaseStudies />
-      <Perspectives />
-      <Approach />
-      <Services />
       <KeywordPerformance />
       <GrowthProof />
-      <CreativeShowcase />
-      <Founder />
       <Contact />
     </main>
   );

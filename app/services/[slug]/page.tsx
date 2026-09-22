@@ -73,7 +73,7 @@ export default async function ServicePage({
             "@type": "ListItem",
             position: 2,
             name: "Services",
-            item: `${base}/#services`,
+            item: `${base}/services`,
           },
           { "@type": "ListItem", position: 3, name: page.tag, item: pageUrl },
         ],
