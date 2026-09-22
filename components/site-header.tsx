@@ -41,7 +41,7 @@ export function SiteHeader() {
             : "border-b border-transparent bg-transparent",
         )}
       >
-        <div className="mx-auto flex h-[4.25rem] w-full max-w-[1120px] items-center justify-between px-6 sm:px-8">
+        <div className="mx-auto flex h-20 w-full max-w-[1120px] items-center justify-between px-6 sm:px-8">
           <Link href="/" aria-label="Apereel home" className="relative z-50 shrink-0">
             <Logo />
           </Link>

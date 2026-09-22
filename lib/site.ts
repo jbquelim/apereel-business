@@ -25,12 +25,10 @@ export const site = {
     "AI-Powered Development & Creative",
   ],
   nav: [
-    { href: "/#audit", label: "Free Audit" },
     { href: "/work", label: "Work" },
     { href: "/approach", label: "Approach" },
     { href: "/services", label: "Services" },
-    { href: "/about", label: "About" },
-    { href: "#contact", label: "Contact" },
+    { href: "/contact", label: "Contact" },
   ],
 } as const;
 
