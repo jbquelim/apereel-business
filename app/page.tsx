@@ -10,6 +10,9 @@ export default function Home() {
       <SiteAudit />
       <RealityCheck />
       <ProofSection />
+      <div aria-hidden className="mx-auto w-full max-w-[1120px] px-6 sm:px-8">
+        <div className="border-t border-white/10" />
+      </div>
       <KeywordPerformance />
       <GrowthProof />
     </main>
