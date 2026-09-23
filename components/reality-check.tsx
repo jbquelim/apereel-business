@@ -93,16 +93,16 @@ export function RealityCheck() {
     >
       <Container>
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl">
+        <div className="flex flex-col gap-6 md:flex-row md:flex-wrap md:items-end md:justify-between">
+          <div>
             <p className={KICKER}>The Apereel Perspective</p>
             <h2
               id="reality-check-heading"
-              className="font-display mt-3 text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-5xl"
+              className="font-display mt-3 text-4xl font-normal tracking-[-0.02em] text-navy sm:text-5xl lg:whitespace-nowrap"
             >
               What good digital growth looks like.
             </h2>
-            <p className="mt-4 text-lg text-navy/60 sm:text-xl">
+            <p className="mt-4 max-w-2xl text-lg text-navy/60 sm:text-xl">
               Three things to look for before investing more in marketing.
             </p>
           </div>
