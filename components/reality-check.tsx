@@ -1,73 +1,90 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/container";
 
-const PILLARS = [
+type Slide = {
+  num: string;
+  tabLabel: string;
+  overlayLabel: string;
+  image: string;
+  thumb: string;
+  eyebrow: string;
+  title: string;
+  body: string;
+  chips: string[];
+  takeawayKicker: string;
+  takeaway: string;
+};
+
+const SLIDES: Slide[] = [
   {
-    kicker: "Business Fundamentals",
-    title: "More content is not the answer.",
-    body: "Pricing, product selection, and customer experience matter. A content plan should support a stronger business.",
-    footerKicker: "Start here",
-    footer: "Fix what limits the buying decision.",
-    icon: (
-      // Document
-      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
-        <path
-          d="M7 3.5h6.5L18 8v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5a1.5 1.5 0 0 1 1-1.5Z"
-          className="stroke-electric-deep"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M13.5 3.5V8H18M9 12h6M9 15.5h6"
-          className="stroke-electric-deep"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    num: "01",
+    tabLabel: "Business fundamentals",
+    overlayLabel: "Business Fundamentals",
+    image: "/images/growth-business-fundamentals.jpg",
+    thumb: "/images/growth-business-fundamentals-thumb.jpg",
+    eyebrow: "Build a stronger business",
+    title: "Growth starts beyond the content calendar.",
+    body: "Pricing, product selection, and customer experience shape the buying decision. Your marketing should support those strengths.",
+    chips: ["Competitive pricing", "Relevant products", "Easy shopping"],
+    takeawayKicker: "The takeaway",
+    takeaway: "Fix what limits the buying decision.",
   },
   {
-    kicker: "Competitive Advantage",
-    title: "Give people a reason to choose you.",
-    body: "Before asking how to rank higher, understand what makes your business the better choice.",
-    footerKicker: "Ask this",
-    footer: "Why should customers choose us?",
-    icon: (
-      // People
-      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
-        <circle cx="12" cy="8.5" r="2.6" className="stroke-electric-deep" strokeWidth="1.6" />
-        <circle cx="5.8" cy="10" r="2" className="stroke-electric-deep" strokeWidth="1.6" />
-        <circle cx="18.2" cy="10" r="2" className="stroke-electric-deep" strokeWidth="1.6" />
-        <path
-          d="M7.5 18.5a4.6 4.6 0 0 1 9 0M2.8 17.5a3.4 3.4 0 0 1 3-2.4M21.2 17.5a3.4 3.4 0 0 0-3-2.4"
-          className="stroke-electric-deep"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    num: "02",
+    tabLabel: "Competitive advantage",
+    overlayLabel: "Competitive Advantage",
+    image: "/images/growth-competitive-advantage.jpg",
+    thumb: "/images/growth-competitive-advantage-thumb.jpg",
+    eyebrow: "Give people a reason to choose you",
+    title: "Being found matters less than being chosen.",
+    body: "Before asking how to rank higher, understand what makes your business the better choice — then make it impossible to miss.",
+    chips: ["Clear positioning", "Real differentiation", "A reason to buy"],
+    takeawayKicker: "Ask this",
+    takeaway: "Why should customers choose us?",
   },
   {
-    kicker: "Measurable Results",
-    title: "Look for proof that matters.",
-    body: "Connect search demand and relevant traffic to real outcomes. Rankings alone do not tell the whole story.",
-    footerKicker: "Measure this",
-    footer: "Qualified leads, conversions, and sales.",
-    icon: (
-      // Bar chart
-      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
-        <path
-          d="M5.5 19.5v-6M10.5 19.5V9M15.5 19.5v-8.5M20 19.5V4.5"
-          className="stroke-electric-deep"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    num: "03",
+    tabLabel: "Measurable results",
+    overlayLabel: "Measurable Results",
+    image: "/images/growth-measurable-results.jpg",
+    thumb: "/images/growth-measurable-results-thumb.jpg",
+    eyebrow: "Proof that reaches the business",
+    title: "Rankings alone don't tell the whole story.",
+    body: "Connect search demand and relevant traffic to real outcomes — the numbers that actually reach the P&L.",
+    chips: ["Qualified traffic", "Conversions", "Revenue & margin"],
+    takeawayKicker: "Measure this",
+    takeaway: "Qualified leads, conversions, and sales.",
   },
 ];
 
+const KICKER = "text-[11px] font-semibold tracking-[0.18em] text-electric-deep uppercase";
+
+function Check() {
+  return (
+    <span className="flex h-4 w-4 flex-none items-center justify-center rounded-full bg-electric-deep">
+      <svg viewBox="0 0 24 24" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
+        <path
+          d="M5 13l4 4L19 7"
+          stroke="#fff"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 export function RealityCheck() {
+  const [active, setActive] = useState(0);
+  const slide = SLIDES[active];
+  const go = (dir: number) =>
+    setActive((i) => (i + dir + SLIDES.length) % SLIDES.length);
+
   return (
     <section
       id="reality-check"
@@ -75,56 +92,145 @@ export function RealityCheck() {
       className="reveal-section bg-ink py-16 sm:py-20 lg:py-24"
     >
       <Container>
-        <div className="mx-auto max-w-3xl text-center">
-          <h2
-            id="reality-check-heading"
-            className="font-display text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-5xl"
+        {/* Header */}
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-2xl">
+            <p className={KICKER}>The Apereel Perspective</p>
+            <h2
+              id="reality-check-heading"
+              className="font-display mt-3 text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-5xl"
+            >
+              What good digital growth looks like.
+            </h2>
+            <p className="mt-4 text-lg text-navy/60 sm:text-xl">
+              Three things to look for before investing more in marketing.
+            </p>
+          </div>
+          <Link
+            href="/approach"
+            className="press-scale inline-flex flex-none items-center gap-2 rounded-full border border-electric-deep/30 px-5 py-3 text-sm font-semibold text-electric-deep transition-colors hover:bg-electric-deep hover:text-white"
           >
-            What good digital growth looks like.
-          </h2>
-          <p className="mt-4 text-lg text-navy/60 sm:text-xl">
-            Three things to look for before investing more in marketing.
-          </p>
+            Explore our approach
+            <span aria-hidden="true">→</span>
+          </Link>
         </div>
 
-        <div className="mt-12 grid gap-6 sm:mt-16 lg:grid-cols-3 lg:gap-8">
-          {PILLARS.map((pillar) => (
-            <div
-              key={pillar.kicker}
-              className="reveal-stagger flex flex-col rounded-[var(--radius-parent)] border border-navy/8 bg-white p-8 sm:p-10"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-electric/10">
-                {pillar.icon}
-              </div>
-              <p className="mt-6 text-[11px] font-semibold tracking-[0.18em] text-electric-deep uppercase">
-                {pillar.kicker}
+        {/* Feature card */}
+        <div className="mt-10 rounded-[24px] border border-navy/8 bg-white p-3 shadow-[0_24px_60px_-30px_rgba(7,14,28,0.30)] sm:mt-14 sm:p-4">
+          <div key={active} className="tab-content grid gap-4 lg:grid-cols-2">
+            {/* Image */}
+            <div className="relative min-h-[280px] overflow-hidden rounded-[18px] lg:min-h-[440px]">
+              <Image
+                src={slide.image}
+                alt={slide.overlayLabel}
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
+                priority={active === 0}
+              />
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-navy/70 to-transparent"
+                aria-hidden="true"
+              />
+              <p className="absolute bottom-5 left-5 text-[11px] font-semibold tracking-[0.18em] text-white/90 uppercase sm:bottom-6 sm:left-6">
+                {slide.num} <span className="text-white/50">/</span>{" "}
+                {slide.overlayLabel}
               </p>
-              <h3 className="font-display mt-3 text-2xl text-navy sm:text-[26px]">
-                {pillar.title}
+            </div>
+
+            {/* Content */}
+            <div className="flex flex-col justify-center p-4 sm:p-8 lg:p-10">
+              <p className={KICKER}>{slide.eyebrow}</p>
+              <h3 className="font-display mt-3 text-3xl tracking-[-0.02em] text-navy text-balance sm:text-4xl">
+                {slide.title}
               </h3>
-              <p className="mt-4 mb-6 text-sm leading-relaxed text-navy/60 sm:text-base">
-                {pillar.body}
+              <p className="mt-4 text-base leading-relaxed text-navy/60 sm:text-lg">
+                {slide.body}
               </p>
-              <div className="mt-auto border-t border-navy/10 pt-5">
-                <p className="pt-1 text-[11px] font-semibold tracking-[0.18em] text-electric-deep uppercase">
-                  {pillar.footerKicker}
-                </p>
-                <p className="mt-2 text-sm font-medium text-navy sm:text-base">
-                  {pillar.footer}
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                {slide.chips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="inline-flex items-center gap-2 rounded-full bg-electric/8 px-3.5 py-2 text-sm font-medium text-navy"
+                  >
+                    <Check />
+                    {chip}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-8 border-t border-navy/10 pt-6">
+                <p className={KICKER}>{slide.takeawayKicker}</p>
+                <p className="mt-2 text-lg font-semibold text-navy">
+                  {slide.takeaway}
                 </p>
               </div>
             </div>
-          ))}
+          </div>
         </div>
 
-        <div className="mt-12 text-center">
-          <Link
-            href="/#proof"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-electric-deep transition-colors hover:text-navy sm:text-base"
-          >
-            See the results behind our approach
-            <span aria-hidden="true">→</span>
-          </Link>
+        {/* Tabs + pager */}
+        <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid flex-1 gap-3 sm:grid-cols-3">
+            {SLIDES.map((s, i) => {
+              const on = i === active;
+              return (
+                <button
+                  key={s.num}
+                  type="button"
+                  onClick={() => setActive(i)}
+                  aria-pressed={on}
+                  aria-label={`Show ${s.tabLabel}`}
+                  className={`press-scale flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
+                    on
+                      ? "border-electric-deep bg-white ring-1 ring-electric-deep/25"
+                      : "border-navy/10 bg-white/50 hover:border-navy/20 hover:bg-white"
+                  }`}
+                >
+                  <Image
+                    src={s.thumb}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 flex-none rounded-lg object-cover"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-navy/40 tabular-nums">
+                      {s.num}
+                    </span>
+                    <span className="block text-sm leading-snug font-medium text-navy">
+                      {s.tabLabel}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 lg:flex-none">
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label="Previous"
+              className="press-scale flex h-10 w-10 items-center justify-center rounded-full border border-navy/15 text-navy transition-colors hover:border-electric-deep hover:text-electric-deep"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <span className="text-sm font-semibold text-navy/60 tabular-nums">
+              {slide.num} / {String(SLIDES.length).padStart(2, "0")}
+            </span>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label="Next"
+              className="press-scale flex h-10 w-10 items-center justify-center rounded-full border border-navy/15 text-navy transition-colors hover:border-electric-deep hover:text-electric-deep"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
         </div>
       </Container>
     </section>
