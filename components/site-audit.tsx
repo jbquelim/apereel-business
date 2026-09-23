@@ -1264,14 +1264,19 @@ export function SiteAudit() {
           on solid navy so the numbers never fight the bright graph. */}
       <div className="relative flex flex-1 flex-col justify-center pt-28 pb-14">
         <HeroGraphVideo />
+        {/* Legibility scrim: darkest at the top where the kicker and headline
+            sit over the bright dusk sky, easing through the middle so the
+            skyline stays visible, dark again at the bottom edge. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-transparent to-navy"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(7,14,28,0.78)_0%,rgba(7,14,28,0.5)_34%,rgba(7,14,28,0.42)_58%,rgba(7,14,28,0.72)_80%,var(--navy)_100%)]"
         />
         <div className="relative mx-auto w-full max-w-[1180px] px-6 sm:px-8">
-        {/* Centered headline over the video */}
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="animate-rise font-mono text-[13px] tracking-[0.24em] text-muted uppercase">
+        {/* Centered headline over the video. Text-shadow carries legibility on
+            bright footage frames so the scrim can stay light and the skyline
+            shows through. */}
+        <div className="mx-auto max-w-4xl text-center [text-shadow:0_1px_24px_rgba(7,14,28,0.85)]">
+          <p className="animate-rise font-mono text-[13px] tracking-[0.24em] text-ink/70 uppercase">
             Find your competitive advantage
           </p>
           <h1
@@ -1282,7 +1287,7 @@ export function SiteAudit() {
             <br />
             <span className="text-electric">to choose you.</span>
           </h1>
-          <p className="animate-rise-delay-1 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl">
+          <p className="animate-rise-delay-1 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/80 sm:text-xl">
             Discover how your business compares and where a stronger offer,
             better experience, or greater visibility could make a difference.
           </p>
