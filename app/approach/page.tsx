@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Approach } from "@/components/approach";
+import { IllustratedApproach } from "@/components/illustrated-approach";
 import { Perspectives } from "@/components/insights";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function ApproachPage() {
   return (
     <main id="main" className="pt-10">
-      <Approach />
+      <IllustratedApproach />
       <Perspectives />
     </main>
   );

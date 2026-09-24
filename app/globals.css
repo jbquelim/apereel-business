@@ -481,3 +481,93 @@ body {
     animation: none;
   }
 }
+
+/* ── Illustrated approach: sticky map + scroll-story chapters ─────── */
+.approach-grid { display: grid; gap: 2.5rem; }
+@media (min-width: 1100px) {
+  .approach-grid { grid-template-columns: 58% 42%; gap: 4rem; align-items: start; }
+  .approach-sticky { position: sticky; top: 5.5rem; }
+}
+@media (max-height: 720px) {
+  .approach-sticky { position: static !important; }
+}
+
+.approach-map { width: 100%; max-width: 640px; aspect-ratio: 1 / 1; max-height: 62vh; margin-inline: auto; }
+.approach-map-svg { display: block; width: 100%; height: 100%; }
+
+.approach-nav { margin-top: 1.1rem; }
+.approach-nav ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.approach-nav a { display: inline-flex; align-items: baseline; gap: 0.4rem; padding: 0.4rem 0.7rem; border-radius: 999px; font-size: 0.8rem; color: var(--muted); border: 1px solid transparent; text-decoration: none; transition: color 0.2s, border-color 0.2s, background 0.2s; }
+.approach-nav a:hover { color: var(--ink); }
+.approach-nav a.is-active { color: var(--ink); border-color: color-mix(in srgb, var(--electric) 45%, transparent); background: color-mix(in srgb, var(--electric) 12%, transparent); }
+.approach-nav .num { font-family: var(--font-ibm-plex), monospace; font-size: 0.68rem; color: var(--electric); }
+
+.approach-chapter { padding-block: 2rem; opacity: 0.45; transition: opacity 0.4s var(--ease-out); }
+.approach-chapter.is-active { opacity: 1; }
+@media (min-width: 1100px) {
+  .approach-chapter { min-height: 60vh; display: flex; flex-direction: column; justify-content: center; padding-block: 3rem; }
+  .approach-chapter:first-child { min-height: 44vh; justify-content: flex-start; padding-top: 0; }
+  .approach-chapter:last-child { min-height: 46vh; }
+}
+.chapter-kicker { font-family: var(--font-ibm-plex), monospace; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.chapter-num { color: var(--electric); }
+.chapter-headline { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.02em; color: var(--ink); font-size: clamp(1.9rem, 3.4vw, 2.75rem); line-height: 1.1; margin: 0.6rem 0 0; text-wrap: balance; }
+.chapter-body { color: var(--muted); font-size: 1.05rem; line-height: 1.65; margin: 1rem 0 0; max-width: 44ch; }
+.chapter-deliverable { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.chapter-deliverable-kicker { font-family: var(--font-ibm-plex), monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: color-mix(in srgb, var(--muted) 70%, transparent); }
+.chapter-deliverable p { color: var(--ink); font-weight: 600; margin: 0.35rem 0 0; }
+.chapter-services { list-style: none; margin: 1.25rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.chapter-services a { font-size: 0.9rem; color: var(--electric); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--electric) 30%, transparent); padding-bottom: 1px; transition: color 0.2s, border-color 0.2s; }
+.chapter-services a:hover { color: var(--ink); border-color: var(--ink); }
+.approach-cta { padding-block: 1.5rem 0.5rem; }
+
+/* Map state machine — driven by [data-active]; presentation attrs are overridden by these rules */
+.approach-map [id^="route-"] { transition: stroke-dashoffset 380ms var(--ease-out); }
+.approach-map #route-1, .approach-map #route-2, .approach-map #route-3, .approach-map #route-4 { stroke-dashoffset: 1; }
+.approach-map #feedback-loop { stroke-dashoffset: 1; transition: stroke-dashoffset 560ms var(--ease-out); }
+.approach-map[data-active="1"] #route-1,
+.approach-map[data-active="2"] #route-1,
+.approach-map[data-active="2"] #route-2,
+.approach-map[data-active="3"] #route-1,
+.approach-map[data-active="3"] #route-2,
+.approach-map[data-active="3"] #route-3,
+.approach-map[data-active="4"] #route-1,
+.approach-map[data-active="4"] #route-2,
+.approach-map[data-active="4"] #route-3,
+.approach-map[data-active="4"] #route-4 { stroke-dashoffset: 0; }
+.approach-map[data-active="4"] #feedback-loop { stroke-dashoffset: 0; }
+
+.approach-map #station-labels { opacity: 0.9; }
+.approach-map #station-research, .approach-map #station-advantage, .approach-map #station-translate, .approach-map #station-amplify, .approach-map #station-improve { opacity: 0.38; transition: opacity 380ms var(--ease-out); }
+.approach-map[data-active="0"] #station-research,
+.approach-map[data-active="1"] #station-research,
+.approach-map[data-active="1"] #station-advantage,
+.approach-map[data-active="2"] #station-research,
+.approach-map[data-active="2"] #station-advantage,
+.approach-map[data-active="2"] #station-translate,
+.approach-map[data-active="3"] #station-research,
+.approach-map[data-active="3"] #station-advantage,
+.approach-map[data-active="3"] #station-translate,
+.approach-map[data-active="3"] #station-amplify,
+.approach-map[data-active="4"] #station-research,
+.approach-map[data-active="4"] #station-advantage,
+.approach-map[data-active="4"] #station-translate,
+.approach-map[data-active="4"] #station-amplify,
+.approach-map[data-active="4"] #station-improve { opacity: 1; }
+
+/* Fallbacks: mobile shows the full journey as one overview; reduced motion is instant */
+@media (max-width: 1099px) {
+  .approach-map #route-1, .approach-map #route-2, .approach-map #route-3, .approach-map #route-4, .approach-map #feedback-loop { stroke-dashoffset: 0; }
+  .approach-map #station-research, .approach-map #station-advantage, .approach-map #station-translate, .approach-map #station-amplify, .approach-map #station-improve { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .approach-map [id^="route-"], .approach-map #feedback-loop { transition: none; stroke-dashoffset: 0; }
+  .approach-map #station-research, .approach-map #station-advantage, .approach-map #station-translate, .approach-map #station-amplify, .approach-map #station-improve { transition: none; opacity: 1; }
+  .approach-chapter { transition: none; opacity: 1; }
+}
+
+/* Intro heading now lives atop the right column (fits map + heading in view) */
+.approach-intro { margin-bottom: 0.5rem; }
+@media (min-width: 1100px) {
+  .approach-intro { min-height: 44vh; display: flex; flex-direction: column; justify-content: flex-start; }
+}
