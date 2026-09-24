@@ -987,13 +987,14 @@ Respond with ONLY a JSON array of strings:
         },
         body: JSON.stringify({
           model,
-          max_tokens: 1000,
-          thinking: { type: "disabled" },
+          // Opus 5.5 thinking is always-on; "disabled" 400s there. Thinking
+          // spends output tokens, so give those attempts extra headroom.
+          max_tokens: model === "claude-opus-5-5" ? 6000 : 1000,
+          ...(model === "claude-opus-5-5" ? {} : { thinking: { type: "disabled" } }),
           messages: [{ role: "user", content: prompt }],
         }),
       });
       if (res.ok) break;
-      if (res.status !== 404) break;
     }
     if (!res || !res.ok) return [];
     const data = await res.json();
@@ -1079,13 +1080,14 @@ Rules:
         },
         body: JSON.stringify({
           model,
-          max_tokens: 1000,
-          thinking: { type: "disabled" },
+          // Opus 5.5 thinking is always-on; "disabled" 400s there. Thinking
+          // spends output tokens, so give those attempts extra headroom.
+          max_tokens: model === "claude-opus-5-5" ? 6000 : 1000,
+          ...(model === "claude-opus-5-5" ? {} : { thinking: { type: "disabled" } }),
           messages: [{ role: "user", content: prompt }],
         }),
       });
       if (res.ok) break;
-      if (res.status !== 404) break;
     }
     if (!res || !res.ok) return null;
     const data = await res.json();
@@ -1154,13 +1156,14 @@ Respond with ONLY the sentence. No quotes, no preamble.`;
         },
         body: JSON.stringify({
           model,
-          max_tokens: 200,
-          thinking: { type: "disabled" },
+          // Opus 5.5 thinking is always-on; "disabled" 400s there. Thinking
+          // spends output tokens, so give those attempts extra headroom.
+          max_tokens: model === "claude-opus-5-5" ? 4000 : 200,
+          ...(model === "claude-opus-5-5" ? {} : { thinking: { type: "disabled" } }),
           messages: [{ role: "user", content: prompt }],
         }),
       });
       if (res.ok) break;
-      if (res.status !== 404) break;
     }
     if (!res || !res.ok) return null;
     const data = await res.json();
@@ -1371,8 +1374,10 @@ Rules:
         },
         body: JSON.stringify({
           model,
-          max_tokens: 4000,
-          thinking: { type: "disabled" },
+          // Opus 5.5 thinking is always-on; "disabled" 400s there. Thinking
+          // spends output tokens, so give those attempts extra headroom.
+          max_tokens: model === "claude-opus-5-5" ? 12000 : 4000,
+          ...(model === "claude-opus-5-5" ? {} : { thinking: { type: "disabled" } }),
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -1384,8 +1389,6 @@ Rules:
 
       const errText = await res.text().catch(() => "");
       console.error(`Anthropic model ${model} failed:`, res.status, errText.slice(0, 200));
-
-      if (res.status !== 404) break;
     }
 
     if (!res || !res.ok) return null;
