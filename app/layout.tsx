@@ -89,7 +89,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en-CA"
       className={`${plusJakarta.variable} ${instrument.variable} ${ibmPlex.variable} h-full antialiased`}
     >
-      <body className="min-h-full overflow-x-hidden bg-navy font-sans text-ink">
+      <body className="min-h-full overflow-x-clip bg-navy font-sans text-ink">
         <JsonLd />
         <SkipLink />
         <SiteHeader />

@@ -50,7 +50,9 @@ html {
   color-scheme: dark;
   scroll-behavior: smooth;
   scroll-padding-top: 5.5rem;
-  overflow-x: hidden;
+  /* clip, not hidden: hidden makes html a scroll container, which kills
+     position: sticky (the pinned growth-signal section relies on it) */
+  overflow-x: clip;
 }
 
 body {
