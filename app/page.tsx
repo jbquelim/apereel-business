@@ -1,7 +1,7 @@
-import { GrowthProof } from "@/components/growth-proof";
 import { GrowthSignal } from "@/components/growth-signal";
-import { KeywordPerformance } from "@/components/keyword-performance";
-import { ProofSection } from "@/components/proof-section";
+import { ProofScroll } from "@/components/proof-scroll";
+import { RankingExplorer } from "@/components/ranking-explorer";
+import { ResultsScroll } from "@/components/results-scroll";
 import { SiteAudit } from "@/components/site-audit";
 
 export default function Home() {
@@ -9,12 +9,12 @@ export default function Home() {
     <main id="main">
       <SiteAudit />
       <GrowthSignal />
-      <ProofSection />
+      <ProofScroll />
       <div aria-hidden className="mx-auto w-full max-w-[1120px] px-6 sm:px-8">
         <div className="border-t border-white/10" />
       </div>
-      <KeywordPerformance />
-      <GrowthProof />
+      <RankingExplorer />
+      <ResultsScroll />
     </main>
   );
 }
