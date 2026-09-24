@@ -977,7 +977,7 @@ Respond with ONLY a JSON array of strings:
 
   try {
     let res: Response | null = null;
-    for (const model of ["claude-sonnet-5", "claude-haiku-4-5"]) {
+    for (const model of ["claude-opus-5-5", "claude-sonnet-5", "claude-haiku-4-5"]) {
       res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -1069,7 +1069,7 @@ Rules:
 
   try {
     let res: Response | null = null;
-    for (const model of ["claude-sonnet-5", "claude-haiku-4-5"]) {
+    for (const model of ["claude-opus-5-5", "claude-sonnet-5", "claude-haiku-4-5"]) {
       res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -1144,7 +1144,7 @@ Respond with ONLY the sentence. No quotes, no preamble.`;
 
   try {
     let res: Response | null = null;
-    for (const model of ["claude-sonnet-5", "claude-haiku-4-5"]) {
+    for (const model of ["claude-opus-5-5", "claude-sonnet-5", "claude-haiku-4-5"]) {
       res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -1286,6 +1286,7 @@ async function fetchIndustryAnalysis(
   ].filter(Boolean);
 
   const models = [
+    "claude-opus-5-5",
     "claude-sonnet-5",
     "claude-haiku-4-5",
   ];
