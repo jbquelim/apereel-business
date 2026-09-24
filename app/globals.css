@@ -569,5 +569,5 @@ body {
 /* Intro heading now lives atop the right column (fits map + heading in view) */
 .approach-intro { margin-bottom: 0.5rem; }
 @media (min-width: 1100px) {
-  .approach-intro { min-height: 44vh; display: flex; flex-direction: column; justify-content: flex-start; }
+  .approach-intro { min-height: 20vh; display: flex; flex-direction: column; justify-content: flex-start; }
 }
