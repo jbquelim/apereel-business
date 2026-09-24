@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Container } from "@/components/container";
 import { cn } from "@/lib/cn";
 import {
   MotionProvider,
@@ -13,15 +12,18 @@ import {
 import {
   ACCENT_RGB,
   BASE_RGB,
+  CHOICE_CALLOUT,
   CURVES,
   CURVE_OPACITY,
+  OFFER_ANCHORS,
   OFFER_LABELS,
-  OFFER_LABEL_OPACITY,
   OUTCOME_LABELS,
-  OUTCOME_LABEL_OPACITY,
   PARTICLES,
+  PRIMARY_CURVE,
   VIEW_H,
   VIEW_W,
+  VIEW_X,
+  VIEW_Y,
 } from "@/lib/signal-states";
 
 const STAGES = [
@@ -31,7 +33,12 @@ const STAGES = [
     heading: "Build a stronger signal.",
     body: "Align product selection, pricing, and customer experience to create a clearer offer.",
     image: "/images/signal/01-offer.svg",
-    alt: "Scattered dots forming three gentle waves labeled Selection, Pricing, and Experience",
+    alt: "Scattered dots forming three gentle waves, anchored by Selection, Pricing, and Experience",
+    details: [
+      { title: "Selection", desc: "What customers want" },
+      { title: "Pricing", desc: "A competitive offer" },
+      { title: "Experience", desc: "Easier buying journey" },
+    ],
   },
   {
     key: "choice",
@@ -39,7 +46,8 @@ const STAGES = [
     heading: "Stand out for a reason.",
     body: "Turn what makes your business different into a clear reason for customers to choose you.",
     image: "/images/signal/02-choice.svg",
-    alt: "The waves converge and a group of dots turns blue, standing out from the field",
+    alt: "One confident blue wave stands out from quieter supporting waves — your advantage",
+    details: [],
   },
   {
     key: "outcome",
@@ -47,7 +55,13 @@ const STAGES = [
     heading: "Connect attention to results.",
     body: "Track how a stronger business supports search visibility, qualified leads, conversions, and revenue.",
     image: "/images/signal/03-outcome.svg",
-    alt: "The dots flow into four branches labeled Revenue, Conversions, Leads, and Rankings",
+    alt: "The signal separates into four gently rising branches: Rankings, Qualified leads, Conversions, and Revenue",
+    details: [
+      { title: "Rankings", desc: "Visibility where demand exists" },
+      { title: "Qualified leads", desc: "Interest from relevant customers" },
+      { title: "Conversions", desc: "More visitors taking action" },
+      { title: "Revenue", desc: "Commercial impact" },
+    ],
   },
 ] as const;
 
@@ -57,23 +71,46 @@ const STAGES = [
  *   [0.42–0.60] hold Choice  [0.60–0.76] morph
  *   [0.76–1.00] hold Outcome
  */
-const T1_START = 0.26;
-const T1_END = 0.42;
-const T2_START = 0.6;
-const T2_END = 0.76;
+const T1S = 0.26;
+const T1E = 0.42;
+const T2S = 0.6;
+const T2E = 0.76;
 const HOLD_CENTERS = [0.13, 0.51, 0.88];
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 function blend(p: number): { a: number; b: number; t: number } {
-  if (p <= T1_START) return { a: 0, b: 0, t: 0 };
-  if (p < T1_END) return { a: 0, b: 1, t: smooth((p - T1_START) / (T1_END - T1_START)) };
-  if (p <= T2_START) return { a: 1, b: 1, t: 0 };
-  if (p < T2_END) return { a: 1, b: 2, t: smooth((p - T2_START) / (T2_END - T2_START)) };
+  if (p <= T1S) return { a: 0, b: 0, t: 0 };
+  if (p < T1E) return { a: 0, b: 1, t: smooth((p - T1S) / (T1E - T1S)) };
+  if (p <= T2S) return { a: 1, b: 1, t: 0 };
+  if (p < T2E) return { a: 1, b: 2, t: smooth((p - T2S) / (T2E - T2S)) };
   return { a: 2, b: 2, t: 0 };
 }
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+/** Staggered reveal inside the Offer hold, fading out before the morph lands. */
+function offerLabelOpacity(i: number, p: number): number {
+  const appear = clamp01((p - (0.03 + i * 0.045)) / 0.03);
+  const exit = 1 - clamp01((p - T1S) / ((T1E - T1S) * 0.45));
+  return appear * exit;
+}
+
+function calloutOpacity(p: number): number {
+  const appear = clamp01((p - (T1E + 0.01)) / 0.03);
+  const exit = 1 - clamp01((p - T2S) / ((T2E - T2S) * 0.35));
+  return appear * exit;
+}
+
+function primaryPathOpacity(p: number): number {
+  const appear = clamp01((p - (T1S + (T1E - T1S) * 0.55)) / ((T1E - T1S) * 0.45));
+  const exit = 1 - clamp01((p - T2S) / ((T2E - T2S) * 0.4));
+  return appear * exit;
+}
+
+function outcomeLabelOpacity(i: number, p: number): number {
+  return clamp01((p - (0.78 + i * 0.045)) / 0.03);
+}
 
 function particleFill(accent: number): string {
   if (accent <= 0) return `rgb(${BASE_RGB[0]},${BASE_RGB[1]},${BASE_RGB[2]})`;
@@ -96,28 +133,46 @@ function curvePath(state: number, curve: number, stateB?: number, t = 0): string
 }
 
 const LABEL_FONT = "var(--font-plus-jakarta), Inter, Arial, sans-serif";
-const LABEL_FILL = "#152b50";
+const NAVY = "#152b50";
+const ACCENT = "#1769ff";
+
+type SceneRefs = {
+  dots: (SVGCircleElement | null)[];
+  curves: (SVGPathElement | null)[];
+  curveGroup: SVGGElement | null;
+  primaryPath: SVGPathElement | null;
+  offerGroups: (SVGGElement | null)[];
+  callout: SVGGElement | null;
+  outcomeGroups: (SVGGElement | null)[];
+};
 
 /** The single inline SVG scene. Initial JSX renders state 0 (server-safe);
  *  scroll updates mutate attributes imperatively — no React re-render per frame. */
-function SignalScene({
-  sceneRef,
-}: {
-  sceneRef: React.MutableRefObject<{
-    dots: (SVGCircleElement | null)[];
-    curves: (SVGPathElement | null)[];
-    curveGroup: SVGGElement | null;
-    offerGroup: SVGGElement | null;
-    outcomeGroup: SVGGElement | null;
-  }>;
-}) {
+function SignalScene({ sceneRef }: { sceneRef: React.MutableRefObject<SceneRefs> }) {
   return (
     <svg
-      viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+      viewBox={`${VIEW_X} ${VIEW_Y} ${VIEW_W} ${VIEW_H}`}
       className="h-auto w-full"
       role="img"
-      aria-label="Dots and curves morphing through three stages: a clearer offer, a reason to be chosen, and outcomes for revenue, conversions, leads, and rankings"
+      aria-label="Dots and curves morphing through three stages: a clearer offer anchored by selection, pricing, and experience; one wave standing out as your advantage; then four gently rising branches for rankings, qualified leads, conversions, and revenue"
     >
+      <defs>
+        <radialGradient id="signal-wash" cx="50%" cy="52%" r="62%">
+          <stop offset="0%" stopColor={ACCENT} stopOpacity="0.055" />
+          <stop offset="78%" stopColor={ACCENT} stopOpacity="0.02" />
+          <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect
+        x={VIEW_X}
+        y={VIEW_Y}
+        width={VIEW_W}
+        height={VIEW_H}
+        rx="28"
+        fill="url(#signal-wash)"
+      />
+
+      {/* tier 3: quiet supporting curves */}
       <g
         ref={(el) => {
           sceneRef.current.curveGroup = el;
@@ -138,6 +193,21 @@ function SignalScene({
           />
         ))}
       </g>
+
+      {/* tier 1: continuous blue stroke beneath the Choice-stage dots */}
+      <path
+        ref={(el) => {
+          sceneRef.current.primaryPath = el;
+        }}
+        d={curvePath(1, PRIMARY_CURVE)}
+        fill="none"
+        stroke={ACCENT}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        opacity={0}
+      />
+
+      {/* tier 2: particles (accent dots enlarge as they turn blue) */}
       <g>
         {PARTICLES.map((row, i) => (
           <circle
@@ -147,54 +217,119 @@ function SignalScene({
             }}
             cx={row[0]}
             cy={row[1]}
-            r={row[2]}
+            r={row[2] * (1 + 0.35 * row[4])}
             opacity={row[3]}
             fill={particleFill(row[4])}
           />
         ))}
       </g>
+
+      {/* Stage 1 — anchor labels with rings, leader lines, descriptions */}
+      {OFFER_LABELS.map((l, i) => {
+        const [ax, ay] = OFFER_ANCHORS[i];
+        return (
+          <g
+            key={l.title}
+            ref={(el) => {
+              sceneRef.current.offerGroups[i] = el;
+            }}
+            opacity={0}
+          >
+            <line
+              x1={l.x}
+              y1={l.y + 27}
+              x2={ax}
+              y2={ay - 9}
+              stroke={ACCENT}
+              strokeOpacity="0.35"
+              strokeWidth="1"
+            />
+            <circle cx={ax} cy={ay} r={11} fill="none" stroke={ACCENT} strokeOpacity="0.3" strokeWidth="1.5" />
+            <circle cx={ax} cy={ay} r={5} fill={ACCENT} />
+            <text
+              x={l.x}
+              y={l.y}
+              textAnchor="middle"
+              fontSize={20}
+              fontWeight={600}
+              fill={NAVY}
+              fontFamily={LABEL_FONT}
+            >
+              {l.title}
+            </text>
+            <text
+              x={l.x}
+              y={l.y + 19}
+              textAnchor="middle"
+              fontSize={15}
+              fill={NAVY}
+              fillOpacity="0.55"
+              fontFamily={LABEL_FONT}
+            >
+              {l.desc}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Stage 2 — "Your advantage" callout at the primary wave's crest */}
       <g
         ref={(el) => {
-          sceneRef.current.offerGroup = el;
+          sceneRef.current.callout = el;
         }}
-        opacity={OFFER_LABEL_OPACITY[0]}
+        opacity={0}
       >
-        {OFFER_LABELS.map((l) => (
+        <line
+          x1={CHOICE_CALLOUT.x + 32}
+          y1={CHOICE_CALLOUT.y - 38}
+          x2={CHOICE_CALLOUT.x + 3}
+          y2={CHOICE_CALLOUT.y - 8}
+          stroke={ACCENT}
+          strokeOpacity="0.35"
+          strokeWidth="1"
+        />
+        <circle cx={CHOICE_CALLOUT.x} cy={CHOICE_CALLOUT.y} r={10} fill="none" stroke={ACCENT} strokeOpacity="0.3" strokeWidth="1.5" />
+        <text
+          x={CHOICE_CALLOUT.x + 38}
+          y={CHOICE_CALLOUT.y - 44}
+          fontSize={17}
+          fontWeight={600}
+          fill={ACCENT}
+          fontFamily={LABEL_FONT}
+        >
+          Your advantage
+        </text>
+      </g>
+
+      {/* Stage 3 — branch endpoints with outlined markers and label groups */}
+      {OUTCOME_LABELS.map((l, i) => (
+        <g
+          key={l.title}
+          ref={(el) => {
+            sceneRef.current.outcomeGroups[i] = el;
+          }}
+          opacity={0}
+        >
+          <circle cx={l.x} cy={l.y} r={8} fill="#f4f1ea" stroke={ACCENT} strokeWidth="2.5" />
           <text
-            key={l.text}
-            x={l.x}
-            y={l.y}
-            textAnchor={l.anchor as "middle"}
-            fontSize={l.size}
-            fontWeight={500}
-            fill={LABEL_FILL}
+            x={l.x + 20}
+            y={l.y - 1}
+            fontSize={19}
+            fontWeight={600}
+            fill={NAVY}
             fontFamily={LABEL_FONT}
           >
-            {l.text}
+            {l.title}
           </text>
-        ))}
-      </g>
-      <g
-        ref={(el) => {
-          sceneRef.current.outcomeGroup = el;
-        }}
-        opacity={OUTCOME_LABEL_OPACITY[0]}
-      >
-        {OUTCOME_LABELS.map((l) => (
-          <text
-            key={l.text}
-            x={l.x}
-            y={l.y}
-            textAnchor={l.anchor as "start"}
-            fontSize={l.size}
-            fontWeight={500}
-            fill={LABEL_FILL}
-            fontFamily={LABEL_FONT}
-          >
-            {l.text}
+          <text x={l.x + 20} y={l.y + 17} fontSize={15} fill={NAVY} fillOpacity="0.6" fontFamily={LABEL_FONT}>
+            {l.desc.map((line, li) => (
+              <tspan key={li} x={l.x + 20} dy={li === 0 ? 0 : 17}>
+                {line}
+              </tspan>
+            ))}
           </text>
-        ))}
-      </g>
+        </g>
+      ))}
     </svg>
   );
 }
@@ -205,9 +340,9 @@ function StageCopy({ stage, active }: { stage: (typeof STAGES)[number]; active: 
       <p className="font-mono text-[11px] tracking-[0.24em] text-electric-deep uppercase">
         {String(active + 1).padStart(2, "0")} {stage.label}
       </p>
-      <h2 className="font-display mt-4 text-3xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-4xl">
+      <h3 className="font-display mt-4 text-3xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-4xl">
         {stage.heading}
-      </h2>
+      </h3>
       <p className="mt-4 text-base leading-relaxed text-navy/60 sm:text-lg">
         {stage.body}
       </p>
@@ -233,7 +368,6 @@ function StageProgress({
 }) {
   return (
     <div role="group" aria-label="Stages" className="relative mx-auto w-full max-w-md">
-      {/* track between the first and last dot centers (columns are equal thirds) */}
       <span
         aria-hidden="true"
         className="absolute top-[4px] right-[16.66%] left-[16.66%] h-px bg-navy/15"
@@ -276,13 +410,15 @@ function StageProgress({
 function PinnedSignal() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
-  const sceneRef = useRef<{
-    dots: (SVGCircleElement | null)[];
-    curves: (SVGPathElement | null)[];
-    curveGroup: SVGGElement | null;
-    offerGroup: SVGGElement | null;
-    outcomeGroup: SVGGElement | null;
-  }>({ dots: [], curves: [], curveGroup: null, offerGroup: null, outcomeGroup: null });
+  const sceneRef = useRef<SceneRefs>({
+    dots: [],
+    curves: [],
+    curveGroup: null,
+    primaryPath: null,
+    offerGroups: [],
+    callout: null,
+    outcomeGroups: [],
+  });
 
   const { scrollYProgress } = useScroll({
     target: wrapperRef,
@@ -299,11 +435,15 @@ function PinnedSignal() {
       const row = PARTICLES[i];
       const ai = a * 5;
       const bi = b * 5;
+      const accent = lerp(row[ai + 4], row[bi + 4], t);
       el.setAttribute("cx", lerp(row[ai], row[bi], t).toFixed(1));
       el.setAttribute("cy", lerp(row[ai + 1], row[bi + 1], t).toFixed(1));
-      el.setAttribute("r", lerp(row[ai + 2], row[bi + 2], t).toFixed(2));
+      el.setAttribute(
+        "r",
+        (lerp(row[ai + 2], row[bi + 2], t) * (1 + 0.35 * accent)).toFixed(2),
+      );
       el.setAttribute("opacity", lerp(row[ai + 3], row[bi + 3], t).toFixed(2));
-      el.setAttribute("fill", particleFill(lerp(row[ai + 4], row[bi + 4], t)));
+      el.setAttribute("fill", particleFill(accent));
     }
     for (let c = 0; c < CURVES[0].length; c++) {
       scene.curves[c]?.setAttribute("d", curvePath(a, c, b, t));
@@ -312,16 +452,19 @@ function PinnedSignal() {
       "opacity",
       lerp(CURVE_OPACITY[a], CURVE_OPACITY[b], t).toFixed(2),
     );
-    scene.offerGroup?.setAttribute(
-      "opacity",
-      lerp(OFFER_LABEL_OPACITY[a], OFFER_LABEL_OPACITY[b], t).toFixed(2),
-    );
-    scene.outcomeGroup?.setAttribute(
-      "opacity",
-      lerp(OUTCOME_LABEL_OPACITY[a], OUTCOME_LABEL_OPACITY[b], t).toFixed(2),
-    );
+    if (scene.primaryPath) {
+      scene.primaryPath.setAttribute("d", curvePath(a, PRIMARY_CURVE, b, t));
+      scene.primaryPath.setAttribute("opacity", primaryPathOpacity(p).toFixed(2));
+    }
+    for (let i = 0; i < scene.offerGroups.length; i++) {
+      scene.offerGroups[i]?.setAttribute("opacity", offerLabelOpacity(i, p).toFixed(2));
+    }
+    scene.callout?.setAttribute("opacity", calloutOpacity(p).toFixed(2));
+    for (let i = 0; i < scene.outcomeGroups.length; i++) {
+      scene.outcomeGroups[i]?.setAttribute("opacity", outcomeLabelOpacity(i, p).toFixed(2));
+    }
 
-    setActive(p < (T1_START + T1_END) / 2 ? 0 : p < (T2_START + T2_END) / 2 ? 1 : 2);
+    setActive(p < (T1S + T1E) / 2 ? 0 : p < (T2S + T2E) / 2 ? 1 : 2);
   });
 
   const scrollToStage = (i: number) => {
@@ -334,16 +477,27 @@ function PinnedSignal() {
 
   return (
     <div ref={wrapperRef} className="relative h-[380svh]">
-      <div className="sticky top-0 flex h-svh flex-col justify-center pt-[4.5rem] pb-6">
-        <Container>
+      <div className="sticky top-0 flex h-svh flex-col justify-center pt-[4.25rem] pb-4">
+        <div className="mx-auto w-[90%] max-w-[1480px]">
+          <div className="mb-8 text-center">
+            <h2
+              id="growth-signal-heading"
+              className="font-display text-3xl font-normal tracking-[-0.02em] text-navy text-balance xl:text-4xl"
+            >
+              What good digital growth looks like.
+            </h2>
+            <p className="mt-3 text-lg text-navy/60">
+              Three things to look for before investing more in marketing.
+            </p>
+          </div>
           <StageProgress active={active} onSelect={scrollToStage} />
-          <div className="mt-10 grid items-center gap-10 lg:mt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-14">
+          <div className="mt-6 grid items-center gap-10 lg:mt-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,12fr)] lg:gap-12">
             <StageCopy stage={STAGES[active]} active={active} />
             <div className="min-w-0">
               <SignalScene sceneRef={sceneRef} />
             </div>
           </div>
-        </Container>
+        </div>
       </div>
     </div>
   );
@@ -353,19 +507,44 @@ function PinnedSignal() {
 function StackedSignal() {
   return (
     <div className="py-20 sm:py-24">
-      <Container className="space-y-16 sm:space-y-20">
+      <div className="mx-auto w-full max-w-[1120px] space-y-16 px-6 sm:space-y-20 sm:px-8">
+        <div>
+          <h2
+            id="growth-signal-heading"
+            className="font-display text-3xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-4xl"
+          >
+            What good digital growth looks like.
+          </h2>
+          <p className="mt-3 text-lg text-navy/60">
+            Three things to look for before investing more in marketing.
+          </p>
+        </div>
         {STAGES.map((stage, i) => (
           <div key={stage.key} className="grid items-center gap-6 sm:grid-cols-2 sm:gap-10">
             <div className={i % 2 === 1 ? "sm:order-last" : undefined}>
               <p className="font-mono text-[11px] tracking-[0.24em] text-electric-deep uppercase">
                 {String(i + 1).padStart(2, "0")} {stage.label}
               </p>
-              <h2 className="font-display mt-3 text-2xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-3xl">
+              <h3 className="font-display mt-3 text-2xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-3xl">
                 {stage.heading}
-              </h2>
+              </h3>
               <p className="mt-3 text-base leading-relaxed text-navy/60">
                 {stage.body}
               </p>
+              {stage.details.length > 0 && (
+                <dl className="mt-5 space-y-2.5">
+                  {stage.details.map((d) => (
+                    <div key={d.title} className="flex items-baseline gap-2.5">
+                      <span
+                        aria-hidden="true"
+                        className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-full bg-electric-deep"
+                      />
+                      <dt className="text-sm font-semibold text-navy">{d.title}</dt>
+                      <dd className="text-sm text-navy/55">{d.desc}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
               {i === STAGES.length - 1 && (
                 <Link
                   href="/work"
@@ -382,14 +561,14 @@ function StackedSignal() {
             <img
               src={stage.image}
               alt={stage.alt}
-              width={VIEW_W}
-              height={VIEW_H}
+              width={1200}
+              height={680}
               loading={i === 0 ? "eager" : "lazy"}
               className="h-auto w-full"
             />
           </div>
         ))}
-      </Container>
+      </div>
     </div>
   );
 }
@@ -399,7 +578,9 @@ export function GrowthSignal() {
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
+    // pin only where the SVG labels render at a legible size; tablets get
+    // the stacked variant with HTML text
+    const mq = window.matchMedia("(min-width: 1280px)");
     setIsDesktop(mq.matches);
     const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
     mq.addEventListener("change", onChange);
@@ -411,7 +592,7 @@ export function GrowthSignal() {
   return (
     <section
       id="growth-signal"
-      aria-label="How a stronger business becomes measurable growth"
+      aria-labelledby="growth-signal-heading"
       className="bg-ink"
     >
       <MotionProvider>{pinned ? <PinnedSignal /> : <StackedSignal />}</MotionProvider>
