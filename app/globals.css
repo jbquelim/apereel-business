@@ -494,9 +494,10 @@ body {
     top: 8.5rem;
   }
   /* The map stays pinned until the last chapter composes with its CTA, then
-     the whole section releases and scrolls away together (minimal tail). */
-  .approach-chapters { padding-bottom: 8vh; }
-  .approach-chapter:last-child { min-height: 52vh; }
+     the whole section releases and scrolls away together. Extra room on the
+     last chapter lets it hold instead of rushing past. */
+  .approach-chapters { padding-bottom: 16vh; }
+  .approach-chapter:last-of-type { min-height: 82vh; }
 }
 @media (max-height: 720px) {
   .approach-sticky { position: static !important; }
@@ -516,8 +517,7 @@ body {
 .approach-chapter.is-active { opacity: 1; }
 @media (min-width: 1100px) {
   .approach-chapter { min-height: 60vh; display: flex; flex-direction: column; justify-content: center; padding-block: 3rem; }
-  .approach-chapter:first-child { min-height: 44vh; justify-content: flex-start; padding-top: 0; }
-  .approach-chapter:last-child { min-height: 46vh; }
+  .approach-chapter:first-of-type { min-height: 44vh; justify-content: flex-start; padding-top: 0; }
 }
 .chapter-kicker { font-family: var(--font-ibm-plex), monospace; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin: 0; }
 .chapter-num { color: var(--electric); }
