@@ -4,11 +4,15 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { ButtonLink } from "@/components/button-link";
+import { OVERLAY_SVGS } from "@/components/cinematic-overlays";
 
 const IMG_W = 2172;
 const IMG_H = 724;
-const ZOOM = 1.04;
-const SCENES = [0.115, 0.29, 0.5, 0.708, 0.915];
+const VISIBLE_FRACTION = 0.52;
+const MIN_ZOOM = 1.12;
+const SCROLL_VIEWPORTS = 4;
+const T_OVERVIEW = 0.06;
+const T_CHAPTER_END = 0.92;
 
 const SERVICE_ROUTES: Record<string, string> = {
   "Research and competitive analysis": "/services/research-competitive-analysis",
@@ -19,10 +23,9 @@ const SERVICE_ROUTES: Record<string, string> = {
 };
 
 type Chapter = {
-  id: string;
+  id: keyof typeof OVERLAY_SVGS;
   number: string;
   nav: string;
-  layer: string;
   title: string;
   summary: string;
   constraint: string;
@@ -35,7 +38,6 @@ const CHAPTERS: Chapter[] = [
     id: "inventory",
     number: "01",
     nav: "Inventory and SEO",
-    layer: "Inventory and SEO",
     title: "The SEO problem that SEO couldn't fix.",
     summary:
       "We looked beyond content and backlinks to the depth, availability, and structure of the catalog.",
@@ -49,7 +51,6 @@ const CHAPTERS: Chapter[] = [
     id: "discovery",
     number: "02",
     nav: "Customer experience",
-    layer: "Customer experience",
     title: "The products were there. The path was missing.",
     summary:
       "We rebuilt discovery around relevant filters, clearer categories and useful product details.",
@@ -61,7 +62,6 @@ const CHAPTERS: Chapter[] = [
     id: "development",
     number: "03",
     nav: "Development",
-    layer: "Development",
     title: "From waiting to shipping.",
     summary:
       "We helped the team build, test, and release improvements internally, reducing dependence on an external queue.",
@@ -75,7 +75,6 @@ const CHAPTERS: Chapter[] = [
     id: "pricing",
     number: "04",
     nav: "Pricing",
-    layer: "Pricing",
     title: "The gap was in the offer.",
     summary:
       "Competitive research exposed pricing differences that more advertising alone could not resolve.",
@@ -88,7 +87,6 @@ const CHAPTERS: Chapter[] = [
     id: "brand",
     number: "05",
     nav: "Brand and commerce",
-    layer: "Brand and commerce",
     title: "Protect the brand. Improve the experience.",
     summary:
       "We aligned imagery, typography, layout, and shopping functionality with brand requirements.",
@@ -99,86 +97,124 @@ const CHAPTERS: Chapter[] = [
   },
 ];
 
-const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
-const smooth = (t: number) => t * t * (3 - 2 * t);
+const FOCUS = [0.115, 0.29, 0.5, 0.708, 0.915];
+const clamp = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = (t: number) => t * t * (3 - 2 * t);
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export function PanoramicJourney() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  const areaRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const artWindowRef = useRef<HTMLDivElement | null>(null);
+  const visualRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const panelRefs = useRef<(HTMLElement | null)[]>([]);
+  const labelRef = useRef<HTMLSpanElement | null>(null);
+  const chapterRefs = useRef<(HTMLElement | null)[]>([]);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const counterRef = useRef<HTMLSpanElement | null>(null);
-  const nameRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
-    const section = sectionRef.current;
-    const scrollArea = scrollAreaRef.current;
+    const area = areaRef.current;
     const stage = stageRef.current;
-    const artWindow = artWindowRef.current;
+    const visual = visualRef.current;
     const img = imgRef.current;
-    if (!section || !scrollArea || !stage || !artWindow || !img) return;
+    const label = labelRef.current;
+    if (!area || !stage || !visual || !img || !label) return;
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const wide = window.matchMedia("(min-width: 1100px)");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const chapters = chapterRefs.current.filter(Boolean) as HTMLElement[];
+    const links = linkRefs.current.filter(Boolean) as HTMLAnchorElement[];
+
+    // Collect animation hooks from the injected SVGs.
+    const bits = chapters.map((c) => ({
+      reveal: Array.from(c.querySelectorAll<SVGElement>("[data-reveal]")),
+      draw: Array.from(c.querySelectorAll<SVGElement>("[data-draw]")),
+      move: Array.from(c.querySelectorAll<SVGElement>("[data-move]")),
+    }));
 
     const s = {
       enabled: false,
       ready: false,
-      frame: 0,
-      measurement: 0,
       start: 0,
-      travel: 0,
-      w: 0,
-      h: 0,
+      travel: 1,
+      w: 1,
+      h: 1,
+      frame: 0,
+      resizeFrame: 0,
       active: -1,
     };
 
-    const select = (i: number) => {
-      if (s.active === i) return;
-      s.active = i;
-      panelRefs.current.forEach((p, j) => {
-        if (!p) return;
-        p.classList.toggle("is-active", j === i);
-        if (s.enabled && j !== i) {
-          p.setAttribute("aria-hidden", "true");
-          (p as HTMLElement & { inert: boolean }).inert = true;
-        } else {
-          p.removeAttribute("aria-hidden");
-          (p as HTMLElement & { inert: boolean }).inert = false;
-        }
+    const diagram = (i: number, p: number) => {
+      const b = bits[i];
+      if (!b) return;
+      b.reveal.forEach((el) => {
+        el.style.opacity = String(
+          clamp((p - Number(el.dataset.reveal)) / 0.18),
+        );
       });
-      linkRefs.current.forEach((a, j) => {
-        if (!a) return;
-        if (j === i) a.setAttribute("aria-current", "true");
+      b.draw.forEach((el) => {
+        el.style.strokeDasharray = "1";
+        el.style.strokeDashoffset = String(1 - p);
+      });
+      b.move.forEach((el) => {
+        const [x, y] = (el.dataset.move ?? "0,0").split(",").map(Number);
+        el.setAttribute("transform", `translate(${x * (1 - p)} ${y * (1 - p)})`);
+      });
+    };
+
+    const select = (i: number, p: number) => {
+      chapters.forEach((c, j) => {
+        const on = j === i;
+        c.classList.toggle("is-active", on);
+        (c as HTMLElement & { inert: boolean }).inert = s.enabled && !on;
+        if (s.enabled && !on) c.setAttribute("aria-hidden", "true");
+        else c.removeAttribute("aria-hidden");
+        diagram(j, s.enabled ? (on ? p : 0) : 1);
+      });
+      links.forEach((a, j) => {
+        if (j === i) a.setAttribute("aria-current", "step");
         else a.removeAttribute("aria-current");
       });
-      if (counterRef.current)
-        counterRef.current.textContent = `${CHAPTERS[i].number} / 05`;
-      if (nameRef.current) nameRef.current.textContent = CHAPTERS[i].nav;
+      label.textContent = `${CHAPTERS[i].number} · ${CHAPTERS[i].nav}`;
+    };
+
+    const camera = (fx: number, z: number) => {
+      const scale = Math.max(s.w / IMG_W, s.h / IMG_H) * z;
+      const sw = IMG_W * scale;
+      const sh = IMG_H * scale;
+      const x = clamp(s.w * 0.5 - fx * sw, s.w - sw, 0);
+      const y = clamp(s.h * 0.5 - sh * 0.5, s.h - sh, 0);
+      img.style.transform = `translate3d(${x}px,${y}px,0) scale(${scale})`;
     };
 
     const paint = () => {
       s.frame = 0;
       if (!s.enabled) return;
-      const p = clamp((window.scrollY - s.start) / s.travel, 0, 1);
-      const v = p * 5;
-      const i = Math.min(4, Math.floor(v));
-      const part = v - i;
-      const a = SCENES[i];
-      const b = SCENES[Math.min(4, i + 1)];
-      const t = i < 4 ? smooth(clamp((part - 0.6) / 0.4, 0, 1)) : 0;
-      select(t > 0.5 ? Math.min(4, i + 1) : i);
-      const fx = a + (b - a) * t;
-      const fy = 0.5;
-      const scale = Math.max(s.w / IMG_W, s.h / IMG_H) * ZOOM;
-      const sw = IMG_W * scale;
-      const sh = IMG_H * scale;
-      const x = clamp(s.w / 2 - fx * sw, s.w - sw, 0);
-      const y = clamp(s.h / 2 - fy * sh, s.h - sh, 0);
-      img.style.transform = `translate3d(${x}px,${y}px,0) scale(${scale})`;
+      const p = clamp((window.scrollY - s.start) / s.travel);
+      const cover = Math.max(s.w / IMG_W, s.h / IMG_H);
+      const zoom = Math.max(MIN_ZOOM, s.w / (IMG_W * cover * VISIBLE_FRACTION));
+      let i = 0;
+      let local = 0;
+      let fx = FOCUS[0];
+      let z = zoom;
+      if (p < T_OVERVIEW) {
+        const t = ease(p / T_OVERVIEW);
+        fx = lerp(0.5, FOCUS[0], t);
+        z = lerp(1, zoom, t);
+      } else if (p > T_CHAPTER_END) {
+        i = 4;
+        local = 1;
+        const t = ease((p - T_CHAPTER_END) / 0.08);
+        fx = lerp(FOCUS[4], 0.5, t);
+        z = lerp(zoom, 1, t);
+      } else {
+        const v = ((p - T_OVERVIEW) / 0.86) * 5;
+        i = Math.min(4, Math.floor(v));
+        local = v - i;
+        const target = FOCUS[i];
+        const prior = FOCUS[Math.max(0, i - 1)];
+        fx = lerp(prior, target, ease(clamp(local / 0.18)));
+      }
+      select(i, clamp((local - 0.18) / 0.47));
+      camera(fx, z);
     };
 
     const request = () => {
@@ -188,219 +224,204 @@ export function PanoramicJourney() {
     const headerOffset = () => {
       const header = document.querySelector("header");
       const hh = header ? header.getBoundingClientRect().height : 72;
-      return hh + 16;
+      return Math.round(hh);
     };
 
     const measure = () => {
-      s.measurement = 0;
-      section.classList.remove("pjf-enhanced", "pjf-measuring");
-      scrollArea.style.height = "";
-      panelRefs.current.forEach((p) => {
-        if (!p) return;
-        p.removeAttribute("aria-hidden");
-        (p as HTMLElement & { inert: boolean }).inert = false;
-      });
+      s.resizeFrame = 0;
+      stage.classList.remove("cm-motion", "cm-measuring");
+      area.style.height = "";
       img.style.transform = "";
+      s.enabled = false;
+      chapters.forEach((c) => {
+        (c as HTMLElement & { inert: boolean }).inert = false;
+        c.removeAttribute("aria-hidden");
+      });
+      bits.forEach((_, i) => diagram(i, 1));
 
       const top = headerOffset();
-      document.documentElement.style.setProperty("--pjf-top", `${top}px`);
+      document.documentElement.style.setProperty("--cm-top", `${top}px`);
 
-      let enabled =
-        s.ready && wide.matches && !reduced.matches && window.innerHeight >= 760;
-
-      if (enabled) {
-        section.classList.add("pjf-enhanced", "pjf-measuring");
-        const max = Math.max(
-          ...panelRefs.current.map((p) =>
-            p ? p.getBoundingClientRect().height : 0,
-          ),
+      if (
+        s.ready &&
+        !reduce.matches &&
+        window.innerWidth >= 1100 &&
+        window.innerHeight >= 720
+      ) {
+        stage.classList.add("cm-motion", "cm-measuring");
+        const height = Math.max(
+          ...chapters.map((c) => c.getBoundingClientRect().height),
         );
-        document.documentElement.style.setProperty(
-          "--pjf-panel-height",
-          `${max}px`,
-        );
-        section.classList.remove("pjf-measuring");
-        if (stage.getBoundingClientRect().height > window.innerHeight - top - 8) {
-          enabled = false;
-          section.classList.remove("pjf-enhanced");
+        document.documentElement.style.setProperty("--cm-copy-height", `${height}px`);
+        stage.classList.remove("cm-measuring");
+        if (stage.getBoundingClientRect().height <= window.innerHeight - top - 8) {
+          s.enabled = true;
+          s.travel = window.innerHeight * SCROLL_VIEWPORTS;
+          area.style.height = `${stage.getBoundingClientRect().height + s.travel}px`;
+          s.start = window.scrollY + area.getBoundingClientRect().top;
+          s.w = visual.clientWidth;
+          s.h = visual.clientHeight;
+        } else {
+          stage.classList.remove("cm-motion");
         }
       }
-      s.enabled = enabled;
-
-      if (enabled) {
-        s.travel = window.innerHeight * 3;
-        scrollArea.style.height = `${stage.getBoundingClientRect().height + s.travel}px`;
-        s.start = window.scrollY + scrollArea.getBoundingClientRect().top;
-        const r = artWindow.getBoundingClientRect();
-        s.w = r.width;
-        s.h = r.height;
-        s.active = -1;
-        paint();
-      } else {
-        s.active = -1;
-        select(0);
-      }
+      if (s.enabled) paint();
+      else select(0, 1);
     };
 
-    const requestMeasure = () => {
-      if (!s.measurement) s.measurement = requestAnimationFrame(measure);
+    const scheduleMeasure = () => {
+      if (!s.resizeFrame) s.resizeFrame = requestAnimationFrame(measure);
     };
 
     const onLinkClick = (i: number) => (e: MouseEvent) => {
-      if (!s.enabled) return; // native anchor handles static mode
+      if (!s.enabled) return;
       e.preventDefault();
       window.scrollTo({
-        top: s.start + s.travel * ((i + 0.3) / 5),
-        behavior: reduced.matches ? "auto" : "smooth",
+        top: s.start + s.travel * (T_OVERVIEW + 0.86 * ((i + 0.75) / 5)),
+        behavior: reduce.matches ? "auto" : "smooth",
       });
-      history.replaceState(null, "", `#pjf-${CHAPTERS[i].id}`);
+      history.replaceState(null, "", `#cm-${CHAPTERS[i].id}`);
     };
-    const clickHandlers = linkRefs.current.map((a, i) => {
+    const clickHandlers = links.map((a, i) => {
       const h = onLinkClick(i);
-      a?.addEventListener("click", h);
+      a.addEventListener("click", h);
       return h;
     });
 
-    const loaded = () => {
-      if (!img.naturalWidth) return;
-      Promise.resolve(img.decode ? img.decode() : undefined)
-        .catch(() => {})
-        .then(() => {
-          s.ready = true;
-          requestMeasure();
-        });
+    const load = () => {
+      s.ready = img.naturalWidth > 0;
+      scheduleMeasure();
     };
-    if (img.complete) loaded();
-    else {
-      img.addEventListener("load", loaded);
-      img.addEventListener("error", requestMeasure);
-    }
+    img.addEventListener("load", load);
+    img.addEventListener("error", () => {
+      s.ready = false;
+      scheduleMeasure();
+    });
+    if (img.complete) load();
 
     window.addEventListener("scroll", request, { passive: true });
-    window.addEventListener("resize", requestMeasure);
-    window.addEventListener("pageshow", requestMeasure);
-    wide.addEventListener("change", requestMeasure);
-    reduced.addEventListener("change", requestMeasure);
-    document.fonts?.ready.then(requestMeasure);
+    window.addEventListener("resize", scheduleMeasure);
+    window.addEventListener("pageshow", scheduleMeasure);
+    reduce.addEventListener("change", scheduleMeasure);
+    document.fonts?.ready.then(scheduleMeasure);
     let ro: ResizeObserver | undefined;
     if ("ResizeObserver" in window) {
-      ro = new ResizeObserver(requestMeasure);
-      panelRefs.current.forEach((p) => p && ro!.observe(p));
+      ro = new ResizeObserver(scheduleMeasure);
+      chapters.forEach((c) => ro!.observe(c));
     }
     measure();
 
     return () => {
       window.removeEventListener("scroll", request);
-      window.removeEventListener("resize", requestMeasure);
-      window.removeEventListener("pageshow", requestMeasure);
-      wide.removeEventListener("change", requestMeasure);
-      reduced.removeEventListener("change", requestMeasure);
-      img.removeEventListener("load", loaded);
-      img.removeEventListener("error", requestMeasure);
-      linkRefs.current.forEach((a, i) => a?.removeEventListener("click", clickHandlers[i]));
+      window.removeEventListener("resize", scheduleMeasure);
+      window.removeEventListener("pageshow", scheduleMeasure);
+      reduce.removeEventListener("change", scheduleMeasure);
+      img.removeEventListener("load", load);
+      links.forEach((a, i) => a.removeEventListener("click", clickHandlers[i]));
       ro?.disconnect();
       if (s.frame) cancelAnimationFrame(s.frame);
-      if (s.measurement) cancelAnimationFrame(s.measurement);
+      if (s.resizeFrame) cancelAnimationFrame(s.resizeFrame);
     };
   }, []);
 
   return (
-    <section ref={sectionRef} id="journey" aria-labelledby="journey-heading" className="pjf-section">
+    <section id="journey" aria-labelledby="journey-heading" className="cm-section">
       <Container>
-        <header className="pjf-intro">
-          <p className="pjf-eyebrow">Complexity to clarity</p>
-          <h2 id="journey-heading" className="pjf-title">
+        <header className="cm-intro">
+          <p className="cm-eyebrow">Complexity to clarity</p>
+          <h2 id="journey-heading" className="cm-title">
             Inside a business transformation.
           </h2>
-          <p className="pjf-subtitle">
+          <p className="cm-subtitle">
             The constraints we found. The changes we made.
           </p>
         </header>
       </Container>
 
-      <div ref={scrollAreaRef} className="pjf-scroll-area">
-        <div ref={stageRef} className="pjf-stage">
-          <div ref={artWindowRef} className="pjf-art-window">
+      <div ref={areaRef} className="cm-area">
+        <div ref={stageRef} className="cm-stage">
+          <div ref={visualRef} className="cm-visual">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imgRef}
               src="/images/panorama-journey.webp"
-              alt="A continuous architectural landscape moving through a catalog wall, a discovery gateway, a build-and-ship bridge, a balance sculpture, and an ordered brand facade."
-              className="pjf-panorama"
+              alt="An illustrated business journey through a catalog, discovery gateway, development bridge, pricing scales and brand storefront."
+              className="cm-panorama"
               width={IMG_W}
               height={IMG_H}
               decoding="async"
             />
-            <div className="pjf-art-shade" aria-hidden="true" />
-            <div className="pjf-art-caption" aria-hidden="true">
-              <span ref={counterRef} className="pjf-counter">
-                01 / 05
-              </span>
-              <span ref={nameRef} className="pjf-name">
-                {CHAPTERS[0].nav}
-              </span>
-            </div>
+            <div className="cm-shade" aria-hidden="true" />
+            <span ref={labelRef} className="cm-scene-label" aria-hidden="true">
+              Scroll to explore the business
+            </span>
           </div>
 
           <Container>
-            <nav className="pjf-rail" aria-label="Case chapters">
+            <nav className="cm-nav" aria-label="Business transformation chapters">
               {CHAPTERS.map((c, i) => (
                 <a
                   key={c.id}
                   ref={(el) => {
                     linkRefs.current[i] = el;
                   }}
-                  href={`#pjf-${c.id}`}
-                  aria-current={i === 0 ? "true" : undefined}
+                  href={`#cm-${c.id}`}
+                  aria-current={i === 0 ? "step" : undefined}
                 >
-                  <span>{c.number}</span>
-                  {c.nav}
+                  <small>{c.number}</small> {c.nav}
                 </a>
               ))}
             </nav>
 
-            <div className="pjf-panels">
+            <div className="cm-chapters">
               {CHAPTERS.map((c, i) => (
                 <article
                   key={c.id}
-                  id={`pjf-${c.id}`}
+                  id={`cm-${c.id}`}
                   ref={(el) => {
-                    panelRefs.current[i] = el;
+                    chapterRefs.current[i] = el;
                   }}
-                  className={`pjf-panel${i === 0 ? " is-active" : ""}`}
+                  className={`cm-chapter${i === 0 ? " is-active" : ""}`}
                 >
-                  <div className="pjf-lead">
-                    <p className="pjf-eyebrow">
-                      {c.number} / {c.nav}
-                    </p>
-                    <h3 className="pjf-headline">{c.title}</h3>
-                  </div>
-                  <div className="pjf-summary">
-                    <p>{c.summary}</p>
-                    <a className="pjf-case-link" href="#work">
-                      Explore this case
-                      <span aria-hidden="true"> ↗</span>
-                    </a>
-                    {c.services.length > 0 && (
-                      <ul className="pjf-services">
-                        {c.services.map((sv) =>
-                          SERVICE_ROUTES[sv] ? (
-                            <li key={sv}>
-                              <Link href={SERVICE_ROUTES[sv]}>{sv}</Link>
-                            </li>
-                          ) : null,
-                        )}
-                      </ul>
-                    )}
-                  </div>
-                  <div className="pjf-detail">
-                    <div>
-                      <h4>The constraint</h4>
-                      <p>{c.constraint}</p>
+                  <div
+                    className="cm-diagram"
+                    aria-hidden="true"
+                    dangerouslySetInnerHTML={{ __html: OVERLAY_SVGS[c.id] }}
+                  />
+                  <div className="cm-copy">
+                    <div className="cm-lead">
+                      <small>
+                        {c.number} / {c.nav}
+                      </small>
+                      <h3>{c.title}</h3>
                     </div>
-                    <div>
-                      <h4>The change</h4>
-                      <p>{c.change}</p>
+                    <div className="cm-desc">
+                      <p>{c.summary}</p>
+                      <a className="cm-case-link" href="#work">
+                        Explore this case
+                        <span aria-hidden="true"> ↗</span>
+                      </a>
+                      {c.services.length > 0 && (
+                        <ul className="cm-services">
+                          {c.services.map((sv) =>
+                            SERVICE_ROUTES[sv] ? (
+                              <li key={sv}>
+                                <Link href={SERVICE_ROUTES[sv]}>{sv}</Link>
+                              </li>
+                            ) : null,
+                          )}
+                        </ul>
+                      )}
+                    </div>
+                    <div className="cm-detail">
+                      <div>
+                        <small>The constraint</small>
+                        <p>{c.constraint}</p>
+                      </div>
+                      <div>
+                        <small>The change</small>
+                        <p>{c.change}</p>
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -411,7 +432,7 @@ export function PanoramicJourney() {
       </div>
 
       <Container>
-        <div className="pjf-cta">
+        <div className="cm-cta">
           <ButtonLink href="/contact">Talk to us about your business</ButtonLink>
         </div>
       </Container>
