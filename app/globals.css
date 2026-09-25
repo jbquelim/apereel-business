@@ -618,6 +618,8 @@ body {
 .cm-diagram { width: min(560px, 92%); margin: 0 auto 1.2rem; background: #071a2c; border: 1px solid #1f4461; border-radius: 8px; }
 .cm-diagram svg { width: 100%; display: block; }
 .cm-cta { padding-top: 2rem; }
+/* When the stage is pinned, keep the CTA visible at the lower-right the whole time */
+.cm-motion .cm-cta { position: absolute; right: 6%; bottom: 22px; padding: 0; margin: 0; z-index: 3; }
 
 /* Enhanced motion: sticky camera stage; only the active chapter shows, its
    diagram floats over the artwork near the landmark. */

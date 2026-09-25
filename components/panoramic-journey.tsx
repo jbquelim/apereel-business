@@ -397,10 +397,6 @@ export function PanoramicJourney() {
                     </div>
                     <div className="cm-desc">
                       <p>{c.summary}</p>
-                      <a className="cm-case-link" href="#work">
-                        Explore this case
-                        <span aria-hidden="true"> ↗</span>
-                      </a>
                       {c.services.length > 0 && (
                         <ul className="cm-services">
                           {c.services.map((sv) =>
@@ -428,14 +424,12 @@ export function PanoramicJourney() {
               ))}
             </div>
           </Container>
+
+          <div className="cm-cta">
+            <ButtonLink href="/contact">Talk to us about your business</ButtonLink>
+          </div>
         </div>
       </div>
-
-      <Container>
-        <div className="cm-cta">
-          <ButtonLink href="/contact">Talk to us about your business</ButtonLink>
-        </div>
-      </Container>
     </section>
   );
 }
