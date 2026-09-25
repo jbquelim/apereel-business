@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { IBM_Plex_Mono, Instrument_Serif, Plus_Jakarta_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { JsonLd } from "@/components/json-ld";
 import { Contact } from "@/components/contact";
 import { SiteFooter } from "@/components/site-footer";
@@ -13,14 +13,6 @@ import "./globals.css";
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-plus-jakarta",
-  display: "swap",
-});
-
-const instrument = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-instrument",
   display: "swap",
 });
 
@@ -87,7 +79,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en-CA"
-      className={`${plusJakarta.variable} ${instrument.variable} ${ibmPlex.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${ibmPlex.variable} h-full antialiased`}
     >
       <body className="min-h-full overflow-x-clip bg-navy font-sans text-ink">
         <JsonLd />
