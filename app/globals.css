@@ -579,7 +579,7 @@ body {
 /* Intro heading now lives atop the right column (fits map + heading in view) */
 .approach-intro { margin-bottom: 0.5rem; }
 @media (min-width: 1100px) {
-  .approach-intro { min-height: 20vh; display: flex; flex-direction: column; justify-content: flex-start; }
+  .approach-intro { display: flex; flex-direction: column; justify-content: flex-start; margin-bottom: 160px; }
 }
 
 /* ── Cinematic case journey (Case Studies) — full-width camera + diagrams ── */
@@ -589,7 +589,7 @@ body {
 .cm-subtitle { color: var(--muted); font-size: clamp(1.05rem, 1.6vw, 1.4rem); margin: 0; }
 
 .cm-area { position: relative; margin-top: 2rem; }
-.cm-visual { position: relative; width: 100%; height: clamp(300px, 50svh, 620px); overflow: hidden; background: #071425; }
+.cm-visual { position: relative; width: 100%; height: clamp(280px, 44svh, 560px); overflow: hidden; background: #071425; }
 .cm-panorama { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
 .cm-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, #060f1d, transparent 45%); }
 .cm-scene-label { position: absolute; left: 6%; bottom: 22px; color: #8bceff; font-family: var(--font-ibm-plex), monospace; font-size: 0.8rem; letter-spacing: 0.05em; text-shadow: 0 2px 10px #000; }
@@ -619,7 +619,7 @@ body {
 .cm-diagram svg { width: 100%; display: block; }
 .cm-cta { padding-top: 2rem; }
 /* When the stage is pinned, keep the CTA visible at the lower-right the whole time */
-.cm-motion .cm-cta { position: absolute; right: 6%; bottom: 22px; padding: 0; margin: 0; z-index: 3; }
+.cm-motion .cm-cta { position: absolute; right: 6%; bottom: 16px; padding: 0; margin: 0; z-index: 3; }
 
 /* Enhanced motion: sticky camera stage; only the active chapter shows, its
    diagram floats over the artwork near the landmark. */

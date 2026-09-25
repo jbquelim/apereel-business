@@ -252,7 +252,12 @@ export function PanoramicJourney() {
         const height = Math.max(
           ...chapters.map((c) => c.getBoundingClientRect().height),
         );
-        document.documentElement.style.setProperty("--cm-copy-height", `${height}px`);
+        // Reserve a lane below the tallest chapter so the pinned CTA never
+        // overlaps the content.
+        document.documentElement.style.setProperty(
+          "--cm-copy-height",
+          `${height + 72}px`,
+        );
         stage.classList.remove("cm-measuring");
         if (stage.getBoundingClientRect().height <= window.innerHeight - top - 8) {
           s.enabled = true;
