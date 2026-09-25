@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { CreativeShowcase } from "@/components/creative-showcase";
 import { LivingBusinessMachine } from "@/components/living-business-machine";
-import { Services } from "@/components/services";
 
 export const metadata: Metadata = {
   title: "Services",
@@ -19,7 +18,6 @@ export default function ServicesPage() {
   return (
     <main id="main" className="pt-10">
       <LivingBusinessMachine />
-      <Services />
       <CreativeShowcase />
     </main>
   );
