@@ -581,3 +581,73 @@ body {
 @media (min-width: 1100px) {
   .approach-intro { min-height: 20vh; display: flex; flex-direction: column; justify-content: flex-start; }
 }
+
+/* ── Panoramic case journey (Case Studies page) ─────────────────── */
+.pj-section { background: #060f1d; padding: 3.5rem 0 4rem; }
+.pj-eyebrow { font-family: var(--font-ibm-plex), monospace; text-transform: uppercase; color: var(--electric); font-size: 0.68rem; letter-spacing: 0.18em; margin: 0; }
+.pj-intro { max-width: 60rem; margin-bottom: 2rem; }
+.pj-title { font-family: var(--font-instrument), Georgia, serif; font-weight: 400; letter-spacing: -0.02em; line-height: 1.05; color: var(--ink); font-size: clamp(2.4rem, 5vw, 4.25rem); margin: 0.5rem 0 0.4rem; text-wrap: balance; }
+.pj-lede { color: var(--muted); font-size: clamp(1.05rem, 1.6vw, 1.5rem); margin: 0; }
+
+.pj-story { display: grid; gap: 1.75rem; }
+@media (min-width: 1100px) {
+  .pj-story { grid-template-columns: minmax(0,64fr) minmax(0,36fr); gap: 2.5rem; align-items: start; }
+}
+
+.pj-visual { min-width: 0; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.pj-viewport { position: relative; width: 100%; aspect-ratio: 3; overflow: hidden; background: #07182a; }
+.pj-panorama { display: block; width: 100%; height: 100%; object-fit: contain; }
+.pj-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#06101d99, transparent 22%, transparent 74%, #06101dcc); }
+
+.pj-controls { position: absolute; left: 22px; right: 22px; top: 16px; display: none; align-items: flex-start; justify-content: space-between; gap: 14px; font-size: 11px; color: var(--muted); }
+.pj-step { display: flex; flex-direction: column; gap: 2px; max-width: 34%; }
+.pj-step-next { text-align: right; }
+.pj-step-off { visibility: hidden; }
+.pj-step-k { font-family: var(--font-ibm-plex), monospace; letter-spacing: 0.1em; color: color-mix(in srgb, var(--muted) 75%, transparent); }
+.pj-counter { font-family: var(--font-ibm-plex), monospace; font-variant-numeric: tabular-nums; letter-spacing: 0.12em; color: var(--ink); }
+.pj-caption { position: absolute; left: 24px; bottom: 20px; display: none; max-width: 72%; }
+.pj-current-name { display: block; font-family: var(--font-instrument), Georgia, serif; font-size: 1.9rem; color: var(--ink); line-height: 1.1; margin-top: 2px; }
+
+.pj-rail { display: flex; gap: 12px; padding: 16px 18px 20px; background: #06101d; }
+.pj-rail a { flex: 1; min-width: 0; text-decoration: none; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.pj-rail-num { font-family: var(--font-ibm-plex), monospace; display: block; font-size: 12px; }
+.pj-rail-line { height: 2px; display: block; background: #324b63; margin: 7px 0 5px; transition: background 0.25s; }
+.pj-rail-name { display: block; }
+.pj-rail a[aria-current="true"] { color: #7cc3ff; }
+.pj-rail a[aria-current="true"] .pj-rail-line { background: var(--electric); }
+
+.pj-narrative { min-width: 0; }
+@media (min-width: 1100px) { .pj-narrative { border-left: 1px solid var(--line); padding-left: 2rem; } }
+.pj-article { padding: 1.75rem 0 2.5rem; border-bottom: 1px solid var(--line); }
+.pj-headline { font-family: var(--font-instrument), Georgia, serif; font-weight: 400; letter-spacing: -0.015em; line-height: 1.1; color: var(--ink); font-size: clamp(1.7rem, 3vw, 2.7rem); margin: 0.9rem 0 0.9rem; text-wrap: balance; }
+.pj-summary { color: var(--muted); font-size: 1.05rem; line-height: 1.6; margin: 0 0 1.4rem; }
+.pj-detail { display: grid; grid-template-columns: 26px 1fr; gap: 14px; margin-top: 1.1rem; }
+.pj-icon { width: 22px; height: 22px; color: var(--electric); margin-top: 3px; }
+.pj-detail h4 { font-family: var(--font-ibm-plex), monospace; font-size: 0.66rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--electric); font-weight: 400; margin: 0 0 6px; }
+.pj-detail p { color: var(--muted); font-size: 0.95rem; margin: 0; line-height: 1.5; }
+.pj-outcome { margin: 1.5rem 0 0; color: var(--ink); font-size: 1rem; }
+.pj-outcome span { display: block; font-family: var(--font-ibm-plex), monospace; font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: color-mix(in srgb, var(--muted) 70%, transparent); margin-bottom: 6px; }
+.pj-services { list-style: none; margin: 1.25rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.pj-services a { font-size: 0.88rem; color: var(--electric); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--electric) 30%, transparent); padding-bottom: 1px; transition: color 0.2s, border-color 0.2s; }
+.pj-services a:hover { color: var(--ink); border-color: var(--ink); }
+.pj-case-link { display: inline-block; margin-top: 1.5rem; color: var(--ink); font-family: var(--font-instrument), Georgia, serif; font-size: 1.2rem; text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--ink) 30%, transparent); }
+.pj-case-link:hover { border-color: var(--electric); color: var(--electric); }
+.pj-cta { padding-top: 1.75rem; }
+
+/* Per-chapter still (fallback / mobile): the same panorama cropped to the landmark */
+.pj-still { width: 100%; aspect-ratio: 1.7; background-image: url(/images/panorama-journey.webp); background-size: cover; margin-bottom: 1.4rem; border: 1px solid var(--line); border-radius: 4px; }
+@media (min-width: 1100px) { .pj-still { display: none; } }
+
+/* Enhanced (desktop, motion, tall viewport): sticky camera window that pans */
+.pj-enhanced .pj-visual { position: sticky; top: 5.5rem; }
+.pj-enhanced .pj-viewport { aspect-ratio: 1.48; max-height: calc(100svh - 172px); }
+.pj-enhanced .pj-panorama { position: absolute; top: 0; left: 0; width: 2172px; height: 724px; max-width: none; object-fit: fill; transform-origin: 0 0; will-change: transform; }
+.pj-enhanced .pj-controls { display: flex; }
+.pj-enhanced .pj-caption { display: block; }
+.pj-enhanced .pj-still { display: none; }
+.pj-enhanced .pj-article { min-height: 76svh; display: flex; flex-direction: column; justify-content: center; }
+.pj-enhanced .pj-article:last-of-type { min-height: 82svh; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pj-panorama { transition: none; }
+}
