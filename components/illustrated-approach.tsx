@@ -202,13 +202,15 @@ export function IllustratedApproach() {
                     ))}
                   </ul>
                 )}
+                {i === CHAPTERS.length - 1 && (
+                  <div className="approach-cta">
+                    <ButtonLink href="/contact">
+                      Talk to us about your business
+                    </ButtonLink>
+                  </div>
+                )}
               </article>
             ))}
-            <div className="approach-cta">
-              <ButtonLink href="/contact">
-                Talk to us about your business
-              </ButtonLink>
-            </div>
           </div>
         </div>
       </Container>

@@ -427,12 +427,14 @@ export function PanoramicJourney() {
                   </div>
                 </article>
               ))}
+
+              <div className="cm-cta">
+                <ButtonLink href="/contact">
+                  Talk to us about your business
+                </ButtonLink>
+              </div>
             </div>
           </Container>
-
-          <div className="cm-cta">
-            <ButtonLink href="/contact">Talk to us about your business</ButtonLink>
-          </div>
         </div>
       </div>
     </section>

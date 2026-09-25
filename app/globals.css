@@ -529,7 +529,7 @@ body {
 .chapter-services { list-style: none; margin: 1.25rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
 .chapter-services a { font-size: 0.9rem; color: var(--electric); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--electric) 30%, transparent); padding-bottom: 1px; transition: color 0.2s, border-color 0.2s; }
 .chapter-services a:hover { color: var(--ink); border-color: var(--ink); }
-.approach-cta { padding-block: 1.5rem 0.5rem; }
+.approach-cta { margin-top: 2rem; }
 
 /* Map state machine — driven by [data-active]; presentation attrs are overridden by these rules */
 .approach-map [id^="route-"] { transition: stroke-dashoffset 380ms var(--ease-out); }
@@ -619,7 +619,7 @@ body {
 .cm-diagram svg { width: 100%; display: block; }
 .cm-cta { padding-top: 2rem; }
 /* When the stage is pinned, keep the CTA visible at the lower-right the whole time */
-.cm-motion .cm-cta { position: absolute; right: 6%; bottom: 16px; padding: 0; margin: 0; z-index: 3; }
+.cm-motion .cm-cta { position: absolute; right: 0; bottom: 16px; padding: 0; margin: 0; z-index: 3; }
 
 /* Enhanced motion: sticky camera stage; only the active chapter shows, its
    diagram floats over the artwork near the landmark. */
