@@ -39,12 +39,12 @@ export function Services() {
           <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
             Services
           </p>
-          <h1
+          <h2
             id="services-heading"
             className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-6xl"
           >
             Each capability solves a specific growth constraint.
-          </h1>
+          </h2>
         </div>
 
         {/* Tab bar */}

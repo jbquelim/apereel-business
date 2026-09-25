@@ -641,3 +641,103 @@ body {
   .cm-desc p, .cm-detail p { font-size: 1rem; }
 }
 @media (prefers-reduced-motion: reduce) { .cm-chapter, .cm-panorama { transition: none; } }
+
+/* ── Living Business Machine (services intro) ─────────────────────────
+   Five glass service plates on a dark stage. Base layout is normal flow
+   (works without JS / on small screens / reduced motion); the component
+   adds .enhanced when the sticky scroll stage is viable. */
+.lbm { --lbm-top: 5rem; --lbm-copy-height: 240px; background: var(--navy); }
+.lbm-scene {
+  position: relative;
+  height: clamp(300px, 47svh, 640px);
+  overflow: hidden;
+  perspective: 1400px;
+  background: radial-gradient(ellipse at 50% 76%, #103455 0%, #0a1b2c 35%, var(--navy) 72%);
+}
+.lbm-floor {
+  position: absolute; left: 3%; right: 3%; height: 38%; bottom: -14%;
+  transform: rotateX(68deg);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 31px, #29557255 32px),
+    repeating-linear-gradient(90deg, transparent 0 60px, #29557255 61px);
+  border-top: 1px solid #376183;
+}
+.lbm-plate {
+  position: absolute; left: 50%; top: 45%; height: 79%;
+  aspect-ratio: 400 / 520; transform-origin: center;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 22px 18px rgba(0, 0, 0, 0.53));
+}
+.lbm-plate svg { display: block; width: 100%; height: 100%; }
+.lbm-plate:nth-of-type(2) { transform: translate(-235%, -50%) rotateY(-12deg); }
+.lbm-plate:nth-of-type(3) { transform: translate(-143%, -50%) rotateY(-12deg); }
+.lbm-plate:nth-of-type(4) { transform: translate(-50%, -50%) rotateY(-12deg); }
+.lbm-plate:nth-of-type(5) { transform: translate(43%, -50%) rotateY(-12deg); }
+.lbm-plate:nth-of-type(6) { transform: translate(135%, -50%) rotateY(-12deg); }
+.lbm-scene-caption {
+  position: absolute; bottom: 12px; width: 100%; margin: 0;
+  text-align: center; font-family: var(--font-ibm-plex), monospace;
+  font-size: 10px; letter-spacing: 0.2em; color: #739cbd;
+}
+.lbm-nav {
+  width: 100%; max-width: 1120px; margin: auto;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px;
+  padding: 14px 1.5rem 0;
+}
+.lbm-nav a {
+  color: var(--muted); text-decoration: none;
+  border-bottom: 2px solid rgba(244, 241, 234, 0.12);
+  padding: 8px 0; text-align: center;
+  font-size: 0.85rem; letter-spacing: 0.04em;
+  transition: color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+.lbm-nav a:hover { color: var(--ink); }
+.lbm-nav a[aria-current] { color: var(--electric); border-color: var(--electric); }
+.lbm-nav-num { font-family: var(--font-ibm-plex), monospace; font-size: 0.7rem; color: var(--electric); }
+.lbm-copy-stack { padding-bottom: 26px; }
+.lbm-copy {
+  width: 100%; max-width: 1120px; margin: auto;
+  padding: 22px 1.5rem 26px;
+  display: grid; grid-template-columns: 2fr 1fr; gap: 40px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: calc(var(--lbm-top) + 16px);
+}
+.lbm-copy + .lbm-copy { margin-top: 8px; }
+.lbm-points {
+  border-left: 1px solid rgba(244, 241, 234, 0.14);
+  margin: 8px 0; padding-left: 32px; color: var(--muted); list-style: none;
+}
+.lbm-points li { padding: 9px 0; }
+.lbm-copy-link {
+  display: inline-block; margin-top: 1rem; font-size: 0.9rem; font-weight: 500;
+  color: var(--ink); text-underline-offset: 4px; transition: color 0.2s var(--ease-out);
+}
+.lbm-copy-link:hover { color: var(--electric); text-decoration: underline; }
+.lbm-copy-asset { max-width: 320px; margin: auto; grid-column: 1 / -1; }
+.lbm-copy-asset svg { width: 100%; display: block; }
+/* Fallback diagrams always show the completed state */
+.lbm-copy-asset [data-barrier] { display: none; }
+
+.lbm.enhanced .lbm-stage { position: sticky; top: var(--lbm-top); }
+.lbm.enhanced .lbm-copy-stack { position: relative; height: var(--lbm-copy-height); }
+.lbm.enhanced .lbm-copy {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 100%; top: 0; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.3s var(--ease-out);
+}
+.lbm.enhanced .lbm-copy.active { opacity: 1; visibility: visible; pointer-events: auto; }
+.lbm.enhanced .lbm-copy-asset { display: none; }
+.lbm.enhanced.measuring .lbm-copy-stack { height: auto; }
+.lbm.enhanced.measuring .lbm-copy {
+  position: relative; left: 0; transform: none;
+  opacity: 1; visibility: visible; margin: auto;
+}
+
+@media (max-width: 1099px) {
+  .lbm-scene { height: clamp(210px, 34svh, 420px); }
+  .lbm-copy { grid-template-columns: 1fr; gap: 12px; }
+  .lbm-points { border: 0; padding: 0; }
+  .lbm-nav { gap: 10px; overflow: auto; }
+  .lbm-nav a { font-size: 13px; min-width: 95px; }
+  .lbm-scene-caption { font-size: 8px; }
+}
