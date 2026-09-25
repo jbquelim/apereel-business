@@ -481,9 +481,10 @@ function PinnedProof() {
       if (c.tipValue)
         c.tipValue.textContent = `≈${(TREND_VALUES[i] / 1000).toFixed(1)}K keywords`;
       if (c.tipDate) c.tipDate.textContent = obsDate(i);
-      // clamp the tooltip inside the plot at both edges
+      // clamp the tooltip inside the plot at both edges; sit it below the
+      // chart title/subtitle (y≈64) so the leftmost position doesn't cover them
       const tx = Math.min(Math.max(markerX - TIP_W / 2, PX + 2), PX + PW - TIP_W - 2);
-      c.tip?.setAttribute("transform", `translate(${tx.toFixed(1)} 6)`);
+      c.tip?.setAttribute("transform", `translate(${tx.toFixed(1)} 64)`);
     }
 
     setActive(chapterAt(p));
