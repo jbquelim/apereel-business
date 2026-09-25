@@ -486,11 +486,12 @@ body {
 .approach-grid { display: grid; gap: 2.5rem; }
 @media (min-width: 1100px) {
   .approach-grid { grid-template-columns: 58% 42%; gap: 4rem; align-items: start; }
-  /* Pin the map, top-aligned, so it sits high and does not move at all while
-     the chapters scroll past it. */
+  /* Pin the map at its exact resting offset (main pt-10 + section pt-24) so it
+     locks in place on the very first scroll — no upward jump — and stays put
+     through every chapter. */
   .approach-sticky {
     position: sticky;
-    top: 4.5rem;
+    top: 8.5rem;
   }
   /* The map stays pinned until the last chapter composes with its CTA, then
      the whole section releases and scrolls away together (minimal tail). */
