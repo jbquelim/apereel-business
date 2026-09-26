@@ -22,7 +22,7 @@ const IW = 1586;
 const IH = 992;
 
 const CFG = {
-  travel: 3000, // px of scroll through the tour
+  holdVh: 0.8, // each stop holds for 80% of the viewport height (as on the Approach page)
   stageMinWidth: 1024,
   minStageHeight: 560,
   minAspect: 1.55, // narrower stages crop the desk's sides and crowd the opening copy
@@ -118,17 +118,35 @@ const LABELS = [
   { num: "04", text: "Distribution", at: [1196, 256], rot: 12 },
 ] as const;
 
-// Timeline (progress 0–1): overview hold → four stop holds → overview + CTA.
-const HOLDS: [number, number][] = [
-  [0.16, 0.28],
-  [0.34, 0.46],
-  [0.52, 0.64],
-  [0.7, 0.82],
-];
-const OVERVIEW_OUT = 0.08;
-const OVERVIEW_BACK = 0.9;
-const COPY_PAD = 0.03; // each stop's copy window extends this far either side of its hold
-const FINAL_IN: [number, number] = [0.88, 0.94];
+// Timeline, laid out in px of scroll then normalised to progress 0–1:
+// overview hold → move → four stop holds (joined by camera moves) → back to
+// the overview → CTA hold. Only the holds scale with the viewport.
+function buildTimeline(holdPx: number) {
+  const MOVE_IN = 240; // overview → first stop, and last stop → overview
+  const MOVE = 180; // stop → stop
+  const OPEN = 240; // opening overview hold
+  const CLOSE = 300; // closing overview hold with the CTA
+  const holdsPx: [number, number][] = [];
+  let at = OPEN + MOVE_IN;
+  for (let i = 0; i < 4; i++) {
+    holdsPx.push([at, at + holdPx]);
+    at += holdPx + (i < 3 ? MOVE : 0);
+  }
+  const backPx = at + MOVE_IN;
+  const travel = backPx + CLOSE;
+  const f = (px: number) => px / travel;
+  return {
+    travel,
+    holds: holdsPx.map(([a, b]) => [f(a), f(b)] as [number, number]),
+    overviewOut: f(OPEN),
+    overviewBack: f(backPx),
+    copyPad: f(90), // copy fades in/out over this much scroll either side of its hold (≤ half a move)
+    finalIn: [f(backPx - 60), f(backPx + 120)] as [number, number],
+    introFade: [f(120), f(270)] as [number, number],
+    labelsOut: [f(180), f(330)] as [number, number],
+    labelsIn: [f(backPx - 150), f(backPx)] as [number, number],
+  };
+}
 const DISCLOSURE = "AI-assisted creative concept demonstration.";
 
 const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -182,6 +200,7 @@ export function CoffeeWorktable() {
     let overview: Cam = { s: 1, tx: 0, ty: 0 };
     let cams: Cam[] = [];
     let keys: { p: number; cam: Cam }[] = [];
+    let tl = buildTimeline(CFG.holdVh * innerHeight);
     let frame = 0;
     let measureFrame = 0;
     let shown = -2;
@@ -223,11 +242,11 @@ export function CoffeeWorktable() {
       return keys[keys.length - 1].cam;
     }
 
-    // 20% reveal, 60% hold, 20% exit of a window.
-    function windowed(p: number, a: number, b: number) {
-      const len = b - a;
-      const i = ease(clamp((p - a) / (len * 0.2)));
-      const o = ease(clamp((p - (b - len * 0.2)) / (len * 0.2)));
+    // Copy reveals over `fade` before the hold, stays fully shown for the
+    // whole hold, and exits over `fade` after it.
+    function windowed(p: number, a: number, b: number, fade: number) {
+      const i = ease(clamp((p - a) / fade));
+      const o = ease(clamp((p - (b - fade)) / fade));
       return { i, o, op: i * (1 - o) };
     }
 
@@ -236,7 +255,10 @@ export function CoffeeWorktable() {
       setStyle(world, `transform:translate3d(${cam.tx.toFixed(2)}px,${cam.ty.toFixed(2)}px,0) scale(${cam.s.toFixed(5)})`);
 
       // Scene labels read at the overview only; they follow the plane.
-      const labelOp = Math.max(1 - clamp((p - 0.06) / 0.05), clamp((p - 0.85) / 0.05));
+      const labelOp = Math.max(
+        1 - clamp((p - tl.labelsOut[0]) / (tl.labelsOut[1] - tl.labelsOut[0])),
+        clamp((p - tl.labelsIn[0]) / (tl.labelsIn[1] - tl.labelsIn[0])),
+      );
       LABELS.forEach((l, i) => {
         const x = cam.tx + l.at[0] * cam.s;
         const y = cam.ty + l.at[1] * cam.s;
@@ -247,24 +269,24 @@ export function CoffeeWorktable() {
       });
 
       let current = -1;
-      HOLDS.forEach(([h0, h1], i) => {
-        const { i: enter, o: exit, op } = windowed(p, h0 - COPY_PAD, h1 + COPY_PAD);
-        if (p >= h0 - COPY_PAD && p < h1 + COPY_PAD) current = i;
+      tl.holds.forEach(([h0, h1], i) => {
+        const { i: enter, o: exit, op } = windowed(p, h0 - tl.copyPad, h1 + tl.copyPad, tl.copyPad);
+        if (p >= h0 - tl.copyPad && p < h1 + tl.copyPad) current = i;
         const y = (1 - enter) * CFG.enterPx - exit * CFG.exitPx;
         setStyle(chapters[i], `opacity:${op.toFixed(3)};transform:translate3d(0,${y.toFixed(1)}px,0)`);
         setStyle(scrims[i], `opacity:${op.toFixed(3)}`);
         setStyle(outlines[i], `opacity:${(op * 0.85).toFixed(3)}`);
       });
 
-      const introOp = 1 - ease(clamp((p - 0.04) / 0.05));
+      const introOp = 1 - ease(clamp((p - tl.introFade[0]) / (tl.introFade[1] - tl.introFade[0])));
       setStyle(intro, `opacity:${introOp.toFixed(3)};transform:translate3d(0,${(-(1 - introOp) * CFG.exitPx).toFixed(1)}px,0)`);
-      const fin = ease(clamp((p - FINAL_IN[0]) / (FINAL_IN[1] - FINAL_IN[0])));
+      const fin = ease(clamp((p - tl.finalIn[0]) / (tl.finalIn[1] - tl.finalIn[0])));
       setStyle(final, `opacity:${fin.toFixed(3)};transform:translate3d(0,${((1 - fin) * CFG.enterPx).toFixed(1)}px,0)`);
       final.toggleAttribute("data-live", fin > 0.5);
       // Tour controls hand the bottom edge over to the CTA.
       setStyle(controls, `opacity:${(1 - fin).toFixed(3)};visibility:${fin > 0.98 ? "hidden" : "visible"}`);
 
-      const navCurrent = p >= FINAL_IN[0] ? -1 : current;
+      const navCurrent = p >= tl.finalIn[0] ? -1 : current;
       if (navCurrent !== shown) {
         shown = navCurrent;
         navButtons.forEach((b, j) => {
@@ -274,8 +296,8 @@ export function CoffeeWorktable() {
       }
     }
 
-    const progress = () => clamp((scrollY - start) / CFG.travel);
-    const toScroll = (p: number) => start + p * CFG.travel;
+    const progress = () => clamp((scrollY - start) / tl.travel);
+    const toScroll = (p: number) => start + p * tl.travel;
     const behavior = (): ScrollBehavior => (reduce.matches ? "instant" : "smooth");
 
     function update() {
@@ -316,7 +338,8 @@ export function CoffeeWorktable() {
       }
       root.classList.add("enhanced");
       enabled = true;
-      journey.style.height = `${H + CFG.travel}px`;
+      tl = buildTimeline(CFG.holdVh * innerHeight);
+      journey.style.height = `${H + tl.travel}px`;
       start = scrollY + journey.getBoundingClientRect().top - top;
 
       // Overview: cover the stage, anchored to the top so the headline sits
@@ -330,12 +353,12 @@ export function CoffeeWorktable() {
       cams = STOPS.map((s) => frameRegion(s.region, s.screen, base));
       keys = [
         { p: 0, cam: overview },
-        { p: OVERVIEW_OUT, cam: overview },
-        ...HOLDS.flatMap(([h0, h1], i) => [
+        { p: tl.overviewOut, cam: overview },
+        ...tl.holds.flatMap(([h0, h1], i) => [
           { p: h0, cam: cams[i] },
           { p: h1, cam: cams[i] },
         ]),
-        { p: OVERVIEW_BACK, cam: overview },
+        { p: tl.overviewBack, cam: overview },
         { p: 1, cam: overview },
       ];
       render(progress());
@@ -348,7 +371,7 @@ export function CoffeeWorktable() {
     const stopHandlers = navButtons.map((b, i) => {
       const onClick = () => {
         if (!enabled) return;
-        const [h0, h1] = HOLDS[i];
+        const [h0, h1] = tl.holds[i];
         scrollTo({ top: toScroll((h0 + h1) / 2), behavior: behavior() });
       };
       b.addEventListener("click", onClick);
@@ -363,7 +386,7 @@ export function CoffeeWorktable() {
     skip.addEventListener("click", onSkip);
     // Keyboard focus reaching the CTA brings the final composition into view.
     const onFinalFocus = () => {
-      if (enabled && progress() < FINAL_IN[1]) scrollTo({ top: toScroll(1), behavior: "instant" });
+      if (enabled && progress() < tl.finalIn[1]) scrollTo({ top: toScroll(1), behavior: "instant" });
     };
     final.addEventListener("focusin", onFinalFocus);
 

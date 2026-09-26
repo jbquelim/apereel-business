@@ -525,22 +525,26 @@ body {
 .approach-chapter { padding-block: 2rem; opacity: 0.45; transition: opacity 0.4s var(--ease-out); }
 .approach-chapter.is-active { opacity: 1; }
 @media (min-width: 1100px) {
-  /* One step per screen: when a step's text sits near the top of the view,
-     the next step is still below the fold. */
   .approach-chapter { min-height: calc(100svh - 7rem); padding-block: 0; }
   /* Each step's text centres on the drawing, like the intro heading. */
   .approach-chapter-inner { min-height: min(640px, 62vh, 58cqw); display: flex; flex-direction: column; justify-content: center; }
-  /* Last step holds: its text pins beside the drawing (same top as the map,
-     padded to the pinned column's height) for --approach-hold of scroll,
-     then text and drawing release together — never higher than centred. */
-  .approach-chapter:last-of-type {
+}
+/* Every step holds: once its text is centred beside the pinned drawing it
+   pins there for --approach-hold of scroll, then slides away as the next
+   step arrives. Its pinned box runs to the bottom of the view, so the next
+   step stays below the fold for the whole hold. The last step's box matches
+   the pinned column instead, so text and drawing release together. */
+@media (min-width: 1100px) and (min-height: 721px) {
+  .approach-chapter {
     --approach-hold: 80svh;
-    min-height: calc(var(--approach-sticky-h, 0px) + var(--approach-hold));
+    --approach-box: calc(100svh - 8.5rem);
+    min-height: calc(var(--approach-box) + var(--approach-hold));
   }
-  .approach-chapter:last-of-type .approach-chapter-inner {
+  .approach-chapter:last-of-type { --approach-box: var(--approach-sticky-h, 0px); }
+  .approach-chapter-inner {
     position: sticky; top: 8.5rem;
-    min-height: var(--approach-sticky-h, 0px);
-    padding-bottom: max(0px, var(--approach-sticky-h, 0px) - min(640px, 62vh, 58cqw));
+    min-height: var(--approach-box);
+    padding-bottom: max(0px, var(--approach-box) - min(640px, 62vh, 58cqw));
   }
 }
 .chapter-kicker { font-family: var(--font-ibm-plex), monospace; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin: 0; }
