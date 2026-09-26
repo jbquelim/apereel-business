@@ -28,11 +28,11 @@ export function Perspectives() {
             <span aria-hidden="true" className="mt-8 block h-0.5 w-12 bg-electric-deep" />
           </div>
 
-          <ol className="border-t border-navy/20">
+          <ol>
             {perspectives.map((item, i) => (
               <li
                 key={item.title}
-                className="reveal-stagger grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-5 border-b border-navy/20 py-8 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-x-8 sm:py-10 lg:grid-cols-[4rem_minmax(0,1fr)] lg:py-5"
+                className="reveal-stagger grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-5 border-b border-navy/20 py-8 last:border-b-0 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-x-8 sm:py-10 lg:grid-cols-[4rem_minmax(0,1fr)] lg:py-5"
                 style={{ transitionDelay: `${i * 80}ms` }}
               >
                 <span

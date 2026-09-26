@@ -119,12 +119,12 @@ const LABELS = [
 ] as const;
 
 // Timeline, laid out in px of scroll then normalised to progress 0–1:
-// overview hold → move → four stop holds (joined by camera moves) → back to
+// headline hold → move → four stop holds (joined by camera moves) → back to
 // the overview → CTA hold. Only the holds scale with the viewport.
 function buildTimeline(holdPx: number) {
   const MOVE_IN = 240; // overview → first stop, and last stop → overview
   const MOVE = 180; // stop → stop
-  const OPEN = 240; // opening overview hold
+  const OPEN = holdPx; // opening hold on the headline, as long as a stop's hold
   const CLOSE = 300; // closing overview hold with the CTA
   const holdsPx: [number, number][] = [];
   let at = OPEN + MOVE_IN;
@@ -142,8 +142,10 @@ function buildTimeline(holdPx: number) {
     overviewBack: f(backPx),
     copyPad: f(90), // copy fades in/out over this much scroll either side of its hold (≤ half a move)
     finalIn: [f(backPx - 60), f(backPx + 120)] as [number, number],
-    introFade: [f(120), f(270)] as [number, number],
-    labelsOut: [f(180), f(330)] as [number, number],
+    // headline and scene labels leave as the camera starts moving, and are
+    // gone before stop 1's copy begins (OPEN + MOVE_IN − copyPad)
+    introFade: [f(OPEN), f(OPEN + 140)] as [number, number],
+    labelsOut: [f(OPEN + 20), f(OPEN + 150)] as [number, number],
     labelsIn: [f(backPx - 150), f(backPx)] as [number, number],
   };
 }
