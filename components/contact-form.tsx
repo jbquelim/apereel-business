@@ -163,7 +163,7 @@ export function ContactForm() {
             type="url"
             autoComplete="url"
             spellCheck={false}
-            placeholder="https://yourstore.com"
+            placeholder="https://yourcompany.com"
             className={fieldClass}
             aria-invalid={Boolean(errors.website)}
           />

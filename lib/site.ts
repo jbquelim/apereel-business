@@ -4,7 +4,7 @@ export const site = {
   headline: "Give customers more reasons",
   headlineLine2: "to choose you.",
   supporting:
-    "Digital growth consultancy that drove 20X e-commerce revenue growth in four years. We fix what's actually limiting your business: pricing, inventory, product discovery. Then amplify it with SEO, advertising, and conversion optimization.",
+    "Digital growth consultancy. We fix what's actually limiting your business, from the offer to the customer experience, then amplify it with SEO, advertising, and conversion optimization. Proven by 20X revenue growth in four years.",
   email: "john@apereel.com",
   linkedin: "https://www.linkedin.com/in/jblim",
   founder: {
@@ -218,17 +218,17 @@ export const principles = [
 
 export const perspectives = [
   {
-    title: "Your Best SEO Strategy Might Be a Warehouse Problem",
+    title: "Your best SEO strategy might be a warehouse problem",
     answer: "If product categories with weak inventory never rank, no matter how much content you produce, then the SEO problem is an operations problem. Get the products online first.",
     category: "E-commerce",
   },
   {
-    title: "More Traffic Is Not the Answer.",
+    title: "More traffic is not the answer.",
     answer: "Traffic is easy to buy. The harder part is giving people a reason to stay, trust you, and choose your business.\n\nWithout that, more traffic only means more wasted spend.",
     category: "Strategy",
   },
   {
-    title: "The SEO Opportunity Your Agency Will Never Recommend",
+    title: "The SEO opportunity your agency will never recommend",
     answer: "Fixing the business itself: pricing, assortment, merchandising, customer experience. No agency recommends this because they can't bill for it.",
     category: "Operations",
   },

@@ -7,12 +7,12 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Insights",
   description:
-    "Founder essays on business-first digital growth: why rankings follow business strength, and what actually moved 20X e-commerce revenue growth.",
+    "Founder essays on business-first digital growth: why rankings follow business strength, and what actually moved 20X revenue growth.",
   alternates: { canonical: "/insights" },
   openGraph: {
     title: "Insights | Apereel",
     description:
-      "Founder essays on business-first digital growth, written from four years of 20X e-commerce revenue growth.",
+      "Founder essays on business-first digital growth, written from four years of 20X revenue growth.",
   },
 };
 

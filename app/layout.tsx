@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { JsonLd } from "@/components/json-ld";
 import { Contact } from "@/components/contact";
 import { SiteFooter } from "@/components/site-footer";
@@ -16,10 +16,10 @@ const plusJakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-const ibmPlex = IBM_Plex_Mono({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
-  variable: "--font-ibm-plex",
+  variable: "--font-geist-mono",
   display: "swap",
 });
 
@@ -79,7 +79,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en-CA"
-      className={`${plusJakarta.variable} ${ibmPlex.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full overflow-x-clip bg-navy font-sans text-ink">
         <JsonLd />

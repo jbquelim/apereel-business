@@ -1,83 +1,63 @@
-"use client";
-
-import { useState } from "react";
 import { Container } from "@/components/container";
 import { perspectives } from "@/lib/site";
 
+// "Before we start" — editorial two-column list: an introduction on the
+// left, numbered questions with their answers always visible on the right.
 export function Perspectives() {
-  const [open, setOpen] = useState<number | null>(null);
-
   return (
     <section
       id="perspectives"
       aria-labelledby="perspectives-heading"
-      className="reveal-section bg-ink py-24 sm:py-32"
+      className="reveal-section bg-ink py-24 sm:py-32 lg:py-10"
     >
       <Container>
-        <div className="max-w-2xl">
-          <p className="font-mono text-[11px] tracking-[0.24em] text-navy/60 uppercase">
-            Before We Start
-          </p>
-          <h2
-            id="perspectives-heading"
-            className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-5xl"
-          >
-            The questions your current agency isn&apos;t asking.
-          </h2>
-          <p className="mt-5 text-base leading-relaxed text-navy/60">
-            These should come up before any marketing plan.
-          </p>
-        </div>
-        <ul className="mt-12 divide-y divide-navy/10 border-y border-navy/10">
-          {perspectives.map((item, i) => {
-            const isOpen = open === i;
-            return (
-              <li key={item.title}>
-                <button
-                  onClick={() => setOpen(isOpen ? null : i)}
-                  className="group flex w-full items-start gap-4 py-6 text-left sm:py-8"
-                  aria-expanded={isOpen}
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] lg:gap-20 lg:items-center">
+          <div>
+            <p className="font-mono text-[11px] tracking-[0.24em] text-electric-deep uppercase">
+              Before we start
+            </p>
+            <h2
+              id="perspectives-heading"
+              className="font-display mt-5 text-4xl leading-[1.02] font-medium tracking-[-0.035em] text-navy text-balance sm:text-5xl lg:text-[3rem]"
+            >
+              The questions your current agency isn&rsquo;t asking.
+            </h2>
+            <p className="mt-6 max-w-xs text-lg leading-snug text-navy/80">
+              These should come up before any marketing plan.
+            </p>
+            <span aria-hidden="true" className="mt-8 block h-0.5 w-12 bg-electric-deep" />
+          </div>
+
+          <ol className="border-t border-navy/20">
+            {perspectives.map((item, i) => (
+              <li
+                key={item.title}
+                className="reveal-stagger grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-5 border-b border-navy/20 py-8 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-x-8 sm:py-10 lg:grid-cols-[4rem_minmax(0,1fr)] lg:py-5"
+                style={{ transitionDelay: `${i * 80}ms` }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="font-display text-4xl leading-none font-light tracking-[-0.04em] text-electric-deep tabular-nums sm:text-6xl lg:text-5xl"
                 >
-                  <span
-                    className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-navy/40 transition-colors group-hover:bg-navy"
-                    aria-hidden="true"
-                  />
-                  <div className="flex flex-1 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
-                    <p className="font-display text-lg text-navy transition-colors group-hover:text-navy/70 sm:text-xl">
-                      {item.title}
-                    </p>
-                    <span className="shrink-0 font-mono text-[10px] tracking-[0.18em] text-navy/60 uppercase sm:mt-1.5">
-                      {item.category}
-                    </span>
-                  </div>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    className={`mt-1.5 h-5 w-5 shrink-0 text-navy/40 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
-                    aria-hidden="true"
-                  >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-                <div
-                  className="grid transition-[grid-template-rows] duration-300"
-                  style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
-                >
-                  <div className="overflow-hidden">
-                    <div className="pb-6 pl-5.5 sm:pb-8">
-                      {item.answer.split("\n\n").map((p, j) => (
-                        <p key={j} className="mt-2 text-base leading-relaxed text-navy/60">{p}</p>
-                      ))}
-                    </div>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <p className="font-mono text-[10px] font-medium tracking-[0.24em] text-navy/70 uppercase">
+                    {item.category}
+                  </p>
+                  <h3 className="font-display mt-2.5 text-2xl leading-[1.15] font-medium tracking-[-0.02em] text-navy text-balance sm:text-[2rem] lg:mt-2 lg:text-[1.4rem]">
+                    {item.title}
+                  </h3>
+                  <div className="mt-4 max-w-[46ch] space-y-3 text-[1.05rem] leading-relaxed text-navy/75 sm:text-lg lg:mt-2 lg:max-w-[62ch] lg:space-y-1.5 lg:text-[0.95rem] lg:leading-normal">
+                    {item.answer.split("\n\n").map((p, j) => (
+                      <p key={j}>{p}</p>
+                    ))}
                   </div>
                 </div>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ol>
+        </div>
       </Container>
     </section>
   );

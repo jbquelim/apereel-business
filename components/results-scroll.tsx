@@ -14,8 +14,9 @@ import {
  * Results section (apereel-results-scroll package). Endpoint comparison on a
  * shared 0×–20× scale: traffic ~4× (rounded from the measured 270% increase,
  * preserved in the source note), revenue 20×. When the section comes into
- * view each headline value counts up from 1× with its bar, once, without
- * needing a scroll; reduced motion shows the final values. No time series or
+ * view each headline value counts up from 1× with its bar, once, as soon as
+ * the user lands. On desktop the section also pins briefly (a scroll hold).
+ * Reduced motion shows the final values. No time series or
  * causal claims. Case study resolves to /work; report URL and exact period
  * were not supplied and are not invented.
  */
@@ -24,7 +25,7 @@ const COPY = {
   heading: "More visibility. A bigger business.",
   description:
     "Over four years, organic traffic nearly quadrupled and revenue reached 20 times its starting level.",
-  context: "One ecommerce retailer · Four year comparison",
+  context: "One client · Four year comparison",
   traffic: { value: "~4×", prefix: "~", end: 4, label: "Organic traffic", support: "Approximately 300% growth" },
   revenue: { value: "20×", prefix: "", end: 20, label: "Revenue", support: "Times the starting level" },
   comparisonNote: "Each metric is relative to its own starting level.",
@@ -238,8 +239,7 @@ function Pillars({ visible }: { visible: boolean }) {
  */
 const PLAY_SECONDS = 0.8;
 
-function AnimatedResults() {
-  const rootRef = useRef<HTMLDivElement>(null);
+function useBars() {
   const barRefs = useRef<BarRefs>({
     traffic: null,
     revenue: null,
@@ -248,19 +248,9 @@ function AnimatedResults() {
     trafficValue: null,
     revenueValue: null,
   });
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [done, setDone] = useState(false);
-  // Start when the user has landed, not while the section slides in: its top
-  // has reached the top 15% of the viewport, or the whole results card is on
-  // screen (tall viewports, where the top may never get that high).
-  const topReached = useInView(rootRef, { margin: "0px 0px -85% 0px", once: true });
-  const cardInFull = useInView(panelRef, { amount: "all", once: true });
-  const inView = topReached || cardInFull;
-  const reduce = useReducedMotion();
   const setRef: RefSetter = (key) => (el) => {
     barRefs.current[key] = el;
   };
-
   const paint = (t: number) => {
     const b = barRefs.current;
     if (b.traffic) b.traffic.style.width = `${(BASELINE + (TRAFFIC_END - BASELINE) * t) * 100}%`;
@@ -273,19 +263,20 @@ function AnimatedResults() {
     if (b.trafficLabel) b.trafficLabel.style.opacity = labels;
     if (b.revenueLabel) b.revenueLabel.style.opacity = labels;
   };
+  return { setRef, paint };
+}
 
-  useEffect(() => {
-    if (!inView) return;
-    // reduced motion: land on the final state without the count
-    const run = animate(0, 1, {
-      duration: reduce ? 0 : PLAY_SECONDS,
-      ease: [0.45, 0, 0.25, 1],
-      onUpdate: paint,
-      onComplete: () => setDone(true),
-    });
-    return () => run.stop();
-  }, [inView, reduce]);
-
+function Layout({
+  setRef,
+  done,
+  rootRef,
+  panelRef,
+}: {
+  setRef: RefSetter;
+  done: boolean;
+  rootRef?: React.Ref<HTMLDivElement>;
+  panelRef?: React.Ref<HTMLDivElement>;
+}) {
   return (
     <div ref={rootRef} className="mx-auto w-full max-w-[1160px] px-6 py-16 sm:px-8 sm:py-24">
       <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
@@ -301,7 +292,62 @@ function AnimatedResults() {
   );
 }
 
+/*
+ * Scroll hold (desktop): the section pins under the header for a short stretch
+ * of scroll. The count still plays on its own the moment the section lands;
+ * the pin just keeps the finished result on screen a little longer before the
+ * page moves on.
+ */
+function PinnedResults() {
+  return (
+    <div className="relative h-[165svh]">
+      <div className="sticky top-0 flex h-svh flex-col justify-center pt-20">
+        <AnimatedResults />
+      </div>
+    </div>
+  );
+}
+
+function AnimatedResults() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { setRef, paint } = useBars();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [done, setDone] = useState(false);
+  // Start when the user has landed, not while the section slides in: its top
+  // has reached the top 15% of the viewport, or the whole results card is on
+  // screen (tall viewports, where the top may never get that high).
+  const topReached = useInView(rootRef, { margin: "0px 0px -85% 0px", once: true });
+  const cardInFull = useInView(panelRef, { amount: "all", once: true });
+  const inView = topReached || cardInFull;
+  const reduce = useReducedMotion();
+
+  useEffect(() => {
+    if (!inView) return;
+    // reduced motion: land on the final state without the count
+    const run = animate(0, 1, {
+      duration: reduce ? 0 : PLAY_SECONDS,
+      ease: [0.45, 0, 0.25, 1],
+      onUpdate: paint,
+      onComplete: () => setDone(true),
+    });
+    return () => run.stop();
+  }, [inView, reduce]);
+
+  return <Layout setRef={setRef} done={done} rootRef={rootRef} panelRef={panelRef} />;
+}
+
 export function ResultsScroll() {
+  const reduce = useReducedMotion();
+  const [pinnable, setPinnable] = useState(false);
+
+  useEffect(() => {
+    // pin only when the whole composition fits below the header
+    const evaluate = () => setPinnable(window.innerWidth >= 1024 && window.innerHeight >= 700);
+    evaluate();
+    window.addEventListener("resize", evaluate);
+    return () => window.removeEventListener("resize", evaluate);
+  }, []);
+
   return (
     <section
       id="results"
@@ -309,7 +355,7 @@ export function ResultsScroll() {
       className="bg-ink"
     >
       <MotionProvider>
-        <AnimatedResults />
+        {pinnable && !reduce ? <PinnedResults /> : <AnimatedResults />}
       </MotionProvider>
     </section>
   );

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
@@ -16,8 +15,9 @@ import {
  * Ranking explorer (apereel-ranking-scroll package). Six snapshot records
  * transcribed from the site's existing ranking cards — Semrush attributed,
  * anonymized, no history implied. One data-driven component: the stage SVGs
- * were used as state references only. Links resolve to real destinations:
- * /work and the site's existing anonymized report screenshot.
+ * were used as state references only. The source link resolves to the
+ * site's existing anonymized report screenshot; the case-study CTA lives
+ * once, in the results section that follows.
  */
 
 // difficulty ratings match the site's existing ranking cards (Semrush KD)
@@ -38,9 +38,7 @@ const COPY = {
   volumeLabel: "Est. monthly searches",
   panelNote: "Selected organic ranking",
   sourceNote: "Data via Semrush. Selected rankings. Search terms anonymized.",
-  cta: "Explore the case study",
   reportCta: "View source report",
-  caseStudyUrl: "/work",
   sourceReportUrl: "/images/ranking-positions.png",
 } as const;
 
@@ -334,13 +332,6 @@ function EvidenceTable({
 function Links() {
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <Link
-        href={COPY.caseStudyUrl}
-        className="press-scale inline-flex items-center gap-2 rounded-full bg-electric px-5 py-2.5 text-sm font-semibold text-navy transition-colors hover:bg-electric-deep hover:text-ink"
-      >
-        {COPY.cta}
-        <span aria-hidden="true">→</span>
-      </Link>
       <a
         href={COPY.sourceReportUrl}
         target="_blank"

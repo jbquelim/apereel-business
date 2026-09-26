@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   MotionProvider,
@@ -340,10 +340,10 @@ function StageCopy({ stage, active }: { stage: (typeof STAGES)[number]; active: 
       <p className="font-mono text-[11px] tracking-[0.24em] text-electric-deep uppercase">
         {String(active + 1).padStart(2, "0")} {stage.label}
       </p>
-      <h3 className="font-display mt-4 text-3xl font-normal tracking-[-0.02em] text-navy text-balance sm:text-4xl">
+      <h3 className="font-display mt-3 text-2xl font-normal tracking-[-0.02em] text-navy text-balance lg:text-3xl xl:mt-4 xl:text-4xl">
         {stage.heading}
       </h3>
-      <p className="mt-4 text-base leading-relaxed text-navy/60 sm:text-lg">
+      <p className="mt-3 max-w-xl text-base leading-relaxed text-navy/60 xl:mt-4 xl:text-lg">
         {stage.body}
       </p>
       {active === STAGES.length - 1 && (
@@ -407,8 +407,9 @@ function StageProgress({
   );
 }
 
-function PinnedSignal() {
+function PinnedSignal({ onUnfit }: { onUnfit: () => void }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const sceneRef = useRef<SceneRefs>({
     dots: [],
@@ -467,6 +468,25 @@ function PinnedSignal() {
     setActive(p < (T1S + T1E) / 2 ? 0 : p < (T2S + T2E) / 2 ? 1 : 2);
   });
 
+  // Fall back to the stacked layout if the pinned stage can't fit below the
+  // header (narrow-and-short windows); checked on mount and on resize.
+  useEffect(() => {
+    const check = () => {
+      const el = contentRef.current;
+      const header = document.querySelector<HTMLElement>("body > header, header.fixed");
+      const top = header ? header.getBoundingClientRect().height : 0;
+      if (el && el.offsetHeight > window.innerHeight - top - 8) onUnfit();
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    if (contentRef.current) ro.observe(contentRef.current);
+    window.addEventListener("resize", check);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", check);
+    };
+  }, [onUnfit]);
+
   const scrollToStage = (i: number) => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -478,20 +498,21 @@ function PinnedSignal() {
   return (
     <div ref={wrapperRef} className="relative h-[380svh]">
       <div className="sticky top-0 flex h-svh flex-col justify-center pt-[4.25rem] pb-4">
-        <div className="mx-auto w-[90%] max-w-[1480px]">
-          <div className="mb-8 text-center">
+        {/* below xl the scene takes a larger share so its SVG labels stay legible */}
+        <div ref={contentRef} className="mx-auto w-[94%] max-w-[1480px] xl:w-[90%]">
+          <div className="mb-5 text-center xl:mb-8">
             <h2
               id="growth-signal-heading"
-              className="font-display text-3xl font-normal tracking-[-0.02em] text-navy text-balance xl:text-4xl"
+              className="font-display text-2xl font-normal tracking-[-0.02em] text-navy text-balance lg:text-3xl xl:text-4xl"
             >
               What good digital growth looks like.
             </h2>
-            <p className="mt-3 text-lg text-navy/60">
+            <p className="mt-2 text-base text-navy/60 lg:mt-3 lg:text-lg">
               Three things to look for before investing more in marketing.
             </p>
           </div>
           <StageProgress active={active} onSelect={scrollToStage} />
-          <div className="mt-6 grid items-center gap-10 lg:mt-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,12fr)] lg:gap-12">
+          <div className="mt-5 grid items-center gap-5 lg:mt-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,13fr)] lg:gap-8 xl:grid-cols-[minmax(0,7fr)_minmax(0,12fr)] xl:gap-12">
             <StageCopy stage={STAGES[active]} active={active} />
             <div className="min-w-0">
               <SignalScene sceneRef={sceneRef} />
@@ -576,18 +597,30 @@ function StackedSignal() {
 export function GrowthSignal() {
   const reduce = useReducedMotion();
   const [isDesktop, setIsDesktop] = useState(false);
-
+  // the pinned stage reports when it can't fit; reset on any resize so a
+  // larger window gets the pinned version back
+  const [fits, setFits] = useState(true);
+  const onUnfit = useCallback(() => setFits(false), []);
   useEffect(() => {
-    // pin only where the SVG labels render at a legible size; tablets get
-    // the stacked variant with HTML text
-    const mq = window.matchMedia("(min-width: 1280px)");
-    setIsDesktop(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
+    const reset = () => setFits(true);
+    window.addEventListener("resize", reset);
+    return () => window.removeEventListener("resize", reset);
   }, []);
 
-  const pinned = isDesktop && !reduce;
+  useEffect(() => {
+    // pin on any desktop/tablet-width window tall enough for the stage;
+    // phones and short screens get the stacked variant with HTML text
+    const mq = window.matchMedia("(min-width: 700px) and (min-height: 600px)");
+    const id = requestAnimationFrame(() => setIsDesktop(mq.matches));
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => {
+      cancelAnimationFrame(id);
+      mq.removeEventListener("change", onChange);
+    };
+  }, []);
+
+  const pinned = isDesktop && fits && !reduce;
 
   return (
     <section
@@ -595,7 +628,7 @@ export function GrowthSignal() {
       aria-labelledby="growth-signal-heading"
       className="bg-ink"
     >
-      <MotionProvider>{pinned ? <PinnedSignal /> : <StackedSignal />}</MotionProvider>
+      <MotionProvider>{pinned ? <PinnedSignal onUnfit={onUnfit} /> : <StackedSignal />}</MotionProvider>
     </section>
   );
 }

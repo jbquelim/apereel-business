@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
@@ -44,7 +43,7 @@ const CHAPTERS = [
     id: "foundations",
     title: "Business foundations",
     description:
-      "We strengthened product selection, accelerated inventory launches, and made shopping easier.",
+      "The starting point in early 2022, with four years of search growth ahead.",
   },
   {
     id: "visibility",
@@ -159,7 +158,7 @@ function TrendChart({
         return (
           <g key={v}>
             <line x1={PX} y1={y} x2={PX + PW} y2={y} stroke="#f4f1ea" strokeOpacity={v === 0 ? 0.25 : 0.08} strokeWidth="1" />
-            <text x={PX - 10} y={y + 4} textAnchor="end" fontSize={12} fill="#9aa4b8" fontFamily="var(--font-ibm-plex), monospace">
+            <text x={PX - 10} y={y + 4} textAnchor="end" fontSize={12} fill="#9aa4b8" fontFamily="var(--font-geist-mono), monospace">
               {v === 0 ? "0" : `${v / 1000}K`}
             </text>
           </g>
@@ -174,7 +173,7 @@ function TrendChart({
           textAnchor={m === 0 ? "start" : m === TREND_MONTHS ? "end" : "middle"}
           fontSize={12.5}
           fill="#9aa4b8"
-          fontFamily="var(--font-ibm-plex), monospace"
+          fontFamily="var(--font-geist-mono), monospace"
         >
           {TREND_START.year + m / 12}
         </text>
@@ -379,13 +378,6 @@ function ChapterButton({
 function Cta() {
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <Link
-        href="/work"
-        className="press-scale inline-flex items-center gap-2 rounded-full bg-electric px-5 py-2.5 text-sm font-semibold text-navy transition-colors hover:bg-electric-deep hover:text-ink"
-      >
-        Explore the case study
-        <span aria-hidden="true">→</span>
-      </Link>
       <a
         href={REPORT_SRC}
         target="_blank"
@@ -413,13 +405,9 @@ function Intro() {
             Proof, not promises.
           </h2>
           <p className="mt-4 text-lg text-muted sm:text-xl">
-            Four years of growth for one ecommerce business.
+            Four years of growth for one client.
           </p>
         </div>
-        <p className="max-w-xl text-base leading-relaxed text-muted sm:text-lg">
-          We strengthened product selection, accelerated inventory launches,
-          and improved the shopping experience.
-        </p>
       </div>
     </div>
   );
@@ -522,13 +510,9 @@ function PinnedProof() {
                 Proof, not promises.
               </h2>
               <p className="mt-1.5 text-base text-muted">
-                Four years of growth for one ecommerce business.
+                Four years of growth for one client.
               </p>
             </div>
-            <p className="max-w-md text-sm leading-relaxed text-muted lg:justify-self-end lg:text-right">
-              We strengthened product selection, accelerated inventory
-              launches, and improved the shopping experience.
-            </p>
           </div>
 
           <div className="grid shrink-0 grid-cols-3 gap-3">
