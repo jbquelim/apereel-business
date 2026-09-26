@@ -1,21 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
 
 // Cinematic replacement for the vector HeroGraph: one seamlessly looping
 // cycle — bars rise left-to-right, the arrow draws to the top right, the
 // scene holds, then gracefully resets to the empty stage and rebuilds.
 // Static image under prefers-reduced-motion.
 export function HeroGraphVideo() {
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">

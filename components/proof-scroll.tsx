@@ -81,7 +81,6 @@ const CHAPTER_TARGETS = [0, 0.49, 0.89];
 const chapterAt = (p: number) => (p < 0.25 ? 0 : p < 0.73 ? 1 : 2);
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /* ── Chart geometry (chart-frame.svg production scaffold) ─────────── */
 const CW = 1280;

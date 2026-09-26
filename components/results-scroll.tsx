@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   MotionProvider,
@@ -251,7 +251,8 @@ function useBars() {
   const setRef: RefSetter = (key) => (el) => {
     barRefs.current[key] = el;
   };
-  const paint = (t: number) => {
+  // stable: it only reads refs, so effects can depend on it without restarting
+  const paint = useCallback((t: number) => {
     const b = barRefs.current;
     if (b.traffic) b.traffic.style.width = `${(BASELINE + (TRAFFIC_END - BASELINE) * t) * 100}%`;
     if (b.revenue) b.revenue.style.width = `${(BASELINE + (REVENUE_END - BASELINE) * t) * 100}%`;
@@ -262,7 +263,7 @@ function useBars() {
     const labels = t >= 1 ? "1" : "0";
     if (b.trafficLabel) b.trafficLabel.style.opacity = labels;
     if (b.revenueLabel) b.revenueLabel.style.opacity = labels;
-  };
+  }, []);
   return { setRef, paint };
 }
 
@@ -331,7 +332,7 @@ function AnimatedResults() {
       onComplete: () => setDone(true),
     });
     return () => run.stop();
-  }, [inView, reduce]);
+  }, [inView, reduce, paint]);
 
   return <Layout setRef={setRef} done={done} rootRef={rootRef} panelRef={panelRef} />;
 }
