@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { CreativeShowcase } from "@/components/creative-showcase";
+import { CoffeeWorktable } from "@/components/coffee-worktable";
+import { CreativeFilm } from "@/components/creative-film";
 import { LivingBusinessMachine } from "@/components/living-business-machine";
 
 export const metadata: Metadata = {
@@ -18,7 +19,8 @@ export default function ServicesPage() {
   return (
     <main id="main" className="pt-10">
       <LivingBusinessMachine />
-      <CreativeShowcase />
+      <CreativeFilm />
+      <CoffeeWorktable />
     </main>
   );
 }

@@ -23,6 +23,8 @@ export {
   useScroll,
   useTransform,
   useMotionValueEvent,
+  useInView,
+  animate,
 } from "motion/react";
 
 export function MotionProvider({ children }: { children: React.ReactNode }) {

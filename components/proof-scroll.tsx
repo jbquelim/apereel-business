@@ -71,12 +71,14 @@ const TRAFFIC_FINAL = 58600;
 const NONBRAND_FINAL = 87;
 
 /*
- * Timeline (motion-spec.json):
- *   [0.00–0.20] chapter 0 hold   [0.20–0.30] crossfade
- *   [0.30–0.68] chapter 1 — inspection line sweeps the time axis
- *   [0.68–0.78] crossfade        [0.78–1.00] chapter 2 hold + CTA
+ * Timeline: the section opens on the Jan 2022 starting point (dim bars,
+ * starting figures) and grows with the scroll.
+ *   [0.00–0.68] inspection line sweeps the time axis (chapters 0 → 1)
+ *   [0.68–0.78] crossfade to the final snapshot
+ *   [0.78–1.00] chapter 2 hold + CTA
  */
-const CHAPTER_TARGETS = [0.1, 0.49, 0.89];
+const SWEEP_END = 0.68;
+const CHAPTER_TARGETS = [0, 0.49, 0.89];
 const chapterAt = (p: number) => (p < 0.25 ? 0 : p < 0.73 ? 1 : 2);
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -105,14 +107,11 @@ function obsDate(i: number): string {
 /** Per-bar brightness at progress p; the sweep brightens bars it has passed. */
 function barOpacity(i: number, p: number, markerX: number): number {
   const swept = 0.4 + 0.6 * clamp01((markerX - barCX(i) + 30) / 60);
-  const pre = p < 0.2 ? 1 : p < 0.3 ? 1 - (p - 0.2) / 0.1 : 0;
-  const post = p > 0.78 ? 1 : p > 0.68 ? (p - 0.68) / 0.1 : 0;
-  const mid = 1 - pre - post;
-  return pre * 0.8 + post * 1 + mid * swept;
+  const post = clamp01((p - SWEEP_END) / 0.1);
+  return post + (1 - post) * swept;
 }
 
-const markerOpacity = (p: number) =>
-  Math.min(clamp01((p - 0.28) / 0.02), 1 - clamp01((p - 0.68) / 0.02));
+const markerOpacity = (p: number) => 1 - clamp01((p - SWEEP_END) / 0.02);
 
 type ChartRefs = {
   bars: (SVGRectElement | null)[];
@@ -445,16 +444,16 @@ function PinnedProof() {
     offset: ["start start", "end end"],
   });
 
-  useMotionValueEvent(scrollYProgress, "change", (p) => {
+  const paint = (p: number) => {
     const c = chartRef.current;
-    const f = clamp01((p - 0.3) / 0.38);
+    const f = clamp01(p / SWEEP_END);
     const markerX = PX + f * PW;
 
     // metric cells count with the sweep: keywords from the real series,
     // traffic and share scaled to the same level (≈, disclosed); at rest
     // all three show the true final snapshots
     const [kwEl, trEl, nbEl] = metricRefs.current;
-    const inSweep = p > 0.3 && p < 0.68;
+    const inSweep = p < SWEEP_END;
     if (inSweep) {
       const kv = TREND_VALUES[Math.round(f * (N - 1))];
       const frac = Math.min(1, kv / KEYWORDS_FINAL);
@@ -487,8 +486,17 @@ function PinnedProof() {
       c.tip?.setAttribute("transform", `translate(${tx.toFixed(1)} 64)`);
     }
 
+  };
+
+  useMotionValueEvent(scrollYProgress, "change", (p) => {
+    paint(p);
     setActive(chapterAt(p));
   });
+  // paint the starting state before the first scroll event arrives
+  useEffect(() => {
+    paint(scrollYProgress.get());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scrollToChapter = (i: number) => {
     const el = wrapperRef.current;

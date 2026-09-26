@@ -5,16 +5,17 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   MotionProvider,
-  useMotionValueEvent,
+  animate,
+  useInView,
   useReducedMotion,
-  useScroll,
 } from "@/components/motion";
 
 /*
  * Results section (apereel-results-scroll package). Endpoint comparison on a
  * shared 0×–20× scale: traffic ~4× (rounded from the measured 270% increase,
- * preserved in the source note), revenue 20×. Headline values never animate;
- * scroll only reveals the bars and supporting statements. No time series or
+ * preserved in the source note), revenue 20×. When the section comes into
+ * view each headline value counts up from 1× with its bar, once, without
+ * needing a scroll; reduced motion shows the final values. No time series or
  * causal claims. Case study resolves to /work; report URL and exact period
  * were not supplied and are not invented.
  */
@@ -24,8 +25,8 @@ const COPY = {
   description:
     "Over four years, organic traffic nearly quadrupled and revenue reached 20 times its starting level.",
   context: "One ecommerce retailer · Four year comparison",
-  traffic: { value: "~4×", label: "Organic traffic", support: "Approximately 300% growth" },
-  revenue: { value: "20×", label: "Revenue", support: "Times the starting level" },
+  traffic: { value: "~4×", prefix: "~", end: 4, label: "Organic traffic", support: "Approximately 300% growth" },
+  revenue: { value: "20×", prefix: "", end: 20, label: "Revenue", support: "Times the starting level" },
   comparisonNote: "Each metric is relative to its own starting level.",
   sourceNote: "Traffic rounded from a measured 270% increase.",
   pillars: [
@@ -44,17 +45,19 @@ const REVENUE_END = 1;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
-/* Timeline per motion-spec.json. */
-const trafficFraction = (p: number) => BASELINE + 0.15 * clamp01((p - 0.12) / 0.28);
-const revenueFraction = (p: number) => BASELINE + 0.95 * clamp01((p - 0.5) / 0.28);
-const TRAFFIC_DONE = 0.4;
-const REVENUE_DONE = 0.78;
+type Metric = { value: string; prefix: string; end: number; label: string; support: string };
+/** Headline value while its bar grows (t 0→1). Floored, so every metric
+ *  reaches its real value only at t = 1 — both counts land together. */
+const countText = (m: Metric, t: number) =>
+  `${m.prefix}${Math.floor(1 + (m.end - 1) * clamp01(t) + 1e-9)}×`;
 
 type BarRefs = {
   traffic: HTMLDivElement | null;
   revenue: HTMLDivElement | null;
   trafficLabel: HTMLSpanElement | null;
   revenueLabel: HTMLSpanElement | null;
+  trafficValue: HTMLSpanElement | null;
+  revenueValue: HTMLSpanElement | null;
 };
 
 function Bar({
@@ -62,19 +65,27 @@ function Bar({
   endFraction,
   fillRef,
   labelRef,
+  valueRef,
   complete,
 }: {
-  metric: { value: string; label: string; support: string };
+  metric: Metric;
   endFraction: number;
   fillRef?: (el: HTMLDivElement | null) => void;
   labelRef?: (el: HTMLSpanElement | null) => void;
+  valueRef?: (el: HTMLSpanElement | null) => void;
   complete: boolean;
 }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-4">
         <div>
-          <p className="font-mono text-4xl text-navy sm:text-5xl">{metric.value}</p>
+          <p className="font-mono text-4xl text-navy tabular-nums sm:text-5xl">
+            {/* counting copy is decorative; assistive tech gets the real value */}
+            <span ref={valueRef} aria-hidden="true">
+              {complete ? metric.value : countText(metric, 0)}
+            </span>
+            <span className="sr-only">{metric.value}</span>
+          </p>
           <p className="mt-1 text-[15px] font-medium text-navy">{metric.label}</p>
           <p className="text-[13px] text-navy/55">{metric.support}</p>
         </div>
@@ -119,11 +130,13 @@ function Bar({
   );
 }
 
+type RefSetter = <K extends keyof BarRefs>(key: K) => (el: BarRefs[K]) => void;
+
 function Panel({
-  barRefs,
+  setRef,
   complete,
 }: {
-  barRefs?: React.MutableRefObject<BarRefs>;
+  setRef?: RefSetter;
   complete: boolean;
 }) {
   return (
@@ -135,15 +148,17 @@ function Panel({
         <Bar
           metric={COPY.traffic}
           endFraction={TRAFFIC_END}
-          fillRef={barRefs ? (el) => (barRefs.current.traffic = el) : undefined}
-          labelRef={barRefs ? (el) => (barRefs.current.trafficLabel = el) : undefined}
+          fillRef={setRef?.("traffic")}
+          labelRef={setRef?.("trafficLabel")}
+          valueRef={setRef?.("trafficValue")}
           complete={complete}
         />
         <Bar
           metric={COPY.revenue}
           endFraction={REVENUE_END}
-          fillRef={barRefs ? (el) => (barRefs.current.revenue = el) : undefined}
-          labelRef={barRefs ? (el) => (barRefs.current.revenueLabel = el) : undefined}
+          fillRef={setRef?.("revenue")}
+          labelRef={setRef?.("revenueLabel")}
+          valueRef={setRef?.("revenueValue")}
           complete={complete}
         />
       </div>
@@ -215,86 +230,87 @@ function Pillars({ visible }: { visible: boolean }) {
   );
 }
 
-function PinnedResults() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
+/*
+ * Plays once, on its own, as soon as the user lands on the section — no scrolling
+ * needed. One eased clock drives both metrics together: traffic ~1×→~4× and
+ * revenue 1×→20× grow and count in parallel and finish on the same frame;
+ * then the endpoint labels, pillars and CTA emphasis land.
+ */
+const PLAY_SECONDS = 0.8;
+
+function AnimatedResults() {
+  const rootRef = useRef<HTMLDivElement>(null);
   const barRefs = useRef<BarRefs>({
     traffic: null,
     revenue: null,
     trafficLabel: null,
     revenueLabel: null,
+    trafficValue: null,
+    revenueValue: null,
   });
-  const [finalHold, setFinalHold] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [done, setDone] = useState(false);
+  // Start when the user has landed, not while the section slides in: its top
+  // has reached the top 15% of the viewport, or the whole results card is on
+  // screen (tall viewports, where the top may never get that high).
+  const topReached = useInView(rootRef, { margin: "0px 0px -85% 0px", once: true });
+  const cardInFull = useInView(panelRef, { amount: "all", once: true });
+  const inView = topReached || cardInFull;
+  const reduce = useReducedMotion();
+  const setRef: RefSetter = (key) => (el) => {
+    barRefs.current[key] = el;
+  };
 
-  const { scrollYProgress } = useScroll({
-    target: wrapperRef,
-    offset: ["start start", "end end"],
-  });
-
-  useMotionValueEvent(scrollYProgress, "change", (p) => {
+  const paint = (t: number) => {
     const b = barRefs.current;
-    if (b.traffic) b.traffic.style.width = `${trafficFraction(p) * 100}%`;
-    if (b.revenue) b.revenue.style.width = `${revenueFraction(p) * 100}%`;
-    // endpoint labels appear only once their reveal completes
-    if (b.trafficLabel) b.trafficLabel.style.opacity = p >= TRAFFIC_DONE ? "1" : "0";
-    if (b.revenueLabel) b.revenueLabel.style.opacity = p >= REVENUE_DONE ? "1" : "0";
-    setFinalHold(p >= REVENUE_DONE);
-  });
+    if (b.traffic) b.traffic.style.width = `${(BASELINE + (TRAFFIC_END - BASELINE) * t) * 100}%`;
+    if (b.revenue) b.revenue.style.width = `${(BASELINE + (REVENUE_END - BASELINE) * t) * 100}%`;
+    // headline values count with their bars
+    if (b.trafficValue) b.trafficValue.textContent = countText(COPY.traffic, t);
+    if (b.revenueValue) b.revenueValue.textContent = countText(COPY.revenue, t);
+    // endpoint labels appear together once both bars are complete
+    const labels = t >= 1 ? "1" : "0";
+    if (b.trafficLabel) b.trafficLabel.style.opacity = labels;
+    if (b.revenueLabel) b.revenueLabel.style.opacity = labels;
+  };
+
+  useEffect(() => {
+    if (!inView) return;
+    // reduced motion: land on the final state without the count
+    const run = animate(0, 1, {
+      duration: reduce ? 0 : PLAY_SECONDS,
+      ease: [0.45, 0, 0.25, 1],
+      onUpdate: paint,
+      onComplete: () => setDone(true),
+    });
+    return () => run.stop();
+  }, [inView, reduce]);
 
   return (
-    <div ref={wrapperRef} className="relative h-[200svh]">
-      <div className="sticky top-0 flex h-svh flex-col pt-[5.25rem] pb-5">
-        <div className="mx-auto flex w-full max-w-[1160px] min-h-0 flex-1 flex-col justify-center px-6 sm:px-8">
-          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-            <LeftColumn emphasized={finalHold} />
-            <Panel barRefs={barRefs} complete={false} />
-          </div>
-          <div className="mt-8">
-            <Pillars visible={finalHold} />
-          </div>
+    <div ref={rootRef} className="mx-auto w-full max-w-[1160px] px-6 py-16 sm:px-8 sm:py-24">
+      <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <LeftColumn emphasized={done} />
+        <div ref={panelRef}>
+          <Panel setRef={setRef} complete={done} />
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Static mode: mobile, short screens, reduced motion, no-JS — complete state. */
-function StaticResults() {
-  return (
-    <div className="mx-auto w-full max-w-[1160px] px-6 py-16 sm:px-8 sm:py-20">
-      <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-        <LeftColumn emphasized={false} />
-        <Panel complete />
-      </div>
       <div className="mt-8">
-        <Pillars visible />
+        <Pillars visible={done} />
       </div>
     </div>
   );
 }
 
 export function ResultsScroll() {
-  const reduce = useReducedMotion();
-  const [pinnable, setPinnable] = useState(false);
-
-  useEffect(() => {
-    const evaluate = () => {
-      // pin only when the full composition fits below the header
-      setPinnable(window.innerWidth >= 1100 && window.innerHeight >= 700);
-    };
-    evaluate();
-    window.addEventListener("resize", evaluate);
-    return () => window.removeEventListener("resize", evaluate);
-  }, []);
-
-  const pinned = pinnable && !reduce;
-
   return (
     <section
       id="results"
       aria-labelledby="results-scroll-heading"
       className="bg-ink"
     >
-      <MotionProvider>{pinned ? <PinnedResults /> : <StaticResults />}</MotionProvider>
+      <MotionProvider>
+        <AnimatedResults />
+      </MotionProvider>
     </section>
   );
 }

@@ -78,24 +78,26 @@ const CHAPTERS: Chapter[] = [
 ];
 
 export function IllustratedApproach() {
-  const [active, setActive] = useState(0);
+  // -1 = nothing lit yet: the page opens on the heading alone, and a step
+  // only lights once it has scrolled into place beside the map
+  const [active, setActive] = useState(-1);
   const chapterRefs = useRef<(HTMLElement | null)[]>([]);
-  const activeRef = useRef(0);
+  const activeRef = useRef(-1);
+  const sectionRef = useRef<HTMLElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
 
   const recompute = useCallback(() => {
-    const line = window.innerHeight * 0.45;
-    let best = 0;
-    let bestDist = Infinity;
+    // Pinned layout: a step lights as it settles into the box beside the map
+    // (its text centred on the drawing). Unpinned: upper quarter of the view.
+    const sticky = stickyRef.current;
+    const pinned = !!sticky && getComputedStyle(sticky).position === "sticky";
+    const line = pinned
+      ? sticky.getBoundingClientRect().top + 48
+      : window.innerHeight * 0.25;
+    let best = -1;
     for (let i = 0; i < chapterRefs.current.length; i++) {
       const el = chapterRefs.current[i];
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      const center = r.top + r.height / 2;
-      const d = Math.abs(center - line);
-      if (d < bestDist) {
-        bestDist = d;
-        best = i;
-      }
+      if (el && el.getBoundingClientRect().top <= line) best = i;
     }
     if (best !== activeRef.current) {
       activeRef.current = best;
@@ -113,6 +115,17 @@ export function IllustratedApproach() {
         scheduled = false;
       });
     };
+    // The last step's box matches the pinned column, so the section releases
+    // exactly when step 05 sits centred on the drawing.
+    const sticky = stickyRef.current;
+    const ro = new ResizeObserver(() => {
+      if (sticky)
+        sectionRef.current?.style.setProperty(
+          "--approach-sticky-h",
+          `${sticky.offsetHeight}px`,
+        );
+    });
+    if (sticky) ro.observe(sticky);
     recompute();
     // Re-measure once fonts/layout settle.
     const t = window.setTimeout(recompute, 250);
@@ -122,11 +135,13 @@ export function IllustratedApproach() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.clearTimeout(t);
+      ro.disconnect();
     };
   }, [recompute]);
 
   return (
     <section
+      ref={sectionRef}
       id="approach"
       aria-labelledby="approach-heading"
       className="reveal-section approach-illustrated py-16 sm:py-24"
@@ -134,7 +149,7 @@ export function IllustratedApproach() {
       <Container>
         <div className="approach-grid">
           {/* Left: sticky map + step nav */}
-          <div className="approach-sticky">
+          <div ref={stickyRef} className="approach-sticky">
             <div
               className="approach-map"
               data-active={active}
@@ -162,15 +177,17 @@ export function IllustratedApproach() {
           {/* Right: intro + scrolling chapters */}
           <div className="approach-chapters">
             <div className="approach-intro">
-              <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
-                Our Approach
-              </p>
-              <h1
-                id="approach-heading"
-                className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-5xl"
-              >
-                Fix the business first. Then amplify it with digital.
-              </h1>
+              <div className="approach-intro-inner">
+                <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
+                  Our Approach
+                </p>
+                <h1
+                  id="approach-heading"
+                  className="font-display mt-4 text-4xl font-normal tracking-[-0.02em] text-ink text-balance sm:text-5xl"
+                >
+                  Fix the business first. Then amplify it with digital.
+                </h1>
+              </div>
             </div>
             {CHAPTERS.map((c, i) => (
               <article
@@ -181,34 +198,38 @@ export function IllustratedApproach() {
                 }}
                 className={`approach-chapter${i === active ? " is-active" : ""}`}
               >
-                <p className="chapter-kicker">
-                  <span className="chapter-num">{c.num}</span> / {c.label}
-                </p>
-                <h2 className="chapter-headline">{c.headline}</h2>
-                <p className="chapter-body">{c.body}</p>
-                <div className="chapter-deliverable">
-                  <span className="chapter-deliverable-kicker">What you get</span>
-                  <p>{c.deliverable}</p>
-                </div>
-                {c.services.length > 0 && (
-                  <ul className="chapter-services">
-                    {c.services.map((s) => (
-                      <li key={s.href}>
-                        <Link href={s.href}>
-                          {s.label}
-                          <span aria-hidden="true"> ↗</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {i === CHAPTERS.length - 1 && (
-                  <div className="approach-cta">
-                    <ButtonLink href="/contact">
-                      Talk to us about your business
-                    </ButtonLink>
+                <div className="approach-chapter-inner">
+                  <p className="chapter-kicker">
+                    <span className="chapter-num">{c.num}</span> / {c.label}
+                  </p>
+                  <h2 className="chapter-headline">{c.headline}</h2>
+                  <p className="chapter-body">{c.body}</p>
+                  <div className="chapter-deliverable">
+                    <span className="chapter-deliverable-kicker">
+                      What you get
+                    </span>
+                    <p>{c.deliverable}</p>
                   </div>
-                )}
+                  {c.services.length > 0 && (
+                    <ul className="chapter-services">
+                      {c.services.map((s) => (
+                        <li key={s.href}>
+                          <Link href={s.href}>
+                            {s.label}
+                            <span aria-hidden="true"> ↗</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {i === CHAPTERS.length - 1 && (
+                    <div className="approach-cta">
+                      <ButtonLink href="/contact">
+                        Talk to us about your business
+                      </ButtonLink>
+                    </div>
+                  )}
+                </div>
               </article>
             ))}
           </div>

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   MotionProvider,
+  animate,
+  useInView,
   useMotionValueEvent,
   useReducedMotion,
   useScroll,
@@ -47,33 +49,38 @@ const TARGETS = ROWS.map((_, i) => (i + 0.5) / ROWS.length);
 const indexAt = (p: number) =>
   Math.min(ROWS.length - 1, Math.floor(p * ROWS.length));
 
-function RankLadder({ activePosition }: { activePosition: number }) {
+// One bar per example (01–05, matching the table and the 0X / 05 counter).
+// The active example's bar fills left to right while its rank counts down
+// from #99, so every scroll step visibly advances even when two examples
+// share the same real rank.
+const RANK_FROM = 99;
+
+function RankLadder({ active, fill }: { active: number; fill: number }) {
   return (
-    <div aria-hidden="true" className="flex flex-col gap-[7px]">
-      {Array.from({ length: 10 }, (_, i) => {
-        const n = i + 1;
-        const on = n === activePosition;
+    <div aria-hidden="true" className="flex h-full flex-col justify-between py-1">
+      {ROWS.map((row, i) => {
+        const on = i === active;
+        const f = on ? fill : 0;
         return (
-          <div key={n} className="flex items-center gap-3">
+          <div key={row.id} className="flex items-center gap-3">
             <span
               className={cn(
                 "w-5 font-mono text-[11px] tabular-nums transition-colors duration-200",
-                on ? "text-ink" : "text-muted/50",
+                on && f > 0.02 ? "text-ink" : "text-muted/50",
               )}
             >
-              {String(n).padStart(2, "0")}
+              {String(i + 1).padStart(2, "0")}
             </span>
             {/* equal widths on purpose: length does not encode performance */}
-            <div
-              className={cn(
-                "relative h-[11px] w-full rounded-full transition-colors duration-200",
-                on ? "bg-electric" : "bg-white/8",
-              )}
-            >
+            <div className="relative h-[11px] w-full overflow-hidden rounded-full bg-white/8">
+              <span
+                className="absolute inset-0 origin-left rounded-full bg-electric"
+                style={{ transform: `scaleX(${f.toFixed(4)})` }}
+              />
               <span
                 className={cn(
-                  "absolute top-1/2 left-[3px] h-[5px] w-[5px] -translate-y-1/2 rounded-full transition-colors duration-200",
-                  on ? "bg-white" : "bg-white/25",
+                  "absolute top-1/2 left-[3px] h-[5px] w-[5px] -translate-y-1/2 rounded-full",
+                  f > 0.02 ? "bg-white" : "bg-white/25",
                 )}
               />
             </div>
@@ -87,13 +94,83 @@ function RankLadder({ activePosition }: { activePosition: number }) {
 function Panel({
   active,
   progressRef,
+  landed = true,
 }: {
   active: number;
   progressRef?: React.MutableRefObject<HTMLDivElement | null>;
+  /** Pinned mode: hold the first count until the section has actually pinned. */
+  landed?: boolean;
 }) {
   const row = ROWS[active];
+  const reduce = useReducedMotion();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef, { amount: 0.5 });
+  // Start at the final values (server render / no JS); arm the start state on
+  // mount only if the panel is still below the fold, so nothing visibly resets.
+  // rank and fill are tagged with the row they belong to, so a newly selected
+  // row starts at #99 / empty on its first frame instead of flashing old values
+  const [rankState, setRankState] = useState({ id: row.id as string, v: row.position as number });
+  const [volume, setVolume] = useState<number>(row.monthlySearches);
+  const [fillState, setFillState] = useState({ id: row.id as string, v: 1 });
+  const volumeRef = useRef<number>(row.monthlySearches);
+  const armed = useRef(false);
+
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el || reduce) return;
+    if (el.getBoundingClientRect().top > window.innerHeight) {
+      armed.current = true;
+      setFillState({ id: row.id, v: 0 });
+      setRankState({ id: row.id, v: RANK_FROM });
+      setVolume(0);
+      volumeRef.current = 0;
+    }
+    // mount-time arming only; later row changes are handled by the tween effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduce]);
+
+  useEffect(() => {
+    if (reduce || !inView || !landed) return;
+    if (!armed.current && rankState.id === row.id && rankState.v === row.position) return;
+    armed.current = false;
+    const rankAnim = animate(RANK_FROM, row.position, {
+      duration: 1.15,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => setRankState({ id: row.id, v }),
+    });
+    // progress fill: steady left-to-right sweep, finishing with the count
+    const fillAnim = animate(0, 1, {
+      duration: 1.15,
+      ease: [0.45, 0, 0.2, 1],
+      onUpdate: (v) => setFillState({ id: row.id, v }),
+    });
+    const volumeAnim = animate(volumeRef.current, row.monthlySearches, {
+      duration: 0.9,
+      ease: [0.22, 1, 0.36, 1],
+      onUpdate: (v) => {
+        volumeRef.current = v;
+        setVolume(v);
+      },
+    });
+    return () => {
+      rankAnim.stop();
+      fillAnim.stop();
+      volumeAnim.stop();
+    };
+    // re-run per keyword (and on first view/landing); rank/volume are animation output
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, inView, reduce, landed]);
+
+  // reduced motion: always the real values, no tween
+  const shownRank = reduce ? row.position : rankState.id === row.id ? rankState.v : RANK_FROM;
+  const shownVolume = reduce ? row.monthlySearches : volume;
+  const shownFill = reduce ? 1 : fillState.id === row.id ? fillState.v : 0;
+
   return (
-    <div className="flex h-full flex-col rounded-[var(--radius-parent)] border border-white/10 bg-navy-mid/60 p-6">
+    <div
+      ref={rootRef}
+      className="flex h-full flex-col rounded-[var(--radius-parent)] border border-white/10 bg-navy-mid/60 p-6"
+    >
       <p className="text-[15px] font-semibold text-ink">{COPY.panelTitle}</p>
       <div className="mt-0.5 min-h-[1.25rem]">
         <p
@@ -105,20 +182,20 @@ function Panel({
       </div>
 
       <div className="mt-5 grid flex-1 grid-cols-[1fr_auto] gap-6">
-        <RankLadder activePosition={row.position} />
+        <RankLadder active={active} fill={shownFill} />
         <div className="flex w-[150px] flex-col border-l border-white/10 pl-6">
-          {/* keyed by position: an unchanged rank never remounts or flashes */}
-          <p
-            key={`pos-${row.position}`}
-            className="tab-content font-mono text-5xl text-electric"
-          >
+          {/* counts down from #99; the visible value is decorative motion, the
+              real figure is always in the table and the sr-only text */}
+          <p className="font-mono text-5xl text-electric tabular-nums">
             <span className="text-3xl">#</span>
-            {row.position}
+            <span aria-hidden="true">{Math.round(shownRank)}</span>
+            <span className="sr-only">{row.position}</span>
           </p>
           <div className="mt-4 min-h-[3.5rem]">
-            <p key={`vol-${row.id}`} className="tab-content">
-              <span className="block font-mono text-2xl text-ink">
-                {row.monthlySearches.toLocaleString("en-US")}
+            <p>
+              <span className="block font-mono text-2xl text-ink tabular-nums">
+                <span aria-hidden="true">{Math.round(shownVolume).toLocaleString("en-US")}</span>
+                <span className="sr-only">{row.monthlySearches.toLocaleString("en-US")}</span>
               </span>
               <span className="mt-1 block font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
                 {COPY.volumeLabel}
@@ -299,6 +376,9 @@ function PinnedExplorer() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const progressFillRef = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState(0);
+  // becomes true once the user lands on the stage: the first row's count
+  // plays then, not while the section is still sliding in
+  const [landed, setLanded] = useState(false);
   // programmatic-scroll hold: keep the requested row selected during the
   // smooth jump so intermediate rows never flash; released on arrival or
   // when the user interrupts
@@ -309,10 +389,21 @@ function PinnedExplorer() {
     offset: ["start start", "end end"],
   });
 
+  // landing: the section top has come within 15% of the viewport top (the
+  // stage is essentially in place; stopping a few px short still counts)
+  const { scrollYProgress: arrival } = useScroll({
+    target: wrapperRef,
+    offset: ["start 15%", "start start"],
+  });
+  useMotionValueEvent(arrival, "change", (q) => {
+    if (q > 0 && !landed) setLanded(true);
+  });
+
   useMotionValueEvent(scrollYProgress, "change", (p) => {
     if (progressFillRef.current) {
       progressFillRef.current.style.transform = `scaleX(${p.toFixed(4)})`;
     }
+
     const hold = holdRef.current;
     if (hold) {
       if (Math.abs(p - hold.target) < 0.02) holdRef.current = null;
@@ -345,7 +436,9 @@ function PinnedExplorer() {
   };
 
   return (
-    <div ref={wrapperRef} className="relative mb-14 h-[300svh]">
+    // 100svh stage + 80svh of scroll per row: every ranking holds for most
+    // of a screen before the next one takes over (the last holds until release)
+    <div ref={wrapperRef} className="relative mb-14 h-[500svh]">
       <div className="sticky top-0 flex h-svh flex-col pt-[5.25rem] pb-4">
         <div className="mx-auto flex w-full max-w-[1160px] min-h-0 flex-1 flex-col justify-center px-6 sm:px-8">
           <div className="mb-6 grid gap-3 lg:grid-cols-[auto_1fr] lg:items-end lg:gap-12">
@@ -372,7 +465,7 @@ function PinnedExplorer() {
               </div>
             </div>
             <div className="flex flex-col">
-              <Panel active={active} progressRef={progressFillRef} />
+              <Panel active={active} progressRef={progressFillRef} landed={landed} />
               <p className="mt-3 text-right text-[11px] text-muted/50">{COPY.sourceNote}</p>
             </div>
           </div>

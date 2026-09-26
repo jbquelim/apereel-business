@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { Logo } from "@/components/logo";
 import { site } from "@/lib/site";
@@ -10,6 +11,9 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const menuId = useId();
+  const pathname = usePathname();
+  // a section stays lit on its subpages too (e.g. a case study under /work)
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -50,15 +54,30 @@ export function SiteHeader() {
             className="hidden items-center gap-4 px-4 lg:flex xl:gap-7"
             aria-label="Primary"
           >
-            {site.nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-[11px] font-medium tracking-[0.12em] whitespace-nowrap text-muted uppercase transition-colors hover:text-ink xl:text-[12px] xl:tracking-[0.16em]"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {site.nav.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative py-2 text-[11px] font-medium tracking-[0.12em] whitespace-nowrap uppercase transition-colors xl:text-[12px] xl:tracking-[0.16em]",
+                    active ? "text-ink" : "text-muted hover:text-ink",
+                  )}
+                >
+                  {item.label}
+                  {/* active marker: a short electric underline */}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "absolute inset-x-0 -bottom-0.5 mx-auto h-px bg-electric transition-[width,opacity] duration-300",
+                      active ? "w-full opacity-100" : "w-0 opacity-0",
+                    )}
+                  />
+                </Link>
+              );
+            })}
           </nav>
 
           <Link
@@ -115,7 +134,11 @@ export function SiteHeader() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="font-display text-4xl text-ink sm:text-5xl"
+                aria-current={isActive(item.href) ? "page" : undefined}
+                className={cn(
+                  "font-display text-4xl sm:text-5xl",
+                  isActive(item.href) ? "text-electric" : "text-ink",
+                )}
               >
                 {item.label}
               </Link>
