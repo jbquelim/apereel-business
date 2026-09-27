@@ -17,7 +17,7 @@ function authorized(request: Request) {
 }
 
 function baseUrl(request: Request) {
-  return (process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin).replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
 }
 
 export async function POST(request: Request) {

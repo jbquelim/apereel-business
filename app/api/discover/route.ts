@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { triggerStage } from "@/lib/growth-trigger";
 
 // Snowball discovery: drain the crawl queue by running the audit pipeline in
 // ingest mode (classification + inventory + competitor discovery only) on
@@ -47,6 +48,19 @@ export async function GET(request: Request) {
     !host || host.endsWith(".vercel.app")
       ? "https://www.apereel.com"
       : `https://${host}`;
+
+  // Safety net for paid Growth Plans: restart any order whose report
+  // generation never began (e.g. the webhook's trigger failed).
+  const stuck = (await sql`
+    SELECT id FROM growth_orders
+    WHERE status = 'paid' AND paid_at < now() - interval '10 minutes'
+    LIMIT 5
+  `) as { id: string }[];
+  for (const o of stuck) {
+    await triggerStage(base, o.id, "collect").catch((err) =>
+      console.error("Growth Plan restart failed:", o.id, err instanceof Error ? err.message : err),
+    );
+  }
 
   const startedAt = Date.now();
   const processed: { domain: string; ok: boolean; detail?: string }[] = [];

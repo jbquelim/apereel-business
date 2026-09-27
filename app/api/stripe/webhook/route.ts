@@ -5,7 +5,7 @@ import { markFailed, markPaid } from "@/lib/orders";
 import { triggerStage } from "@/lib/growth-trigger";
 
 function siteBase(request: Request) {
-  return (process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin).replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
 }
 
 // Stripe webhook: the ONLY place a Growth Plan order becomes paid. Every event
