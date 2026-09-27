@@ -1989,7 +1989,8 @@ Respond with ONLY a JSON array:
         priceLow: bench.priceLowCents != null ? formatCents(bench.priceLowCents) : null,
         priceHigh: bench.priceHighCents != null ? formatCents(bench.priceHighCents) : null,
         clientDepth,
-        clientPrice: clientPriceCents != null ? formatCents(clientPriceCents) : null,
+        // an average of category averages — round like every other derived price
+        clientPrice: clientPriceCents != null ? roundAvgPrice(formatCents(clientPriceCents)) : null,
       };
       console.log("Market position:", bench.segment, bench.storesTracked, "stores");
     }
