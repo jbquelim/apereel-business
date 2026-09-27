@@ -1,3 +1,5 @@
+import { isBlockedPage } from "./site-fetch";
+
 // Marketing technology detection from a site's homepage HTML and headers.
 // Our own focused fingerprint list (not the Wappalyzer ruleset): only tools
 // that change marketing advice — platform, email/SMS, reviews, ad pixels,
@@ -148,7 +150,7 @@ export async function fetchSiteStack(name: string, domain: string): Promise<Site
         return null;
       }
       const html = (await res.text()).slice(0, 1_500_000);
-      if (html.length < 500) return null;
+      if (html.length < 500 || isBlockedPage(html)) return null;
       return { name, domain, technologies: detectTechnologies(html, res.headers) };
     } catch {
       return null;

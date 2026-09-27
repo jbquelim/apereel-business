@@ -1,4 +1,5 @@
 import { checkPage, pageSpeed, samplePages, type PageCheck, type PageSpeedResult } from "./page-checks";
+import { fetchCompetitorSet } from "./marketdb";
 
 // The paid Growth Plan report. Two stages so each fits one function run:
 //   collect — the full free audit (internal call) plus paid-only evidence:
@@ -82,13 +83,20 @@ export async function collectEvidence(url: string, domain: string, base: string)
       pages.map(async (p) => ({ ...checkPage(p.type, p.url, p.html), speed: await pageSpeed(p.url) })),
     ),
   );
+  const speedOf = (list: { name: string; domain: string }[]) =>
+    Promise.all(list.slice(0, 3).map(async (c) => ({ name: c.name, domain: c.domain, speed: await pageSpeed(`https://${c.domain}/`) })));
+  // The buyer ran the free audit first, so its competitor set is usually
+  // saved: start their speed tests now instead of after the full audit.
+  const saved = await fetchCompetitorSet(domain);
+  const earlySpeed = saved ? speedOf(saved) : null;
+
   const audit = await runAudit(url, base);
-  const competitors = (audit.industry?.competitors ?? []).slice(0, 3);
+  const auditCompetitors = audit.industry?.competitors ?? [];
+  const sameSet =
+    saved && saved.slice(0, 3).map((c) => c.domain).join() === auditCompetitors.slice(0, 3).map((c) => c.domain).join();
   const [pages, competitorSpeed] = await Promise.all([
     pagesPromise,
-    Promise.all(
-      competitors.map(async (c) => ({ name: c.name, domain: c.domain, speed: await pageSpeed(`https://${c.domain}/`) })),
-    ),
+    earlySpeed && sameSet ? earlySpeed : speedOf(auditCompetitors),
   ]);
   return {
     version: REPORT_VERSION,
@@ -135,6 +143,12 @@ function evidenceBlock(r: GrowthReport): string {
   }
   const failed = (a.experience?.findings ?? []).filter((f) => f.status !== "pass");
   if (failed.length) lines.push(`BUYER EXPERIENCE CHECKS FAILING: ${failed.map((f) => `${f.label}${f.detail ? ` (${f.detail})` : ""}`).join("; ")}`);
+  const read = new Set(r.pages.map((p) => p.type));
+  for (const t of ["Homepage", "Category page", "Product page"] as const) {
+    if (!read.has(t)) {
+      lines.push(`PAGE ${t}: NOT READ — our crawler could not load it (often the host's bot protection). Make no claims about this page's title, headings, tags or structured data; list it under notMeasured.`);
+    }
+  }
   for (const p of r.pages) {
     const speed = p.speed ? `mobile performance ${p.speed.performance ?? "n/a"}, LCP ${p.speed.lcp ?? "n/a"}, CLS ${p.speed.cls ?? "n/a"}` : "speed not measured";
     lines.push(`PAGE ${p.type} ${p.url}: ${speed}; issues: ${p.issues.length ? p.issues.map((i) => `[${i.severity}] ${i.text}`).join(" ") : "none found"}`);

@@ -105,3 +105,23 @@ function safePath(u: string): string {
     return "";
   }
 }
+
+/**
+ * True when HTML is a bot challenge or block page rather than the site —
+ * e.g. SiteGround's sgcaptcha redirect, Cloudflare's "Just a moment",
+ * Incapsula, Wordfence, or a near-empty shell. Hosts often serve these to
+ * data-centre IPs (Vercel, crawlers) while real visitors see the site, so
+ * anything read from such a page must never be reported as the client's.
+ */
+export function isBlockedPage(html: string): boolean {
+  const head = html.slice(0, 20_000);
+  if (/\.well-known\/sgcaptcha|sgcaptcha/i.test(head)) return true;
+  if (/cf-chl-|challenge-platform|cf_chl_opt|<title>\s*Just a moment/i.test(head)) return true;
+  if (/_Incapsula_Resource|Incapsula incident|<title>\s*Attention Required/i.test(head)) return true;
+  if (/wordfence|<title>\s*(Access denied|403 Forbidden|Forbidden|Blocked)/i.test(head)) return true;
+  if (/Checking your browser before accessing|Please enable JavaScript and cookies to continue/i.test(head)) return true;
+  // A real page has some text; a meta-refresh shell or empty body doesn't.
+  const text = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ");
+  const words = (text.match(/[A-Za-zÀ-ÿ]{2,}/g) ?? []).length;
+  return html.length < 2_000 && words < 40;
+}

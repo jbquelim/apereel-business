@@ -1,4 +1,4 @@
-import { fetchSitemapCatalog, fetchTextDirect } from "./site-fetch";
+import { fetchSitemapCatalog, fetchTextDirect, isBlockedPage } from "./site-fetch";
 
 // Growth Plan page audit: picks one page of each type (home, category,
 // product), reads the HTML, and runs deterministic checks. No model involved —
@@ -143,10 +143,16 @@ function linksFrom(html: string, base: string): string[] {
 }
 
 /** One page per type, from the sitemap when possible, else from homepage links. */
+/** The page's HTML, or null when it can't be read or is a bot-challenge page. */
+async function readablePage(url: string): Promise<string | null> {
+  const html = await fetchTextDirect(url, 12000);
+  return html && !isBlockedPage(html) ? html : null;
+}
+
 export async function samplePages(siteUrl: string): Promise<{ type: PageType; url: string; html: string }[]> {
   const host = new URL(siteUrl).hostname;
-  const home = (await fetchTextDirect(`https://${host}/`, 12000)) ??
-    (await fetchTextDirect(`https://${host.startsWith("www.") ? host.slice(4) : `www.${host}`}/`, 12000));
+  const home = (await readablePage(`https://${host}/`)) ??
+    (await readablePage(`https://${host.startsWith("www.") ? host.slice(4) : `www.${host}`}/`));
   if (!home) return [];
   const pages: { type: PageType; url: string; html: string }[] = [{ type: "Homepage", url: `https://${host}/`, html: home }];
 
@@ -157,8 +163,8 @@ export async function samplePages(siteUrl: string): Promise<{ type: PageType; ur
   const productUrl = pick(catalog.productUrls) ?? links.find((u) => PRODUCT_LINK_RE.test(new URL(u).pathname));
 
   const [categoryHtml, productHtml] = await Promise.all([
-    categoryUrl ? fetchTextDirect(categoryUrl, 12000) : Promise.resolve(null),
-    productUrl ? fetchTextDirect(productUrl, 12000) : Promise.resolve(null),
+    categoryUrl ? readablePage(categoryUrl) : Promise.resolve(null),
+    productUrl ? readablePage(productUrl) : Promise.resolve(null),
   ]);
   if (categoryUrl && categoryHtml) pages.push({ type: "Category page", url: categoryUrl, html: categoryHtml });
   if (productUrl && productHtml) pages.push({ type: "Product page", url: productUrl, html: productHtml });

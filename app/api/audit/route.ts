@@ -12,7 +12,7 @@ import {
   normalizeClassification,
 } from "@/lib/taxonomy";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
-import { BROWSER_UA, fetchSitemapCatalog, fetchTextDirect } from "@/lib/site-fetch";
+import { BROWSER_UA, fetchSitemapCatalog, fetchTextDirect, isBlockedPage } from "@/lib/site-fetch";
 import {
   fetchSiteStack,
   stackGaps,
@@ -253,6 +253,10 @@ async function fetchPageMeta(url: string) {
     }
 
     const html = await res.text();
+    if (isBlockedPage(html)) {
+      console.log("fetchPageMeta: bot-challenge page for", url);
+      return null;
+    }
     const maxLen = 200000;
     const doc = html.slice(0, maxLen);
 
