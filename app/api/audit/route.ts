@@ -823,6 +823,10 @@ const JUNK_CATEGORY_RE = new RegExp(
     "^top (picks|rated)$", "^staff picks$", "^most (popular|loved)$",
     "(spring|summer|fall|autumn|winter|holiday)\\s+(essentials|edits?|picks|favou?rites|shop)",
     "(above|under|over|below)\\s*\\$", "^\\$[\\d,]+",
+    // Price-band and "shop by" views ("Shop By Under 500", "Under 300")
+    "\\b(above|under|over|below)\\s*\\d", "^shop by\\b",
+    // Month-named drops are merchandising calendars, not assortment
+    "^(january|february|march|april|may|june|july|august|september|october|november|december)( (drop|edit|collection|launch))?$",
     "^shop all$", "^all products?$", "^collections?$", "^products?$", "^all$", "^new arrivals?$",
   ].join("|"),
   "i",
