@@ -154,6 +154,26 @@ type MarketPosition = {
   clientPrice: string | null;
 };
 
+type StackTech = { name: string; category: string };
+type SiteStack = { name: string; domain: string; technologies: StackTech[] };
+type TechStack = {
+  client: SiteStack;
+  competitors: SiteStack[];
+  gaps: { category: string; examples: string[]; competitorCount: number }[];
+};
+
+const TECH_CATEGORIES = [
+  "Platform",
+  "Email & SMS",
+  "Reviews",
+  "Ad pixels",
+  "Analytics",
+  "Chat & support",
+  "Search & merchandising",
+  "Payments & BNPL",
+  "Loyalty",
+];
+
 type AuditData = {
   url: string;
   scores: Scores;
@@ -164,6 +184,7 @@ type AuditData = {
   trends: TrendsData;
   credibility?: Credibility;
   marketPosition?: MarketPosition;
+  techStack?: TechStack;
   competitorInventories?: CompetitorInventory[];
   productComparisons?: ProductComparison[];
   inventoryInsights?: string[];
@@ -717,6 +738,89 @@ function MarketPositionSection({ mp }: { mp: MarketPosition }) {
   );
 }
 
+function TechStackSection({ stack }: { stack: TechStack }) {
+  const sites = [{ ...stack.client, isClient: true }, ...stack.competitors.slice(0, 5).map((c) => ({ ...c, isClient: false }))];
+  const rows = TECH_CATEGORIES.filter((cat) =>
+    sites.some((site) => site.technologies.some((t) => t.category === cat)),
+  );
+  if (rows.length === 0) return null;
+  const toolsIn = (site: SiteStack, cat: string) =>
+    site.technologies.filter((t) => t.category === cat).map((t) => t.name);
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+      <div className="flex items-center gap-3">
+        <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+          Marketing Technology
+        </p>
+        <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+          Detected Live
+        </span>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-muted">
+        The tools each homepage loads, read directly from the sites today.
+      </p>
+
+      {stack.gaps.length > 0 && (
+        <ul className="mt-5 space-y-2">
+          {stack.gaps.map((g) => (
+            <li
+              key={g.category}
+              className="rounded-[var(--radius-child)] border border-electric/20 bg-electric/5 px-4 py-3 text-[14px] leading-relaxed text-ink"
+            >
+              <span className="font-semibold">{g.category}:</span> {g.competitorCount} of{" "}
+              {stack.competitors.length} competitors show it on their homepage (
+              {g.examples.join(", ")}); we didn&apos;t see it on yours.
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="w-full min-w-[640px] border-collapse text-left text-[13px]">
+          <thead>
+            <tr>
+              <th className="py-2 pr-4 font-mono text-[11px] font-normal tracking-[0.12em] text-muted uppercase">
+                Category
+              </th>
+              {sites.map((site) => (
+                <th
+                  key={site.domain}
+                  className={`py-2 pr-4 font-mono text-[11px] font-normal tracking-[0.08em] uppercase ${site.isClient ? "text-electric" : "text-muted"}`}
+                >
+                  {site.isClient ? "You" : site.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((cat) => (
+              <tr key={cat} className="border-t border-white/5">
+                <td className="py-2.5 pr-4 align-top text-muted">{cat}</td>
+                {sites.map((site) => {
+                  const tools = toolsIn(site, cat);
+                  return (
+                    <td
+                      key={site.domain}
+                      className={`py-2.5 pr-4 align-top ${site.isClient ? "text-ink" : "text-ink/80"}`}
+                    >
+                      {tools.length > 0 ? tools.join(", ") : <span className="text-muted/40">—</span>}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-4 text-[12px] leading-relaxed text-muted/70">
+        Read from each homepage. Some tools load later through a tag manager, so a dash means we
+        didn&apos;t see it, not that the site doesn&apos;t use it.
+      </p>
+    </div>
+  );
+}
+
 function AuditResults({ data }: { data: AuditData }) {
   const hasScores = Object.values(data.scores).some((s) => s !== null);
   const hasVitals = Object.values(data.vitals).some((v) => v !== null);
@@ -853,6 +957,8 @@ function AuditResults({ data }: { data: AuditData }) {
       )}
 
       {data.marketPosition && <MarketPositionSection mp={data.marketPosition} />}
+
+      {data.techStack && <TechStackSection stack={data.techStack} />}
 
       {data.credibility && <CredibilitySection credibility={data.credibility} url={data.url} />}
 

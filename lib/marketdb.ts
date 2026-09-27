@@ -218,3 +218,69 @@ export async function recordAuditSnapshot(
     }
   }
 }
+
+// ── Saved competitor sets ────────────────────────────────────────────────
+// Reports reuse the last good set for a domain so the same business sees the
+// same competitors each time (and the search + refine step is skipped).
+
+export type SavedCompetitor = { name: string; domain: string; strength: string };
+
+const COMPETITOR_SET_MAX_AGE_DAYS = 30;
+const bareDomain = (d: string) => d.replace(/^www\./, "").toLowerCase();
+
+export async function fetchCompetitorSet(domain: string): Promise<SavedCompetitor[] | null> {
+  const sql = getSql();
+  if (!sql) return null;
+  try {
+    const rows = (await sql`
+      SELECT competitors FROM competitor_sets
+      WHERE domain = ${bareDomain(domain)}
+        AND updated_at > now() - make_interval(days => ${COMPETITOR_SET_MAX_AGE_DAYS})
+    `) as { competitors: SavedCompetitor[] }[];
+    const set = rows[0]?.competitors;
+    return Array.isArray(set) && set.length >= 3 ? set : null;
+  } catch (err) {
+    console.error("fetchCompetitorSet failed:", err);
+    return null;
+  }
+}
+
+export async function saveCompetitorSet(
+  domain: string,
+  competitors: SavedCompetitor[],
+  offering: string | null,
+): Promise<void> {
+  const sql = getSql();
+  if (!sql || competitors.length < 3) return;
+  try {
+    await sql`
+      INSERT INTO competitor_sets (domain, offering, competitors, updated_at)
+      VALUES (${bareDomain(domain)}, ${offering}, ${JSON.stringify(competitors)}::jsonb, now())
+      ON CONFLICT (domain) DO UPDATE
+        SET offering = EXCLUDED.offering, competitors = EXCLUDED.competitors, updated_at = now()
+    `;
+  } catch (err) {
+    console.error("saveCompetitorSet failed:", err);
+  }
+}
+
+// ── Tech snapshots ───────────────────────────────────────────────────────
+
+export async function recordTechSnapshots(
+  stacks: { domain: string; technologies: { name: string; category: string }[] }[],
+): Promise<void> {
+  const sql = getSql();
+  if (!sql || stacks.length === 0) return;
+  try {
+    await Promise.all(
+      stacks.map(
+        (s) => sql`
+          INSERT INTO tech_snapshots (domain, technologies)
+          VALUES (${bareDomain(s.domain)}, ${JSON.stringify(s.technologies)}::jsonb)
+        `,
+      ),
+    );
+  } catch (err) {
+    console.error("recordTechSnapshots failed:", err);
+  }
+}

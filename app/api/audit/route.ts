@@ -2,6 +2,9 @@ import { NextResponse, after } from "next/server";
 import {
   recordAuditSnapshot,
   fetchSegmentBenchmark,
+  fetchCompetitorSet,
+  saveCompetitorSet,
+  recordTechSnapshots,
 } from "@/lib/marketdb";
 import { recordLeadAndSendEmail } from "@/lib/leads";
 import {
@@ -9,6 +12,12 @@ import {
   normalizeClassification,
 } from "@/lib/taxonomy";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
+import {
+  fetchSiteStack,
+  stackGaps,
+  type SiteStack,
+  type TechCategory,
+} from "@/lib/tech-stack";
 import {
   competitorQueries,
   finalizeCompetitors,
@@ -187,6 +196,11 @@ type AuditResult = {
   };
   experience?: ExperienceCheckResult | null;
   marketPosition?: MarketPosition;
+  techStack?: {
+    client: SiteStack;
+    competitors: SiteStack[];
+    gaps: { category: TechCategory; examples: string[]; competitorCount: number }[];
+  };
   industry: IndustryAnalysis;
   trends: TrendsData;
   credibility?: {
@@ -1818,7 +1832,12 @@ export async function POST(request: Request) {
     meta?.title?.split(/[|\-–—]/)[0]?.trim() ??
     new URL(url).hostname.replace(/^www\./, "").split(".")[0];
 
-  if (industry) {
+  // A saved set (≤30 days old) keeps reports consistent for the same business.
+  const savedCompetitors = industry ? await fetchCompetitorSet(domain) : null;
+  if (industry && savedCompetitors) {
+    industry.competitors = savedCompetitors;
+    console.log("Using saved competitor set:", savedCompetitors.map((c) => c.domain));
+  } else if (industry) {
     const original: CompetitorCandidate[] = industry.competitors;
     let refined: CompetitorCandidate[] = [];
     const queries = competitorQueries({
@@ -1894,18 +1913,27 @@ Respond with ONLY a JSON array:
     // must answer over HTTP, so invented competitors never reach the page.
     industry.competitors = await finalizeCompetitors(refined, original, domain);
     console.log("Final competitors:", industry.competitors.map((c) => c.domain));
+    const toSave = industry.competitors;
+    const offering = industry.offering || null;
+    after(() => saveCompetitorSet(domain, toSave, offering));
   }
 
   let competitorInventories: CompetitorInventory[] = [];
   let competitorCatalogs: CatalogSize[] = [];
   let trends: TrendsData = null;
+  let siteStacks: (SiteStack | null)[] = [];
 
   if (industry && industry.competitors.length > 0) {
     const top3 = industry.competitors.slice(0, 3);
-    const [inventoryResult, trendsResult] = await Promise.all([
+    const [inventoryResult, trendsResult, stacks] = await Promise.all([
       fetchCompetitorInventories(top3),
       isIngest ? Promise.resolve(null) : fetchGoogleTrends(brandName, industry.competitors),
+      Promise.all([
+        fetchSiteStack(brandName, domain),
+        ...industry.competitors.map((c) => fetchSiteStack(c.name, c.domain)),
+      ]),
     ]);
+    siteStacks = stacks;
     competitorInventories = inventoryResult.inventories;
     competitorCatalogs = inventoryResult.catalogs;
     trends = trendsResult;
@@ -2096,6 +2124,14 @@ Respond with ONLY a JSON array:
     ]);
   });
 
+  const [clientStack, ...competitorStacks] = siteStacks;
+  const readableStacks = competitorStacks.filter((st): st is SiteStack => st !== null);
+  const techStack = clientStack && readableStacks.length > 0
+    ? { client: clientStack, competitors: readableStacks, gaps: stackGaps(clientStack, readableStacks) }
+    : undefined;
+  const allStacks = siteStacks.filter((st): st is SiteStack => st !== null);
+  if (allStacks.length > 0) after(() => recordTechSnapshots(allStacks));
+
   if (isIngest) {
     return NextResponse.json({
       ok: true,
@@ -2138,6 +2174,7 @@ Respond with ONLY a JSON array:
     trends,
     credibility,
     marketPosition,
+    techStack,
     competitorInventories:
       competitorInventories.length > 0
         ? competitorInventories.map((c) => ({

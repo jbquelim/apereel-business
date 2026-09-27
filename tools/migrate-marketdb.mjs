@@ -115,5 +115,31 @@ await sql`
   )
 `;
 
+// The last good competitor set per audited domain, reused for 30 days so a
+// business sees the same competitors on every report.
+await sql`
+  CREATE TABLE IF NOT EXISTS competitor_sets (
+    domain TEXT PRIMARY KEY,
+    offering TEXT,
+    competitors JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+
+// Marketing technology seen on a site's homepage, one row per crawl, so
+// changes over time ("added Klaviyo in June") can be reported.
+await sql`
+  CREATE TABLE IF NOT EXISTS tech_snapshots (
+    id SERIAL PRIMARY KEY,
+    domain TEXT NOT NULL,
+    technologies JSONB NOT NULL,
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+await sql`
+  CREATE INDEX IF NOT EXISTS idx_tech_snapshots_domain_time
+  ON tech_snapshots (domain, captured_at)
+`;
+
 const [{ count }] = await sql`SELECT count(*)::int AS count FROM businesses`;
 console.log("Schema ready. businesses rows:", count);
