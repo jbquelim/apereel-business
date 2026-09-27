@@ -1885,8 +1885,8 @@ Web search results for buyers looking for alternatives:
 ${competitorSearchData}
 
 Return the best list of up to 5 DIRECT competitors. A direct competitor sells substantially the same products or services to the same kind of customer. Test every candidate, including the current ones, against WHAT THIS BUSINESS SELLS:
-- Keep a current competitor unless it clearly fails that test.
-- Replace or add only with businesses from the search results that clearly pass it.
+- The current list comes from memory. Candidates from the company database (headquarters, staff, traffic shown) are verified businesses — when one overlaps the offering at least as closely as a current pick, prefer the database candidate.${country ? `\n- Prefer businesses headquartered in ${country}; include a business from elsewhere only if it clearly competes for ${country} customers and no closer ${country} match exists.` : ""}
+- Otherwise keep current competitors that pass the test, and add search-result businesses that clearly pass it.
 - Same business model: manufacturers compete with manufacturers, retailers with retailers, service firms with service firms. A distributor, marketplace, directory or parts-search database is NOT a competitor of a manufacturer.
 - Sharing a broad category label is not enough (an electronic-components distributor does not compete with a lamp-parts and wire-harness manufacturer).
 - Never include ${domain}, any brand this business sells or carries, or a directory/listing site${country ? `\n- Every competitor must serve customers in ${country}` : ""}
