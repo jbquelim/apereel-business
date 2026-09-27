@@ -60,3 +60,45 @@ export async function markPaid(p: {
 export async function markFailed(id: string): Promise<void> {
   await sql()`UPDATE growth_orders SET status = 'failed' WHERE id = ${id} AND status = 'pending'`;
 }
+
+export type GrowthOrder = {
+  id: string;
+  domain: string;
+  url: string;
+  email: string;
+  name: string | null;
+  status: OrderStatus | "generation_failed";
+  report: unknown;
+  livemode: boolean | null;
+};
+
+export async function getOrder(id: string): Promise<GrowthOrder | null> {
+  const rows = (await sql()`
+    SELECT id, domain, url, email, name, status, report, livemode FROM growth_orders WHERE id = ${id}
+  `) as GrowthOrder[];
+  return rows[0] ?? null;
+}
+
+/** Claims an order for report generation; false if it isn't in an allowed state. */
+export async function claimForGeneration(id: string, from: string[]): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE growth_orders SET status = 'generating', generation_error = NULL
+    WHERE id = ${id} AND status = ANY(${from})
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+export async function saveReport(id: string, report: unknown, status: "generating" | "needs_review"): Promise<void> {
+  await sql()`
+    UPDATE growth_orders SET report = ${JSON.stringify(report)}::jsonb, status = ${status}
+    WHERE id = ${id} AND status = 'generating'
+  `;
+}
+
+export async function failGeneration(id: string, error: string): Promise<void> {
+  await sql()`
+    UPDATE growth_orders SET status = 'generation_failed', generation_error = ${error.slice(0, 500)}
+    WHERE id = ${id} AND status = 'generating'
+  `;
+}

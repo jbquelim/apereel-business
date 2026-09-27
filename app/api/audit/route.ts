@@ -12,6 +12,7 @@ import {
   normalizeClassification,
 } from "@/lib/taxonomy";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
+import { BROWSER_UA, fetchSitemapCatalog, fetchTextDirect } from "@/lib/site-fetch";
 import {
   fetchSiteStack,
   stackGaps,
@@ -438,9 +439,6 @@ async function fetchCompetitorSearchResults(queries: string[]): Promise<string |
   return results.length > 0 ? results.join("\n\n---\n\n") : null;
 }
 
-const BROWSER_UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
 const MAX_RAW_PRODUCTS = 150;
 
 type ShopifyProduct = {
@@ -596,99 +594,6 @@ async function fetchShopifyInventory(
   } catch {
     return null;
   }
-}
-
-// Some firewalls (e.g. WordPress security plugins) 403 a full desktop-Chrome
-// user agent that arrives without Chrome's client hints, yet allow a plain
-// one — so a blocked request is retried once with the plain agent.
-const PLAIN_UA = "Mozilla/5.0";
-
-async function fetchTextDirect(url: string, timeoutMs = 8000): Promise<string | null> {
-  for (const ua of [BROWSER_UA, PLAIN_UA]) {
-    try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": ua, Accept: "*/*" },
-        redirect: "follow",
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (res.ok) return await res.text();
-      if (![401, 403, 406, 429].includes(res.status)) return null;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
-function extractLocs(xml: string): string[] {
-  return [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((m) => m[1]);
-}
-
-// Language-variant duplicates (/fr/product/x mirrors /product/x) inflate counts.
-const LANG_PREFIX_RE = /^\/[a-z]{2}(?:-[a-z]{2})?\/(?=.)/i;
-const PRODUCT_PATH_RE = /\/(products?|item|p)\/[^/]+\/?$/;
-
-type SitemapCatalog = { productUrls: string[]; categoryPages: number };
-
-async function fetchSitemapCatalog(domain: string): Promise<SitemapCatalog> {
-  // robots.txt names the real sitemaps (often sitemap_index.xml on WordPress,
-  // or several per product line); fall back to the conventional locations.
-  const robots = await fetchTextDirect(`https://${domain}/robots.txt`, 8000);
-  const declared = robots
-    ? [...new Set([...robots.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((m) => m[1]))]
-    : [];
-  const roots = declared.length > 0
-    ? declared.slice(0, 6)
-    : [`https://${domain}/sitemap.xml`, `https://${domain}/sitemap_index.xml`];
-
-  const rootXmls: string[] = [];
-  for (const root of roots) {
-    const text = await fetchTextDirect(root, 10000);
-    if (text && /<(urlset|sitemapindex)/i.test(text)) {
-      rootXmls.push(text);
-      if (declared.length === 0) break; // conventional fallbacks: first hit wins
-    }
-  }
-  if (rootXmls.length === 0) return { productUrls: [], categoryPages: 0 };
-
-  const isProductCategoryMap = (u: string) => /product_cat|product-cat|collection/i.test(u);
-  const isCategoryMap = (u: string) => isProductCategoryMap(u) || /categor/i.test(u);
-  const urls: string[] = [];
-  const childMaps: string[] = [];
-  for (const xml of rootXmls) {
-    if (/<sitemapindex/i.test(xml)) childMaps.push(...extractLocs(xml));
-    else urls.push(...extractLocs(xml));
-  }
-
-  let categoryPages = 0;
-  if (childMaps.length > 0) {
-    // WooCommerce splits products across product-sitemap.xml, -sitemap2 …;
-    // tags and attribute (pa_) maps are not products.
-    const productMaps = childMaps.filter(
-      (u) => /product/i.test(u) && !isCategoryMap(u) && !/product_tag|product-tag|pa_|brand/i.test(u),
-    );
-    const children = (productMaps.length > 0
-      ? productMaps
-      : childMaps.filter((u) => !/image|blog|post|video|news|page|author|tag/i.test(u))
-    ).slice(0, 8);
-    const categoryMap = childMaps.find(isProductCategoryMap) ?? childMaps.find(isCategoryMap);
-    const [childXmls, categoryXml] = await Promise.all([
-      Promise.all(children.map((u) => fetchTextDirect(u, 10000))),
-      categoryMap ? fetchTextDirect(categoryMap, 10000) : Promise.resolve(null),
-    ]);
-    urls.push(...(childXmls.filter(Boolean) as string[]).flatMap(extractLocs));
-    categoryPages = categoryXml ? extractLocs(categoryXml).length : 0;
-  }
-
-  const productUrls = [...new Set(urls)].filter((u) => {
-    try {
-      const path = new URL(u).pathname;
-      return PRODUCT_PATH_RE.test(path) && !LANG_PREFIX_RE.test(path);
-    } catch {
-      return false;
-    }
-  });
-  return { productUrls, categoryPages };
 }
 
 function groupProductUrls(productUrls: string[]): { label: string; urls: string[] }[] {
@@ -1736,12 +1641,12 @@ export async function POST(request: Request) {
   // visitor-facing prose (insights, translate advantage, headline) — the
   // pipeline keeps classification, inventory crawl, competitor discovery,
   // and persistence. Secret-gated so it also bypasses the visitor rate limit.
-  const isIngest =
-    mode === "ingest" &&
-    !!process.env.CRON_SECRET &&
-    request.headers.get("x-ingest-secret") === process.env.CRON_SECRET;
+  const isInternal =
+    !!process.env.CRON_SECRET && request.headers.get("x-ingest-secret") === process.env.CRON_SECRET;
+  const isIngest = mode === "ingest" && isInternal;
 
-  if (!isIngest && rateLimited(clientIp(request))) {
+  // Internal callers (nightly ingest, Growth Plan generation) skip the visitor limit.
+  if (!isInternal && rateLimited(clientIp(request))) {
     return NextResponse.json(
       { ok: false, error: "Too many requests. Please try again later." },
       { status: 429 },

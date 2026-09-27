@@ -2,6 +2,11 @@ import { NextResponse, after } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { markFailed, markPaid } from "@/lib/orders";
+import { triggerStage } from "@/lib/growth-trigger";
+
+function siteBase(request: Request) {
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin).replace(/\/$/, "");
+}
 
 // Stripe webhook: the ONLY place a Growth Plan order becomes paid. Every event
 // is signature-verified against STRIPE_WEBHOOK_SECRET using the raw body, and
@@ -38,7 +43,16 @@ export async function POST(request: Request) {
         amountCents: session.amount_total ?? null,
         livemode: event.livemode,
       });
-      if (order) after(() => notifyNewOrder(order));
+      if (order) {
+        after(async () => {
+          await notifyNewOrder(order);
+          try {
+            await triggerStage(siteBase(request), order.id, "collect");
+          } catch (err) {
+            console.error("Growth Plan generation did not start:", err instanceof Error ? err.message : err);
+          }
+        });
+      }
       break;
     }
     case "checkout.session.async_payment_failed": {

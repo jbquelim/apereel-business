@@ -165,6 +165,7 @@ await sql`
   )
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_growth_orders_status ON growth_orders (status, created_at)`;
+await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS generation_error TEXT`;
 
 const [{ count }] = await sql`SELECT count(*)::int AS count FROM businesses`;
 console.log("Schema ready. businesses rows:", count);
