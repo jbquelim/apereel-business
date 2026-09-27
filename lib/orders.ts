@@ -102,3 +102,63 @@ export async function failGeneration(id: string, error: string): Promise<void> {
     WHERE id = ${id} AND status = 'generating'
   `;
 }
+
+export type OrderRow = {
+  id: string;
+  domain: string;
+  email: string;
+  name: string | null;
+  status: string;
+  livemode: boolean | null;
+  created_at: string;
+  paid_at: string | null;
+  sent_at: string | null;
+  generation_error: string | null;
+};
+
+export async function listOrders(limit = 100): Promise<OrderRow[]> {
+  return (await sql()`
+    SELECT id, domain, email, name, status, livemode, created_at, paid_at, sent_at, generation_error
+    FROM growth_orders WHERE status <> 'pending'
+    ORDER BY COALESCE(paid_at, created_at) DESC LIMIT ${limit}
+  `) as OrderRow[];
+}
+
+export async function getOrderDetail(id: string) {
+  const rows = (await sql()`
+    SELECT id, domain, url, email, name, status, livemode, report, review_notes, access_token,
+           created_at, paid_at, sent_at, generation_error
+    FROM growth_orders WHERE id = ${id}
+  `) as (OrderRow & { url: string; report: unknown; review_notes: string | null; access_token: string | null })[];
+  return rows[0] ?? null;
+}
+
+/** John's edits to the plan; only while the report is awaiting review. */
+export async function updatePlan(id: string, plan: unknown, notes: string | null): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE growth_orders
+    SET report = jsonb_set(report, '{plan}', ${JSON.stringify(plan)}::jsonb), review_notes = ${notes}
+    WHERE id = ${id} AND status = 'needs_review' AND report IS NOT NULL
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+/** Approves a reviewed report: issues the customer's access token once. */
+export async function markSent(id: string, token: string) {
+  const rows = (await sql()`
+    UPDATE growth_orders SET status = 'sent', sent_at = now(), access_token = ${token}
+    WHERE id = ${id} AND status = 'needs_review'
+    RETURNING id, domain, email, name, livemode
+  `) as { id: string; domain: string; email: string; name: string | null; livemode: boolean | null }[];
+  return rows[0] ?? null;
+}
+
+export async function getSentReport(token: string) {
+  if (!/^[A-Za-z0-9_-]{32,64}$/.test(token)) return null;
+  const rows = (await sql()`
+    SELECT domain, name, report, sent_at FROM growth_orders
+    WHERE access_token = ${token} AND status = 'sent'
+  `) as { domain: string; name: string | null; report: unknown; sent_at: string }[];
+  return rows[0] ?? null;
+}

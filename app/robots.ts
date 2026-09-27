@@ -7,6 +7,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
+      // Private: admin review and customers' Growth Plan reports
+      disallow: ["/admin", "/report/", "/growth-plan/"],
     },
     sitemap: `${base}/sitemap.xml`,
   };
