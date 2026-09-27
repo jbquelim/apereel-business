@@ -2013,9 +2013,9 @@ Respond with ONLY a JSON array:
         segment: bench.segment,
         storesTracked: bench.storesTracked,
         medianDepth: bench.medianDepth,
-        medianPrice: bench.medianPriceCents != null ? formatCents(bench.medianPriceCents) : null,
-        priceLow: bench.priceLowCents != null ? formatCents(bench.priceLowCents) : null,
-        priceHigh: bench.priceHighCents != null ? formatCents(bench.priceHighCents) : null,
+        medianPrice: bench.medianPriceCents != null ? roundAvgPrice(formatCents(bench.medianPriceCents)) : null,
+        priceLow: bench.priceLowCents != null ? roundAvgPrice(formatCents(bench.priceLowCents)) : null,
+        priceHigh: bench.priceHighCents != null ? roundAvgPrice(formatCents(bench.priceHighCents)) : null,
         clientDepth,
         // an average of category averages — round like every other derived price
         clientPrice: clientPriceCents != null ? roundAvgPrice(formatCents(clientPriceCents)) : null,
