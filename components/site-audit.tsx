@@ -781,7 +781,7 @@ function AuditResults({ data }: { data: AuditData }) {
 
           <div className="mt-6">
             <p className="mb-3 text-[11px] font-semibold tracking-[0.2em] text-muted uppercase">
-              Top 5 Direct Competitors
+              Direct Competitors
             </p>
             <div className="space-y-2">
               {data.industry.competitors.map((competitor, i) => (

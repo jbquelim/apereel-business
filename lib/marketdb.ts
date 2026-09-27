@@ -71,7 +71,8 @@ export type SegmentBenchmark = {
 // tracked category per store (categories overlap, so summing would
 // double-count); price uses each store's average price point. Only shown
 // when the segment has enough stores to make a median honest.
-const MIN_STORES_FOR_BENCHMARK = 5;
+// Below ~20 comparable businesses a median is an anecdote, not a benchmark.
+const MIN_STORES_FOR_BENCHMARK = 20;
 
 export async function fetchSegmentBenchmark(
   industry: string,

@@ -512,45 +512,97 @@ async function fetchShopifyInventory(
   }
 }
 
+// Some firewalls (e.g. WordPress security plugins) 403 a full desktop-Chrome
+// user agent that arrives without Chrome's client hints, yet allow a plain
+// one — so a blocked request is retried once with the plain agent.
+const PLAIN_UA = "Mozilla/5.0";
+
 async function fetchTextDirect(url: string, timeoutMs = 8000): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": BROWSER_UA, Accept: "*/*" },
-      redirect: "follow",
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!res.ok) return null;
-    return await res.text();
-  } catch {
-    return null;
+  for (const ua of [BROWSER_UA, PLAIN_UA]) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": ua, Accept: "*/*" },
+        redirect: "follow",
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (res.ok) return await res.text();
+      if (![401, 403, 406, 429].includes(res.status)) return null;
+    } catch {
+      return null;
+    }
   }
+  return null;
 }
 
 function extractLocs(xml: string): string[] {
   return [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((m) => m[1]);
 }
 
-async function fetchSitemapProductUrls(domain: string): Promise<string[]> {
-  const xml = await fetchTextDirect(`https://${domain}/sitemap.xml`, 10000);
-  if (!xml || !/<(urlset|sitemapindex)/i.test(xml)) return [];
+// Language-variant duplicates (/fr/product/x mirrors /product/x) inflate counts.
+const LANG_PREFIX_RE = /^\/[a-z]{2}(?:-[a-z]{2})?\/(?=.)/i;
+const PRODUCT_PATH_RE = /\/(products?|item|p)\/[^/]+\/?$/;
 
-  let urls = extractLocs(xml);
-  if (/<sitemapindex/i.test(xml)) {
-    const children = [
-      ...urls.filter((u) => /product/i.test(u)),
-      ...urls.filter((u) => !/product/i.test(u) && !/image|blog|video|news/i.test(u)),
-    ].slice(0, 3);
-    const childXmls = await Promise.all(children.map((u) => fetchTextDirect(u, 10000)));
-    urls = (childXmls.filter(Boolean) as string[]).flatMap(extractLocs);
+type SitemapCatalog = { productUrls: string[]; categoryPages: number };
+
+async function fetchSitemapCatalog(domain: string): Promise<SitemapCatalog> {
+  // robots.txt names the real sitemaps (often sitemap_index.xml on WordPress,
+  // or several per product line); fall back to the conventional locations.
+  const robots = await fetchTextDirect(`https://${domain}/robots.txt`, 8000);
+  const declared = robots
+    ? [...new Set([...robots.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((m) => m[1]))]
+    : [];
+  const roots = declared.length > 0
+    ? declared.slice(0, 6)
+    : [`https://${domain}/sitemap.xml`, `https://${domain}/sitemap_index.xml`];
+
+  const rootXmls: string[] = [];
+  for (const root of roots) {
+    const text = await fetchTextDirect(root, 10000);
+    if (text && /<(urlset|sitemapindex)/i.test(text)) {
+      rootXmls.push(text);
+      if (declared.length === 0) break; // conventional fallbacks: first hit wins
+    }
+  }
+  if (rootXmls.length === 0) return { productUrls: [], categoryPages: 0 };
+
+  const isProductCategoryMap = (u: string) => /product_cat|product-cat|collection/i.test(u);
+  const isCategoryMap = (u: string) => isProductCategoryMap(u) || /categor/i.test(u);
+  const urls: string[] = [];
+  const childMaps: string[] = [];
+  for (const xml of rootXmls) {
+    if (/<sitemapindex/i.test(xml)) childMaps.push(...extractLocs(xml));
+    else urls.push(...extractLocs(xml));
   }
 
-  return urls.filter((u) => {
+  let categoryPages = 0;
+  if (childMaps.length > 0) {
+    // WooCommerce splits products across product-sitemap.xml, -sitemap2 …;
+    // tags and attribute (pa_) maps are not products.
+    const productMaps = childMaps.filter(
+      (u) => /product/i.test(u) && !isCategoryMap(u) && !/product_tag|product-tag|pa_|brand/i.test(u),
+    );
+    const children = (productMaps.length > 0
+      ? productMaps
+      : childMaps.filter((u) => !/image|blog|post|video|news|page|author|tag/i.test(u))
+    ).slice(0, 8);
+    const categoryMap = childMaps.find(isProductCategoryMap) ?? childMaps.find(isCategoryMap);
+    const [childXmls, categoryXml] = await Promise.all([
+      Promise.all(children.map((u) => fetchTextDirect(u, 10000))),
+      categoryMap ? fetchTextDirect(categoryMap, 10000) : Promise.resolve(null),
+    ]);
+    urls.push(...(childXmls.filter(Boolean) as string[]).flatMap(extractLocs));
+    categoryPages = categoryXml ? extractLocs(categoryXml).length : 0;
+  }
+
+  const productUrls = [...new Set(urls)].filter((u) => {
     try {
-      return /\/(products?|item|p)\/[^/]+\/?$/.test(new URL(u).pathname);
+      const path = new URL(u).pathname;
+      return PRODUCT_PATH_RE.test(path) && !LANG_PREFIX_RE.test(path);
     } catch {
       return false;
     }
   });
+  return { productUrls, categoryPages };
 }
 
 function groupProductUrls(productUrls: string[]): { label: string; urls: string[] }[] {
@@ -563,11 +615,16 @@ function groupProductUrls(productUrls: string[]): { label: string; urls: string[
     list.push(u);
     groups.set(token, list);
   }
-  return [...groups.entries()]
+  const top = [...groups.entries()]
     .filter(([, us]) => us.length >= 5)
     .sort((a, b) => b[1].length - a[1].length)
-    .slice(0, 6)
-    .map(([label, us]) => ({ label, urls: us }));
+    .slice(0, 6);
+  // First-slug-word groups only mean something when they cover most of the
+  // catalog (brand- or type-led slugs). Scattered part numbers produce tiny
+  // groups that read as a "thin catalog" — report the total instead.
+  const covered = top.reduce((n, [, us]) => n + us.length, 0);
+  if (covered < productUrls.length * 0.4) return [];
+  return top.map(([label, us]) => ({ label, urls: us }));
 }
 
 async function sampleProductPrices(urls: string[], sampleSize: number): Promise<number[]> {
@@ -588,12 +645,18 @@ async function sampleProductPrices(urls: string[], sampleSize: number): Promise<
   return prices.filter((p): p is number => p !== null);
 }
 
-async function fetchSitemapInventory(domain: string): Promise<string | null> {
-  const productUrls = await fetchSitemapProductUrls(domain);
+async function fetchSitemapInventory(
+  domain: string,
+): Promise<{ text: string; totalProducts: number; categoryPages: number } | null> {
+  const { productUrls, categoryPages } = await fetchSitemapCatalog(domain);
   if (productUrls.length < 20) return null;
 
   const groups = groupProductUrls(productUrls);
   const lines: string[] = [`Total products in sitemap: ${productUrls.length.toLocaleString()}`];
+  if (categoryPages > 0) lines.push(`Product category pages in sitemap: ${categoryPages.toLocaleString()}`);
+  if (groups.length === 0) {
+    lines.push("Category breakdown: not derivable from product URLs (slugs are part numbers or model names) — report the total only");
+  }
 
   const sampled = await Promise.all(
     groups.slice(0, 4).map(async (g) => {
@@ -611,7 +674,11 @@ async function fetchSitemapInventory(domain: string): Promise<string | null> {
   }
 
   console.log("Sitemap inventory found for", domain, "-", productUrls.length, "products");
-  return `Sitemap inventory analysis for ${domain} (product counts are EXACT, taken from the site's sitemap; prices sampled from live product pages — use counts verbatim, derive avg/range from the sampled prices):\n${lines.join("\n")}`;
+  return {
+    text: `Sitemap inventory analysis for ${domain} (product counts are EXACT, taken from the site's sitemap; prices sampled from live product pages — use counts verbatim, derive avg/range from the sampled prices):\n${lines.join("\n")}`,
+    totalProducts: productUrls.length,
+    categoryPages,
+  };
 }
 
 function extractCollectionLinks(markdown: string, domain: string): string[] {
@@ -706,7 +773,14 @@ async function searchIndexedInventory(domain: string): Promise<string | null> {
 
 type InventorySource = "live" | "sitemap" | "crawl" | "search";
 
-type CrawledInventory = { data: string; source: InventorySource; products?: RawProduct[] };
+type CrawledInventory = {
+  data: string;
+  source: InventorySource;
+  products?: RawProduct[];
+  // Exact catalog size when a live feed or sitemap lists every product.
+  totalProducts?: number;
+  categoryPages?: number;
+};
 
 const SOURCE_NOTES: Record<InventorySource, string> = {
   live: "live product API — exact figures",
@@ -720,7 +794,14 @@ async function crawlSiteInventory(domain: string): Promise<CrawledInventory | nu
   if (shopify) return { data: shopify.text, source: "live", products: shopify.products };
 
   const sitemap = await fetchSitemapInventory(domain);
-  if (sitemap) return { data: sitemap, source: "sitemap" };
+  if (sitemap) {
+    return {
+      data: sitemap.text,
+      source: "sitemap",
+      totalProducts: sitemap.totalProducts,
+      categoryPages: sitemap.categoryPages,
+    };
+  }
 
   const crawled = await crawlCollectionPages(domain);
   if (crawled) return { data: crawled, source: "crawl" };
@@ -813,9 +894,11 @@ function dropOverlappingStoreViews(cats: InventoryCategory[]): InventoryCategory
   return cats.filter((c) => !drop.has(c));
 }
 
+type CatalogSize = { name: string; domain: string; totalProducts: number; categoryPages: number };
+
 async function fetchCompetitorInventories(
   competitors: Competitor[],
-): Promise<CompetitorInventory[]> {
+): Promise<{ inventories: CompetitorInventory[]; catalogs: CatalogSize[] }> {
   const crawlResults = await Promise.all(
     competitors.map(async (c) => ({
       name: c.name,
@@ -838,10 +921,18 @@ async function fetchCompetitorInventories(
       dropped.map((r) => r.domain).join(", "),
     );
   }
-  if (withData.length === 0) return [];
+  const catalogs: CatalogSize[] = crawlResults
+    .filter((r) => (r.inventory?.totalProducts ?? 0) > 0)
+    .map((r) => ({
+      name: r.name,
+      domain: r.domain,
+      totalProducts: r.inventory!.totalProducts!,
+      categoryPages: r.inventory!.categoryPages ?? 0,
+    }));
+  if (withData.length === 0) return { inventories: [], catalogs };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) return { inventories: [], catalogs };
 
   const prompt = `Below is crawled inventory data for multiple competitor websites. Each competitor's data source is noted — treat live API figures as exact, and be conservative with anything derived.
 
@@ -890,17 +981,17 @@ Rules:
       }),
     });
 
-    if (!res.ok) return [];
+    if (!res.ok) return { inventories: [], catalogs };
 
     const data = await res.json();
     const text = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return [];
+    if (!jsonMatch) return { inventories: [], catalogs };
 
     const parsed = JSON.parse(jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) => ch === "\n" || ch === "\r" || ch === "\t" ? " " : ""));
-    if (!Array.isArray(parsed.competitors)) return [];
+    if (!Array.isArray(parsed.competitors)) return { inventories: [], catalogs };
 
-    return withData
+    const inventories = withData
       .map((r) => {
         const match = parsed.competitors.find(
           (c: { domain: string }) => c.domain === r.domain,
@@ -920,9 +1011,10 @@ Rules:
         };
       })
       .filter((r) => r.categories.length > 0);
+    return { inventories, catalogs };
   } catch (err) {
     console.error("Competitor inventory analysis failed:", err);
-    return [];
+    return { inventories: [], catalogs };
   }
 }
 
@@ -933,6 +1025,7 @@ async function generateInventoryInsights(
   competitorInventories: CompetitorInventory[],
   productMatches: ProductMatch[] = [],
   marketPosition?: MarketPosition,
+  catalogs: CatalogSize[] = [],
 ): Promise<string[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return [];
@@ -947,7 +1040,10 @@ async function generateInventoryInsights(
 
   const prompt = `You are a senior e-commerce strategy consultant. Below is real crawled inventory data for ${domain} (a ${subIndustry} business) and its competitors.
 
-=== THE CLIENT: ${domain} — every category below BELONGS TO THE CLIENT ===
+${catalogs.length > 0 ? `=== CATALOG SIZE (exact count of product pages in each site's sitemap) ===
+${catalogs.map((c) => `- ${c.name} (${c.domain}): ${c.totalProducts.toLocaleString()} products${c.categoryPages ? ` across ${c.categoryPages.toLocaleString()} category pages` : ""}`).join("\n")}
+
+` : ""}=== THE CLIENT: ${domain} — every category below BELONGS TO THE CLIENT ===
 ${ownCategories.length > 0 ? fmt(ownCategories) : "(no inventory data extracted)"}
 
 === COMPETITORS (NOT the client) ===
@@ -972,6 +1068,8 @@ Rules:
 - When the SEGMENT BENCHMARK block is present, ground at least one insight in it (e.g. "the median store in your segment carries...") using ONLY the numbers provided there — it is the strongest evidence available; never invent segment statistics
 - No hedging words like "may", "might", "could potentially"
 - If the client has no inventory data, focus on what competitors' depth means for them
+- Category rows are a partial view of a catalog; when CATALOG SIZE is given, it is the authoritative total for that site
+${CRAWL_GUARDRAIL}
 
 Respond with ONLY a JSON array of strings:
 ["insight one", "insight two", "insight three"]`;
@@ -1015,6 +1113,10 @@ Respond with ONLY a JSON array of strings:
     return [];
   }
 }
+
+// Missing data is a limitation of our crawler, not a fact about the client.
+const CRAWL_GUARDRAIL = `- Missing or unmeasured client data means OUR crawler could not read it. NEVER claim or imply the client's site has no catalog, hides its products, is uncrawlable, or is invisible to search because of it
+- Never call a competitor's catalog thin, small or shallow unless an exact CATALOG SIZE figure shows it`;
 
 const APEREEL_SERVICES = [
   "Research & Competitive Analysis",
@@ -1062,6 +1164,7 @@ Respond with ONLY valid JSON, no markdown:
 
 Rules:
 - "strength" must reference data belonging to ${domain} (the client) — never attribute a competitor's numbers to the client
+${CRAWL_GUARDRAIL}
 - The advantage MUST be consistent with how this market actually competes (see "Competitive landscape" above). If customers in this market buy on service, expertise, brand authorization, or experience rather than price, do NOT recommend price-led or discount positioning — choose the strongest DEFENSIBLE position instead, even if a price or count statistic looks bigger
 - Prefer an advantage a competitor cannot easily copy (authorized dealer status, regional dominance, service depth, exclusive lines) over raw catalog size or price, when the data supports one
 - Exactly 3-4 touchpoints, chosen from: Website, Product Pages, Category Navigation, Search & Filtering, Creative, Messaging
@@ -1142,6 +1245,8 @@ async function generateHeadlineFinding(
 ${sections.join("\n\n")}
 
 Write the single most important takeaway of this audit — the one sentence the CEO should read before anything else. It must be consistent with the identified advantage (do not introduce a different strategy), grounded in the findings, addressed to the client ("Your..."), under 35 words, direct and confident, no hedging.
+
+${CRAWL_GUARDRAIL}
 
 Respond with ONLY the sentence. No quotes, no preamble.`;
 
@@ -1715,15 +1820,17 @@ Respond with ONLY a JSON array:
   }
 
   let competitorInventories: CompetitorInventory[] = [];
+  let competitorCatalogs: CatalogSize[] = [];
   let trends: TrendsData = null;
 
   if (industry && industry.competitors.length > 0) {
     const top3 = industry.competitors.slice(0, 3);
-    const [inventories, trendsResult] = await Promise.all([
+    const [inventoryResult, trendsResult] = await Promise.all([
       fetchCompetitorInventories(top3),
       isIngest ? Promise.resolve(null) : fetchGoogleTrends(brandName, industry.competitors),
     ]);
-    competitorInventories = inventories;
+    competitorInventories = inventoryResult.inventories;
+    competitorCatalogs = inventoryResult.catalogs;
     trends = trendsResult;
     console.log("Competitor inventories found:", competitorInventories.length);
   }
@@ -1780,7 +1887,9 @@ Respond with ONLY a JSON array:
   // Segment benchmark from the market index: median depth and price points
   // for the client's segment, with the client's own numbers alongside.
   let marketPosition: MarketPosition | undefined;
-  if (industry) {
+  // B2B sellers quote rather than list prices, so a store-price benchmark
+  // would compare them against the wrong thing.
+  if (industry && industry.businessModel !== "b2b") {
     const bench = await fetchSegmentBenchmark(industry.industry, industry.subIndustry);
     if (bench) {
       const cats = industry.inventoryCategories;
@@ -1809,11 +1918,24 @@ Respond with ONLY a JSON array:
     }
   }
 
+  // Exact catalog sizes (sitemap / live feed) for the client and competitors.
+  const catalogs: CatalogSize[] = [
+    ...(inventorySearchData?.totalProducts
+      ? [{
+          name: `${brandName} (the client)`,
+          domain,
+          totalProducts: inventorySearchData.totalProducts,
+          categoryPages: inventorySearchData.categoryPages ?? 0,
+        }]
+      : []),
+    ...competitorCatalogs,
+  ];
+
   let inventoryInsights: string[] = [];
   if (
     !isIngest &&
     industry &&
-    (industry.inventoryCategories.length > 0 || competitorInventories.length > 0)
+    (industry.inventoryCategories.length > 0 || competitorInventories.length > 0 || catalogs.length > 0)
   ) {
     inventoryInsights = await generateInventoryInsights(
       domain,
@@ -1822,6 +1944,7 @@ Respond with ONLY a JSON array:
       competitorInventories,
       productMatches,
       marketPosition,
+      catalogs,
     );
     console.log("Inventory insights generated:", inventoryInsights.length);
   }
