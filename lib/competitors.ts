@@ -112,33 +112,49 @@ export async function fetchExaCompanies(opts: {
   if (!apiKey || !opts.offering) return null;
   const client = cleanDomain(opts.clientDomain);
   const query = `Companies that sell ${opts.offering}${opts.country ? ` in ${opts.country}` : ""}`;
+  type ExaCompany = {
+    url?: string;
+    title?: string;
+    entities?: {
+      properties?: {
+        description?: string;
+        workforce?: { total?: number } | null;
+        headquarters?: { city?: string | null; country?: string | null } | null;
+        webTraffic?: { visitsMonthly?: number } | null;
+      };
+    }[];
+  };
   try {
+    // No excludeDomains: with it, Exa returned its own profile URLs instead of
+    // company websites. The client is filtered out below instead.
     const res = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: { "x-api-key": apiKey, "content-type": "application/json" },
-      body: JSON.stringify({
-        query,
-        type: "auto",
-        category: "company",
-        numResults: 10,
-        ...(client ? { excludeDomains: [client, `www.${client}`] } : {}),
-      }),
+      body: JSON.stringify({ query, type: "auto", category: "company", numResults: 12 }),
       signal: AbortSignal.timeout(12000),
     });
     if (!res.ok) {
       console.error("Exa search failed:", res.status);
       return null;
     }
-    const data = (await res.json()) as { results?: { url?: string; title?: string }[] };
+    const data = (await res.json()) as { results?: ExaCompany[] };
     const lines = (data.results ?? [])
       .map((r) => {
         const domain = cleanDomain(r.url);
-        if (!domain || domain === client || isBlockedDomain(domain)) return null;
-        return `- ${(r.title ?? "").trim() || domain} (${domain})`;
+        if (!domain || domain === client || domain === "exa.ai" || isBlockedDomain(domain)) return null;
+        const p = r.entities?.[0]?.properties;
+        const where = [p?.headquarters?.city, p?.headquarters?.country].filter(Boolean).join(", ");
+        const facts = [
+          where && `HQ ${where}`,
+          p?.workforce?.total ? `~${p.workforce.total} staff` : null,
+          p?.webTraffic?.visitsMonthly ? `~${p.webTraffic.visitsMonthly.toLocaleString("en-US")} site visits/month (estimate)` : null,
+        ].filter(Boolean);
+        const about = (p?.description ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
+        return `- ${(r.title ?? "").trim() || domain} (${domain})${facts.length ? ` — ${facts.join("; ")}` : ""}${about ? `. ${about}` : ""}`;
       })
       .filter(Boolean);
     if (lines.length === 0) return null;
-    return `Company search (Exa) for "${query}":\n${lines.join("\n")}`;
+    return `Company search (Exa company database) for "${query}":\n${lines.join("\n")}`;
   } catch (err) {
     console.error("Exa search error:", err);
     return null;
