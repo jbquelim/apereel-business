@@ -1439,6 +1439,9 @@ async function fetchPageSpeed(url: string) {
     strategy: "mobile",
   });
   for (const cat of categories) params.append("category", cat);
+  // Without a key, requests from Vercel's shared IPs hit Google's anonymous
+  // quota (429, "limit 0") and every audit loses its scores.
+  if (process.env.PAGESPEED_API_KEY) params.set("key", process.env.PAGESPEED_API_KEY);
 
   const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params}`;
 
@@ -1907,6 +1910,8 @@ Respond with ONLY a JSON array:
             body: JSON.stringify({
               model,
               max_tokens: 2000,
+              // deterministic picks: the first saved set for a domain sticks for 30 days
+              temperature: 0,
               thinking: { type: "disabled" },
               messages: [{ role: "user", content: refinePrompt }],
             }),
