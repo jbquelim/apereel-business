@@ -7,9 +7,14 @@ import { recordLeadAndSendEmail } from "@/lib/leads";
 import {
   taxonomyPromptBlock,
   normalizeClassification,
-  isBlockedDomain,
 } from "@/lib/taxonomy";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
+import {
+  competitorQueries,
+  finalizeCompetitors,
+  screenCompetitors,
+  type CompetitorCandidate,
+} from "@/lib/competitors";
 import { runExperienceChecks, type ExperienceCheckResult } from "@/lib/experience-check";
 import {
   matchProducts,
@@ -98,6 +103,9 @@ type IndustryAnalysis = {
   subIndustry: string;
   detectedCountry?: string | null;
   businessModel: string | null;
+  // What the business actually sells and to whom — drives competitor search.
+  offering: string;
+  competitorQueries: string[];
   competitors: Competitor[];
   insight: string;
   channels: Channel[];
@@ -396,14 +404,7 @@ async function fetchWebSearchResults(domain: string): Promise<string | null> {
   return null;
 }
 
-async function fetchCompetitorSearchResults(industry: string, subIndustry: string, domain: string, country?: string | null): Promise<string | null> {
-  const geo = country || "";
-  const queries = [
-    `${subIndustry} competitors ${domain}`,
-    `best ${subIndustry} ${geo}`.trim(),
-    `top ${subIndustry} stores ${geo}`.trim(),
-  ];
-
+async function fetchCompetitorSearchResults(queries: string[]): Promise<string | null> {
   const results: string[] = [];
   for (const query of queries) {
     try {
@@ -1325,6 +1326,8 @@ Respond with ONLY valid JSON, no markdown formatting:
   "subIndustry": "EXACTLY one of that industry's sub-segments",
   "country": "country where this business is based/primarily operates, from page signals (currency, address, TLD, shipping) — or null if genuinely unclear",
   "businessModel": "retail | b2b | hybrid — 'retail' sells to consumers at listed prices; 'b2b' sells to businesses via quotes, RFQs, or sales conversations (manufacturers, distributors, professional services); 'hybrid' does both",
+  "offering": "One specific sentence: what this business makes or sells, and to whom (e.g. 'Stamped metal hardware, lamp parts and custom wire harnesses for lighting, HVAC and appliance OEMs'). Name the actual products, not the category label",
+  "competitorQueries": ["2-3 search queries a buyer would type to find ALTERNATIVE suppliers of this business's core offering, specific to what it makes and its market (e.g. 'custom wire harness manufacturer Canada', 'lamp parts supplier Canada'). Never use a generic category label on its own"],
   "competitors": [
     { "name": "Brand name ONLY — never a page title, tagline, or product description", "domain": "example.com", "strength": "What they do well that makes them a strong competitor" }
   ],
@@ -1350,7 +1353,9 @@ Respond with ONLY valid JSON, no markdown formatting:
 
 Rules:
 - Do NOT include the analyzed website itself in the competitors list
-- Competitors must be the same TYPE of business (retailer vs retailer, service vs service)
+- Competitors must be the same TYPE of business (retailer vs retailer, service vs service, manufacturer vs manufacturer)
+- Every competitor must overlap with the CORE of the "offering" — what the business makes or sells — not merely share a broad category label (a lamp-parts and wire-harness MANUFACTURER is not competing with an electronic-components DISTRIBUTOR or a parts-search DATABASE)
+- Only list a competitor when you are confident its domain is real; fewer than 5 accurate competitors is better than padding the list
 - Competitors MUST be in the same geographic market as the business${country ? ` (${country})` : ""}
 - Be specific with the sub-industry (e.g. "Fine Jewelry Retail" not just "Retail")
 - Keep each "strength" under 15 words
@@ -1418,14 +1423,9 @@ Rules:
       detectedCountry: typeof parsed.country === "string" && parsed.country.trim() && parsed.country.length < 40
         ? parsed.country.trim()
         : null,
-      competitors: parsed.competitors
-        .filter((c: { domain?: string }) => c.domain && !isBlockedDomain(c.domain))
-        .slice(0, 5)
-        .map((c: { name: string; domain: string; strength: string }) => ({
-          name: c.name,
-          domain: c.domain,
-          strength: c.strength,
-        })),
+      offering: typeof parsed.offering === "string" ? parsed.offering.trim().slice(0, 300) : "",
+      competitorQueries: Array.isArray(parsed.competitorQueries) ? parsed.competitorQueries : [],
+      competitors: screenCompetitors(parsed.competitors, domain).slice(0, 5),
       insight: parsed.insight ?? "",
       channels: Array.isArray(parsed.channels)
         ? parsed.channels.map((ch: { name: string; percentage: number }) => ({
@@ -1637,15 +1637,44 @@ export async function POST(request: Request) {
     new URL(url).hostname.replace(/^www\./, "").split(".")[0];
 
   if (industry) {
-    const competitorSearchData = await fetchCompetitorSearchResults(
-      industry.industry, industry.subIndustry, domain, country,
-    );
+    const original: CompetitorCandidate[] = industry.competitors;
+    let refined: CompetitorCandidate[] = [];
+    const queries = competitorQueries({
+      suggested: industry.competitorQueries,
+      subIndustry: industry.subIndustry,
+      businessModel: industry.businessModel,
+      country,
+    });
+    console.log("Competitor queries:", queries);
+    const competitorSearchData = await fetchCompetitorSearchResults(queries);
 
-    if (competitorSearchData) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (competitorSearchData && apiKey) {
       console.log("Competitor search data:", competitorSearchData.length, "chars");
-      try {
-        const apiKey = process.env.ANTHROPIC_API_KEY;
-        if (apiKey) {
+      const refinePrompt = `You are checking the competitor list for ${domain}.
+
+WHAT THIS BUSINESS SELLS: ${industry.offering || industry.subIndustry}
+BUSINESS MODEL: ${industry.businessModel ?? "unknown"}${country ? `\nMARKET: ${country}` : ""}
+
+Current competitor list:
+${original.map((c, i) => `${i + 1}. ${c.name} (${c.domain}) — ${c.strength}`).join("\n")}
+
+Web search results for buyers looking for alternatives:
+${competitorSearchData}
+
+Return the best list of up to 5 DIRECT competitors. A direct competitor sells substantially the same products or services to the same kind of customer. Test every candidate, including the current ones, against WHAT THIS BUSINESS SELLS:
+- Keep a current competitor unless it clearly fails that test.
+- Replace or add only with businesses from the search results that clearly pass it.
+- Same business model: manufacturers compete with manufacturers, retailers with retailers, service firms with service firms. A distributor, marketplace, directory or parts-search database is NOT a competitor of a manufacturer.
+- Sharing a broad category label is not enough (an electronic-components distributor does not compete with a lamp-parts and wire-harness manufacturer).
+- Never include ${domain}, any brand this business sells or carries, or a directory/listing site${country ? `\n- Every competitor must serve customers in ${country}` : ""}
+- Use each company's real website domain. Fewer than 5 correct competitors is better than a padded list.
+
+Respond with ONLY a JSON array:
+[{"name": "Company", "domain": "example.com", "strength": "What makes them competitive, under 15 words"}]`;
+
+      for (const model of ["claude-sonnet-5", "claude-haiku-4-5"]) {
+        try {
           const refineRes = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: {
@@ -1654,53 +1683,35 @@ export async function POST(request: Request) {
               "content-type": "application/json",
             },
             body: JSON.stringify({
-              model: "claude-haiku-4-5-20251001",
+              model,
               max_tokens: 2000,
-              messages: [{
-                role: "user",
-                content: `You identified these competitors for ${domain} (a ${industry.subIndustry} business${country ? ` in ${country}` : ""}):
-${industry.competitors.map((c, i) => `${i + 1}. ${c.name} (${c.domain}) — ${c.strength}`).join("\n")}
-
-Here are REAL web search results about competitors in this space:
-${competitorSearchData}
-
-Based on the search results, refine the competitor list. Replace any competitors that are NOT direct competitors with actual competitors found in search results.
-
-CRITICAL RULES:
-- Competitors must be the SAME TYPE of business (retailer vs retailer, service vs service)
-- A jewelry RETAILER's competitors are OTHER RETAILERS (e.g. Birks, Peoples Jewellers, Charm Diamond Centres), NEVER the luxury brands they sell (Cartier, Rolex, Tiffany, Omega, TAG Heuer are BRANDS not competitors)
-- A clothing STORE's competitors are other stores, NOT fashion brands like Gucci or Nike
-- Do NOT include ${domain} itself or any variation of it as a competitor
-- Do NOT include any brand/manufacturer that the business SELLS or CARRIES${country ? `\n- ALL competitors MUST operate in ${country}. Do NOT include businesses from other countries.` : ""}
-
-Respond with ONLY a JSON array of exactly 5 competitors:
-[{"name": "Company", "domain": "example.com", "strength": "What makes them competitive"}]`,
-              }],
+              thinking: { type: "disabled" },
+              messages: [{ role: "user", content: refinePrompt }],
             }),
           });
-
-          if (refineRes.ok) {
-            const refineData = await refineRes.json();
-            const refineText = refineData.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
-            const jsonMatch = refineText.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-              const refined = JSON.parse(jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) => ch === "\n" || ch === "\r" || ch === "\t" ? " " : ""));
-              if (Array.isArray(refined) && refined.length > 0) {
-                industry.competitors = refined.slice(0, 5).map((c: { name: string; domain: string; strength: string }) => ({
-                  name: c.name,
-                  domain: c.domain,
-                  strength: c.strength,
-                }));
-                console.log("Competitors refined with search data");
-              }
-            }
+          if (!refineRes.ok) {
+            console.error(`Competitor refine ${model} failed:`, refineRes.status);
+            continue;
           }
+          const refineData = await refineRes.json();
+          const refineText = refineData.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
+          const jsonMatch = refineText.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0].replace(/[\x00-\x1f\x7f]/g, (ch: string) => ch === "\n" || ch === "\r" || ch === "\t" ? " " : ""));
+            if (Array.isArray(parsed)) refined = screenCompetitors(parsed, domain);
+          }
+          console.log(`Competitors refined with search data (${model}):`, refined.map((c) => c.domain));
+          break;
+        } catch (err) {
+          console.error("Competitor refinement failed:", err);
         }
-      } catch (err) {
-        console.error("Competitor refinement failed:", err);
       }
     }
 
+    // Refined picks first, topped up from the original list; every domain
+    // must answer over HTTP, so invented competitors never reach the page.
+    industry.competitors = await finalizeCompetitors(refined, original, domain);
+    console.log("Final competitors:", industry.competitors.map((c) => c.domain));
   }
 
   let competitorInventories: CompetitorInventory[] = [];
