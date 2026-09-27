@@ -428,81 +428,152 @@ const BROWSER_UA =
 
 const MAX_RAW_PRODUCTS = 150;
 
-async function fetchShopifyInventory(
-  domain: string,
-): Promise<{ text: string; products: RawProduct[] } | null> {
+type ShopifyProduct = {
+  title?: string;
+  handle?: string;
+  product_type?: string;
+  variants?: { price: string }[];
+};
+
+const GIFT_CARD_RE = /gift ?cards?|e-?gift/i;
+const SHOPIFY_PAGE_LIMIT = 8; // 8 × 250 = 2,000 products read per store
+
+function shopifyMinPrice(p: ShopifyProduct): number | null {
+  const prices = (p.variants ?? []).map((v) => parseFloat(v.price)).filter((n) => Number.isFinite(n) && n > 0);
+  return prices.length > 0 ? Math.min(...prices) : null;
+}
+
+function describePrices(prices: number[]): string {
+  if (prices.length === 0) return "";
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+  return `, avg price $${Math.round(avg).toLocaleString()}, price range $${Math.round(min).toLocaleString()} - $${Math.round(max).toLocaleString()}`;
+}
+
+async function fetchShopifyJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(`https://${domain}/collections.json?limit=250`, {
+    const res = await fetch(url, {
       headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
       signal: AbortSignal.timeout(6000),
     });
     if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) return null;
-    const collections = (await res.json())?.collections;
-    if (!Array.isArray(collections) || collections.length === 0) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
 
+async function fetchShopifyInventory(
+  domain: string,
+): Promise<{ text: string; products: RawProduct[]; totalProducts?: number } | null> {
+  try {
+    // 1) The whole public catalog, grouped by product type: real categories
+    //    with exact counts. Collections are often merchandising views (price
+    //    bands, months, "shop all") that overlap and mislead.
+    const catalog: ShopifyProduct[] = [];
+    let complete = false;
+    for (let page = 1; page <= SHOPIFY_PAGE_LIMIT; page++) {
+      const data = await fetchShopifyJson<{ products?: ShopifyProduct[] }>(
+        `https://${domain}/products.json?limit=250&page=${page}`,
+      );
+      const batch = data?.products;
+      if (!Array.isArray(batch)) {
+        if (page === 1) break;
+        complete = true;
+        break;
+      }
+      catalog.push(...batch);
+      if (batch.length < 250) {
+        complete = true;
+        break;
+      }
+    }
+
+    const sellable = catalog.filter((p) => p.title && p.handle && !GIFT_CARD_RE.test(`${p.title} ${p.product_type ?? ""}`));
+    const rawProducts: RawProduct[] = sellable.slice(0, MAX_RAW_PRODUCTS).map((p) => {
+      const min = shopifyMinPrice(p);
+      return {
+        title: p.title!,
+        productType: p.product_type || null,
+        priceCents: min != null ? Math.round(min * 100) : null,
+        url: `https://${domain}/products/${p.handle}`,
+      };
+    });
+
+    if (sellable.length >= 20) {
+      const byType = new Map<string, ShopifyProduct[]>();
+      for (const p of sellable) {
+        const type = (p.product_type ?? "").trim();
+        if (!type || JUNK_CATEGORY_RE.test(type)) continue;
+        const key = type.toLowerCase();
+        byType.set(key, [...(byType.get(key) ?? []), p]);
+      }
+      const groups = [...byType.values()]
+        .filter((g) => g.length >= 3)
+        .sort((a, b) => b.length - a.length)
+        .slice(0, 8);
+      const typed = groups.reduce((n, g) => n + g.length, 0);
+      if (groups.length >= 2 && typed >= sellable.length * 0.4) {
+        const total = `${sellable.length.toLocaleString()}${complete ? "" : "+"}`;
+        const lines = [
+          `Total products in catalog: ${total}${complete ? "" : ` (first ${SHOPIFY_PAGE_LIMIT * 250} read)`}`,
+          ...groups.map((g) => {
+            const prices = g.map(shopifyMinPrice).filter((n): n is number => n != null);
+            return `Product type "${g[0].product_type!.trim()}": ${g.length} products${describePrices(prices)}`;
+          }),
+        ];
+        console.log("Shopify catalog read for", domain, "-", sellable.length, "products,", groups.length, "types");
+        return {
+          text: `Live product data from ${domain} (exact figures from the store's public product feed, grouped by product type — use these numbers verbatim):\n${lines.join("\n")}`,
+          products: rawProducts,
+          totalProducts: complete ? sellable.length : undefined,
+        };
+      }
+    }
+
+    // 2) Fallback: named collections, skipping merchandising views.
     type ShopifyCollection = { handle: string; title: string; products_count?: number };
-    type ShopifyProduct = {
-      title?: string;
-      handle?: string;
-      product_type?: string;
-      variants?: { price: string }[];
-    };
-    const biggest = (collections as ShopifyCollection[])
-      .filter((c) => (c.products_count ?? 0) > 0)
-      .sort((a, b) => (b.products_count ?? 0) - (a.products_count ?? 0));
-    const picked = biggest.length > 0 ? biggest : (collections as ShopifyCollection[]);
+    const collections = (await fetchShopifyJson<{ collections?: ShopifyCollection[] }>(
+      `https://${domain}/collections.json?limit=250`,
+    ))?.collections;
+    if (!Array.isArray(collections) || collections.length === 0) {
+      return null;
+    }
+    const picked = collections
+      .filter((c) => (c.products_count ?? 1) > 0 && !JUNK_CATEGORY_RE.test(c.title))
+      .sort((a, b) => (b.products_count ?? 0) - (a.products_count ?? 0))
+      .slice(0, 6);
 
-    const seenHandles = new Set<string>();
-    const rawProducts: RawProduct[] = [];
-
+    const seenHandles = new Set(rawProducts.map((p) => p.url));
     const lines = (await Promise.all(
-      picked.slice(0, 6).map(async (col: ShopifyCollection) => {
-        try {
-          const pRes = await fetch(
-            `https://${domain}/collections/${col.handle}/products.json?limit=250`,
-            {
-              headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
-              signal: AbortSignal.timeout(6000),
-            },
-          );
-          if (!pRes.ok) return null;
-          const products = (await pRes.json())?.products;
-          if (!Array.isArray(products) || products.length === 0) return null;
-          for (const p of products as ShopifyProduct[]) {
-            if (rawProducts.length >= MAX_RAW_PRODUCTS) break;
-            if (!p.title || !p.handle || seenHandles.has(p.handle)) continue;
-            seenHandles.add(p.handle);
-            const variantPrices = (p.variants ?? [])
-              .map((v) => parseFloat(v.price))
-              .filter((n) => Number.isFinite(n) && n > 0);
-            rawProducts.push({
-              title: p.title,
-              productType: p.product_type || null,
-              priceCents:
-                variantPrices.length > 0 ? Math.round(Math.min(...variantPrices) * 100) : null,
-              url: `https://${domain}/products/${p.handle}`,
-            });
-          }
-          const prices = products
-            .flatMap((p: { variants?: { price: string }[] }) =>
-              (p.variants ?? []).map((v) => parseFloat(v.price)),
-            )
-            .filter((n: number) => Number.isFinite(n) && n > 0);
-          const exactCount = col.products_count ?? products.length;
-          const count = `${exactCount}${!col.products_count && products.length === 250 ? "+" : ""}`;
-          if (prices.length === 0) return `Collection "${col.title}": ${count} products`;
-          const min = Math.min(...prices);
-          const max = Math.max(...prices);
-          const avg = prices.reduce((a: number, b: number) => a + b, 0) / prices.length;
-          return `Collection "${col.title}": ${count} products, avg price $${Math.round(avg).toLocaleString()}, price range $${Math.round(min).toLocaleString()} - $${Math.round(max).toLocaleString()}`;
-        } catch {
-          return null;
+      picked.map(async (col) => {
+        const products = (await fetchShopifyJson<{ products?: ShopifyProduct[] }>(
+          `https://${domain}/collections/${col.handle}/products.json?limit=250`,
+        ))?.products;
+        if (!Array.isArray(products) || products.length === 0) return null;
+        for (const p of products) {
+          if (rawProducts.length >= MAX_RAW_PRODUCTS) break;
+          const url = `https://${domain}/products/${p.handle}`;
+          if (!p.title || !p.handle || seenHandles.has(url) || GIFT_CARD_RE.test(p.title)) continue;
+          seenHandles.add(url);
+          const min = shopifyMinPrice(p);
+          rawProducts.push({
+            title: p.title,
+            productType: p.product_type || null,
+            priceCents: min != null ? Math.round(min * 100) : null,
+            url,
+          });
         }
+        const prices = products.map(shopifyMinPrice).filter((n): n is number => n != null);
+        const exactCount = col.products_count ?? products.length;
+        const count = `${exactCount}${!col.products_count && products.length === 250 ? "+" : ""}`;
+        return `Collection "${col.title}": ${count} products${describePrices(prices)}`;
       }),
     )).filter(Boolean) as string[];
 
     if (lines.length === 0) return null;
-    console.log("Shopify inventory data found for", domain);
+    console.log("Shopify collections read for", domain);
     return {
       text: `Live product data from ${domain} (exact figures from the store's product API — use these numbers verbatim):\n${lines.join("\n")}`,
       products: rawProducts,
@@ -791,7 +862,9 @@ const SOURCE_NOTES: Record<InventorySource, string> = {
 
 async function crawlSiteInventory(domain: string): Promise<CrawledInventory | null> {
   const shopify = await fetchShopifyInventory(domain);
-  if (shopify) return { data: shopify.text, source: "live", products: shopify.products };
+  if (shopify) {
+    return { data: shopify.text, source: "live", products: shopify.products, totalProducts: shopify.totalProducts };
+  }
 
   const sitemap = await fetchSitemapInventory(domain);
   if (sitemap) {
