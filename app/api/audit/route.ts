@@ -20,6 +20,7 @@ import {
 } from "@/lib/tech-stack";
 import {
   competitorQueries,
+  fetchExaCompanies,
   finalizeCompetitors,
   screenCompetitors,
   type CompetitorCandidate,
@@ -874,20 +875,32 @@ const SOURCE_NOTES: Record<InventorySource, string> = {
   search: "search-engine snippets — unreliable",
 };
 
+// "mejuri.com" geo-redirects to a localized path where the product feed
+// 404s, while "www.mejuri.com" serves it — so feeds and sitemaps are tried on
+// the host as typed and on its www / non-www twin.
+function hostVariants(domain: string): string[] {
+  const d = domain.toLowerCase();
+  return [d, d.startsWith("www.") ? d.slice(4) : `www.${d}`];
+}
+
 async function crawlSiteInventory(domain: string): Promise<CrawledInventory | null> {
-  const shopify = await fetchShopifyInventory(domain);
-  if (shopify) {
-    return { data: shopify.text, source: "live", products: shopify.products, totalProducts: shopify.totalProducts };
+  for (const host of hostVariants(domain)) {
+    const shopify = await fetchShopifyInventory(host);
+    if (shopify) {
+      return { data: shopify.text, source: "live", products: shopify.products, totalProducts: shopify.totalProducts };
+    }
   }
 
-  const sitemap = await fetchSitemapInventory(domain);
-  if (sitemap) {
-    return {
-      data: sitemap.text,
-      source: "sitemap",
-      totalProducts: sitemap.totalProducts,
-      categoryPages: sitemap.categoryPages,
-    };
+  for (const host of hostVariants(domain)) {
+    const sitemap = await fetchSitemapInventory(host);
+    if (sitemap) {
+      return {
+        data: sitemap.text,
+        source: "sitemap",
+        totalProducts: sitemap.totalProducts,
+        categoryPages: sitemap.categoryPages,
+      };
+    }
   }
 
   const crawled = await crawlCollectionPages(domain);
@@ -915,6 +928,9 @@ const JUNK_CATEGORY_RE = new RegExp(
     // Month-named drops are merchandising calendars, not assortment
     "^(january|february|march|april|may|june|july|august|september|october|november|december)( (drop|edit|collection|launch))?$",
     "^shop all$", "^all products?$", "^collections?$", "^products?$", "^all$", "^new arrivals?$",
+    // Whole-store views ("All Jewelry", "Shop All Rings") are catalog totals,
+    // not categories — comparing them to a segment's deepest category misleads
+    "^(shop )?all (products?|items|jewe?l(le)?ry|collections?|categories|styles|pieces|the)\\b", "^shop all\\b",
   ].join("|"),
   "i",
 );
@@ -1847,7 +1863,12 @@ export async function POST(request: Request) {
       country,
     });
     console.log("Competitor queries:", queries);
-    const competitorSearchData = await fetchCompetitorSearchResults(queries);
+    const [webResults, exaResults] = await Promise.all([
+      fetchCompetitorSearchResults(queries),
+      fetchExaCompanies({ offering: industry.offering, country, clientDomain: domain }),
+    ]);
+    if (exaResults) console.log("Exa company results added");
+    const competitorSearchData = [exaResults, webResults].filter(Boolean).join("\n\n---\n\n") || null;
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (competitorSearchData && apiKey) {

@@ -96,3 +96,51 @@ export async function finalizeCompetitors(
   const alive = await Promise.all(pool.map((c) => domainResolves(c.domain)));
   return pool.filter((_, i) => alive[i]).slice(0, limit);
 }
+
+/**
+ * Exa company search (optional — active only when EXA_API_KEY is set, e.g.
+ * via the Vercel Marketplace integration). One request per uncached audit:
+ * businesses that sell what the client sells, as a plain-text block for the
+ * refinement step. Returns null on any failure so the audit never depends on it.
+ */
+export async function fetchExaCompanies(opts: {
+  offering: string;
+  country: string | null;
+  clientDomain: string;
+}): Promise<string | null> {
+  const apiKey = process.env.EXA_API_KEY;
+  if (!apiKey || !opts.offering) return null;
+  const client = cleanDomain(opts.clientDomain);
+  const query = `Companies that sell ${opts.offering}${opts.country ? ` in ${opts.country}` : ""}`;
+  try {
+    const res = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "content-type": "application/json" },
+      body: JSON.stringify({
+        query,
+        type: "auto",
+        category: "company",
+        numResults: 10,
+        ...(client ? { excludeDomains: [client, `www.${client}`] } : {}),
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) {
+      console.error("Exa search failed:", res.status);
+      return null;
+    }
+    const data = (await res.json()) as { results?: { url?: string; title?: string }[] };
+    const lines = (data.results ?? [])
+      .map((r) => {
+        const domain = cleanDomain(r.url);
+        if (!domain || domain === client || isBlockedDomain(domain)) return null;
+        return `- ${(r.title ?? "").trim() || domain} (${domain})`;
+      })
+      .filter(Boolean);
+    if (lines.length === 0) return null;
+    return `Company search (Exa) for "${query}":\n${lines.join("\n")}`;
+  } catch (err) {
+    console.error("Exa search error:", err);
+    return null;
+  }
+}
