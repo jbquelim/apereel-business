@@ -141,5 +141,30 @@ await sql`
   ON tech_snapshots (domain, captured_at)
 `;
 
+// Paid Growth Plan orders. Status: pending → paid → (generating → needs_review
+// → sent) | failed. Written only by the checkout route and the signed webhook.
+await sql`
+  CREATE TABLE IF NOT EXISTS growth_orders (
+    id TEXT PRIMARY KEY,
+    domain TEXT NOT NULL,
+    url TEXT NOT NULL,
+    email TEXT NOT NULL,
+    name TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    amount_cents INTEGER NOT NULL,
+    currency TEXT NOT NULL,
+    stripe_session_id TEXT UNIQUE,
+    stripe_payment_intent TEXT,
+    livemode BOOLEAN,
+    report JSONB,
+    review_notes TEXT,
+    access_token TEXT UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    paid_at TIMESTAMPTZ,
+    sent_at TIMESTAMPTZ
+  )
+`;
+await sql`CREATE INDEX IF NOT EXISTS idx_growth_orders_status ON growth_orders (status, created_at)`;
+
 const [{ count }] = await sql`SELECT count(*)::int AS count FROM businesses`;
 console.log("Schema ready. businesses rows:", count);
