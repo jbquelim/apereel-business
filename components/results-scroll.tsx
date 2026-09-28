@@ -68,7 +68,9 @@ function Bar({
   labelRef,
   valueRef,
   complete,
+  compact = false,
 }: {
+  compact?: boolean;
   metric: Metric;
   endFraction: number;
   fillRef?: (el: HTMLDivElement | null) => void;
@@ -91,7 +93,7 @@ function Bar({
           <p className="text-[13px] text-navy/55">{metric.support}</p>
         </div>
       </div>
-      <div aria-hidden="true" className="relative mt-8">
+      <div aria-hidden="true" className={cn("relative", compact ? "mt-7" : "mt-8")}>
         {/* full gray track = 20× scale */}
         <div className="h-2.5 w-full rounded-full bg-navy/10">
           <div
@@ -136,16 +138,18 @@ type RefSetter = <K extends keyof BarRefs>(key: K) => (el: BarRefs[K]) => void;
 function Panel({
   setRef,
   complete,
+  compact = false,
 }: {
   setRef?: RefSetter;
   complete: boolean;
+  compact?: boolean;
 }) {
   return (
     <div className="rounded-[var(--radius-parent)] bg-white p-6 sm:p-8">
       <p className="font-mono text-[10px] tracking-[0.2em] text-navy/45 uppercase">
         Final results
       </p>
-      <div className="mt-5 space-y-9">
+      <div className={cn("mt-5", compact ? "space-y-6" : "space-y-9")}>
         <Bar
           metric={COPY.traffic}
           endFraction={TRAFFIC_END}
@@ -153,6 +157,7 @@ function Panel({
           labelRef={setRef?.("trafficLabel")}
           valueRef={setRef?.("trafficValue")}
           complete={complete}
+          compact={compact}
         />
         <Bar
           metric={COPY.revenue}
@@ -161,9 +166,10 @@ function Panel({
           labelRef={setRef?.("revenueLabel")}
           valueRef={setRef?.("revenueValue")}
           complete={complete}
+          compact={compact}
         />
       </div>
-      <div className="mt-8 border-t border-navy/10 pt-4">
+      <div className={cn("border-t border-navy/10 pt-4", compact ? "mt-5" : "mt-8")}>
         <p className="text-[12px] leading-relaxed text-navy/55">{COPY.comparisonNote}</p>
         <p className="mt-0.5 text-[12px] leading-relaxed text-navy/55">{COPY.sourceNote}</p>
       </div>
@@ -272,21 +278,27 @@ function Layout({
   done,
   rootRef,
   panelRef,
+  compact = false,
 }: {
   setRef: RefSetter;
   done: boolean;
+  /** pinned mode: trimmed vertical padding so it fits shorter windows */
+  compact?: boolean;
   rootRef?: React.Ref<HTMLDivElement>;
   panelRef?: React.Ref<HTMLDivElement>;
 }) {
   return (
-    <div ref={rootRef} className="mx-auto w-full max-w-[1160px] px-6 py-16 sm:px-8 sm:py-24">
+    <div
+      ref={rootRef}
+      className={cn("mx-auto w-full max-w-[1160px] px-6 sm:px-8", compact ? "py-1" : "py-16 sm:py-24")}
+    >
       <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <LeftColumn emphasized={done} />
         <div ref={panelRef}>
-          <Panel setRef={setRef} complete={done} />
+          <Panel setRef={setRef} complete={done} compact={compact} />
         </div>
       </div>
-      <div className="mt-8">
+      <div className={compact ? "mt-4" : "mt-8"}>
         <Pillars visible={done} />
       </div>
     </div>
@@ -299,17 +311,30 @@ function Layout({
  * the pin just keeps the finished result on screen a little longer before the
  * page moves on.
  */
-function PinnedResults() {
+function PinnedResults({ onUnfit }: { onUnfit: () => void }) {
+  const stickyRef = useRef<HTMLDivElement>(null);
+  // Fall back to the unpinned layout only if the composition can't fit.
+  useEffect(() => {
+    const check = () => {
+      const content = stickyRef.current?.firstElementChild as HTMLElement | null;
+      if (content && content.offsetHeight > window.innerHeight - 80 - 8) onUnfit();
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    const content = stickyRef.current?.firstElementChild;
+    if (content) ro.observe(content);
+    return () => ro.disconnect();
+  }, [onUnfit]);
   return (
     <div className="relative h-[165svh]">
-      <div className="sticky top-0 flex h-svh flex-col justify-center pt-20">
-        <AnimatedResults />
+      <div ref={stickyRef} className="sticky top-0 flex h-svh flex-col justify-center pt-20">
+        <AnimatedResults compact />
       </div>
     </div>
   );
 }
 
-function AnimatedResults() {
+function AnimatedResults({ compact = false }: { compact?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { setRef, paint } = useBars();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -334,19 +359,27 @@ function AnimatedResults() {
     return () => run.stop();
   }, [inView, reduce, paint]);
 
-  return <Layout setRef={setRef} done={done} rootRef={rootRef} panelRef={panelRef} />;
+  return <Layout setRef={setRef} done={done} rootRef={rootRef} panelRef={panelRef} compact={compact} />;
 }
 
 export function ResultsScroll() {
   const reduce = useReducedMotion();
   const [pinnable, setPinnable] = useState(false);
+  const [fits, setFits] = useState(true);
+  const onUnfit = useCallback(() => setFits(false), []);
 
   useEffect(() => {
-    // pin only when the whole composition fits below the header
-    const evaluate = () => setPinnable(window.innerWidth >= 1024 && window.innerHeight >= 700);
-    evaluate();
+    // two-column layout from 1024px; PinnedResults checks the height fit
+    const evaluate = () => {
+      setPinnable(window.innerWidth >= 1024 && window.innerHeight >= 560);
+      setFits(true);
+    };
+    const id = requestAnimationFrame(evaluate);
     window.addEventListener("resize", evaluate);
-    return () => window.removeEventListener("resize", evaluate);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("resize", evaluate);
+    };
   }, []);
 
   return (
@@ -356,7 +389,7 @@ export function ResultsScroll() {
       className="bg-ink"
     >
       <MotionProvider>
-        {pinnable && !reduce ? <PinnedResults /> : <AnimatedResults />}
+        {pinnable && fits && !reduce ? <PinnedResults onUnfit={onUnfit} /> : <AnimatedResults />}
       </MotionProvider>
     </section>
   );

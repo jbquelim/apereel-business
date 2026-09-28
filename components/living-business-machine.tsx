@@ -19,8 +19,8 @@ const CFG = {
   arriveUntil: 0.25,
   // internal overlay sequence runs 25–70% of a chapter; the rest is a hold
   sequenceUntil: 0.7,
-  stageMinWidth: 1100,
-  sceneMinHeight: 340,
+  stageMinWidth: 1000, // below 1100 the band stacks; the scene flexes to what is left
+  sceneMinHeight: 260, // panel size scales with scene height
 };
 
 const icon = (d: string): ReactNode => (

@@ -9,6 +9,11 @@ import { OVERLAY_SVGS } from "@/components/cinematic-overlays";
 const IMG_W = 2172;
 const IMG_H = 724;
 const VISIBLE_FRACTION = 0.52;
+// Pinned-mode gates: the panorama flexes to fit, so these only exclude
+// phones/tablets-in-portrait and very short windows.
+const MIN_W = 900;
+const MIN_H = 560;
+const MIN_VISUAL = 170;
 const MIN_ZOOM = 1.12;
 const SCROLL_VIEWPORTS = 4;
 const T_OVERVIEW = 0.06;
@@ -245,8 +250,8 @@ export function PanoramicJourney() {
       if (
         s.ready &&
         !reduce.matches &&
-        window.innerWidth >= 1100 &&
-        window.innerHeight >= 720
+        window.innerWidth >= MIN_W &&
+        window.innerHeight >= MIN_H
       ) {
         stage.classList.add("cm-motion", "cm-measuring");
         const height = Math.max(
@@ -254,12 +259,21 @@ export function PanoramicJourney() {
         );
         // Reserve a lane below the tallest chapter so the pinned CTA never
         // overlaps the content.
-        document.documentElement.style.setProperty(
-          "--cm-copy-height",
-          `${height + 72}px`,
-        );
+        const copyH = height + 72;
+        document.documentElement.style.setProperty("--cm-copy-height", `${copyH}px`);
         stage.classList.remove("cm-measuring");
-        if (stage.getBoundingClientRect().height <= window.innerHeight - top - 8) {
+        // The panorama takes whatever height the nav and copy leave, so
+        // shorter windows still pin (with a shorter panorama) instead of
+        // falling back to the static layout.
+        const nav = stage.querySelector<HTMLElement>(".cm-nav");
+        const navH = nav ? nav.getBoundingClientRect().height : 60;
+        const avail = window.innerHeight - top - 8;
+        const visualH = Math.min(560, avail * 0.62, avail - navH - copyH);
+        document.documentElement.style.setProperty("--cm-visual-h", `${Math.floor(visualH)}px`);
+        if (
+          visualH >= MIN_VISUAL &&
+          stage.getBoundingClientRect().height <= window.innerHeight - top - 8
+        ) {
           s.enabled = true;
           s.travel = window.innerHeight * SCROLL_VIEWPORTS;
           area.style.height = `${stage.getBoundingClientRect().height + s.travel}px`;

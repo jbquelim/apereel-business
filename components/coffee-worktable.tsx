@@ -32,8 +32,8 @@ const IH = 992;
 
 const CFG = {
   holdVh: 0.8, // each stop holds for 80% of the viewport height (as on the Approach page)
-  stageMinWidth: 1024,
-  minStageHeight: 560,
+  stageMinWidth: 960,
+  minStageHeight: 460,
   minAspect: 1.55, // narrower stages crop the desk's sides and crowd the opening copy
   maxScale: 1.45, // CSS px per source px — the plate is ~1.6K, keep enlargement modest
   enterPx: 18,

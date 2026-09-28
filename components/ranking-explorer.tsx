@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   MotionProvider,
@@ -363,8 +363,21 @@ function Intro() {
   );
 }
 
-function PinnedExplorer() {
+function PinnedExplorer({ onUnfit }: { onUnfit: () => void }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Fall back to the static layout only if the pinned stage can't fit.
+  useEffect(() => {
+    const check = () => {
+      const el = contentRef.current;
+      if (el && el.offsetHeight > window.innerHeight - 84 - 8) onUnfit();
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    if (contentRef.current) ro.observe(contentRef.current);
+    return () => ro.disconnect();
+  }, [onUnfit]);
   const progressFillRef = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState(0);
   // becomes true once the user lands on the stage: the first row's count
@@ -432,6 +445,7 @@ function PinnedExplorer() {
     <div ref={wrapperRef} className="relative mb-14 h-[500svh]">
       <div className="sticky top-0 flex h-svh flex-col pt-[5.25rem] pb-4">
         <div className="mx-auto flex w-full max-w-[1160px] min-h-0 flex-1 flex-col justify-center px-6 sm:px-8">
+          <div ref={contentRef}>
           <div className="mb-6 grid gap-3 lg:grid-cols-[auto_1fr] lg:items-end lg:gap-12">
             <div>
               <p className="font-mono text-[11px] tracking-[0.24em] text-muted uppercase">
@@ -459,6 +473,7 @@ function PinnedExplorer() {
               <Panel active={active} progressRef={progressFillRef} landed={landed} />
               <p className="mt-3 text-right text-[11px] text-muted/50">{COPY.sourceNote}</p>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -490,18 +505,25 @@ function StaticExplorer() {
 export function RankingExplorer() {
   const reduce = useReducedMotion();
   const [pinnable, setPinnable] = useState(false);
+  // the pinned stage reports when its content can't fit; any resize retries
+  const [fits, setFits] = useState(true);
+  const onUnfit = useCallback(() => setFits(false), []);
 
   useEffect(() => {
     const evaluate = () => {
-      // pin only when the full stage fits below the header
-      setPinnable(window.innerWidth >= 1100 && window.innerHeight >= 680);
+      // two-column layout from 1024px; the fit check handles height
+      setPinnable(window.innerWidth >= 1024 && window.innerHeight >= 560);
+      setFits(true);
     };
-    evaluate();
+    const id = requestAnimationFrame(evaluate);
     window.addEventListener("resize", evaluate);
-    return () => window.removeEventListener("resize", evaluate);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("resize", evaluate);
+    };
   }, []);
 
-  const pinned = pinnable && !reduce;
+  const pinned = pinnable && fits && !reduce;
 
   return (
     <section
@@ -511,7 +533,7 @@ export function RankingExplorer() {
     >
       <MotionProvider>
         {pinned ? (
-          <PinnedExplorer />
+          <PinnedExplorer onUnfit={onUnfit} />
         ) : (
           <>
             <Intro />

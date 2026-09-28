@@ -494,7 +494,7 @@ body {
 
 /* ── Illustrated approach: sticky map + scroll-story chapters ─────── */
 .approach-grid { display: grid; gap: 2.5rem; }
-@media (min-width: 1100px) {
+@media (min-width: 1000px) {
   .approach-grid { grid-template-columns: 58% 42%; gap: 4rem; align-items: start; container-type: inline-size; }
   /* Pin the map at its exact resting offset (main pt-10 + section pt-24) so it
      locks in place on the very first scroll — no upward jump — and stays put
@@ -508,7 +508,12 @@ body {
      last chapter lets it hold instead of rushing past. */
   .approach-chapters { padding-bottom: 0; }
 }
-@media (max-height: 720px) {
+/* 1000–1099px: fixed 58%/42% columns + gap would overflow; share the
+   width instead so the text column never clips */
+@media (min-width: 1000px) and (max-width: 1099px) {
+  .approach-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 2.5rem; }
+}
+@media (max-height: 599px) {
   .approach-sticky { position: static !important; }
 }
 
@@ -524,7 +529,7 @@ body {
 
 .approach-chapter { padding-block: 2rem; opacity: 0.45; transition: opacity 0.4s var(--ease-out); }
 .approach-chapter.is-active { opacity: 1; }
-@media (min-width: 1100px) {
+@media (min-width: 1000px) {
   .approach-chapter { min-height: calc(100svh - 7rem); padding-block: 0; }
   /* Each step's text centres on the drawing, like the intro heading. */
   .approach-chapter-inner { min-height: min(640px, 62vh, 58cqw); display: flex; flex-direction: column; justify-content: center; }
@@ -534,7 +539,7 @@ body {
    step arrives. Its pinned box runs to the bottom of the view, so the next
    step stays below the fold for the whole hold. The last step's box matches
    the pinned column instead, so text and drawing release together. */
-@media (min-width: 1100px) and (min-height: 721px) {
+@media (min-width: 1000px) and (min-height: 600px) {
   .approach-chapter {
     --approach-hold: 80svh;
     --approach-box: calc(100svh - 8.5rem);
@@ -620,7 +625,7 @@ body {
 
 /* Intro heading now lives atop the right column (fits map + heading in view) */
 .approach-intro { margin-bottom: 0.5rem; }
-@media (min-width: 1100px) {
+@media (min-width: 1000px) {
   /* Fills the first screen (below main pt-10 + section pt-24) so the page
      opens on the heading alone and step 1 starts just below the fold. */
   .approach-intro { display: flex; flex-direction: column; justify-content: flex-start; min-height: calc(100svh - 8.5rem); margin-bottom: 0; }
@@ -675,7 +680,9 @@ body {
 .cm-motion .cm-chapters { height: var(--cm-copy-height); }
 .cm-motion .cm-chapter { position: absolute; inset: 0; opacity: 0; visibility: hidden; pointer-events: none; border-top: 0; padding-top: 1.4rem; transition: opacity 0.25s ease; }
 .cm-motion .cm-chapter.is-active { opacity: 1; visibility: visible; pointer-events: auto; }
-.cm-motion .cm-diagram { position: absolute; bottom: calc(100% + 96px); right: 6%; width: clamp(320px, 27vw, 500px); margin: 0; background: rgba(4, 18, 32, 0.94); box-shadow: 0 12px 60px #0009; z-index: 2; }
+.cm-motion .cm-visual { height: var(--cm-visual-h, clamp(280px, 44svh, 560px)); }
+/* diagram (2:1) floats inside the panorama: cap its width to the free height */
+.cm-motion .cm-diagram { position: absolute; bottom: calc(100% + 96px); right: 6%; width: min(clamp(300px, 27vw, 500px), calc((var(--cm-visual-h, 400px) - 56px) * 2)); margin: 0; background: rgba(4, 18, 32, 0.94); box-shadow: 0 12px 60px #0009; z-index: 2; }
 .cm-motion.cm-measuring .cm-chapter { position: relative; opacity: 1; visibility: visible; }
 .cm-motion.cm-measuring .cm-chapters { height: auto; }
 .cm-motion.cm-measuring .cm-diagram { display: none; }
@@ -686,6 +693,14 @@ body {
   .cm-nav a { min-width: 130px; flex: none; }
   .cm-copy { grid-template-columns: 1fr; gap: 1.1rem; }
   .cm-desc p, .cm-detail p { font-size: 1rem; }
+}
+/* Pinned mode below 1100px keeps the desktop grid (the <1100 static rules
+   stack everything, which would not fit a pinned stage). */
+@media (max-width: 1099px) {
+  .cm-motion .cm-nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; overflow: visible; }
+  .cm-motion .cm-nav a { min-width: 0; font-size: 0.76rem; }
+  .cm-motion .cm-copy { grid-template-columns: 1.1fr 1fr 1fr; gap: 1.4rem; }
+  .cm-motion .cm-desc p, .cm-motion .cm-detail p { font-size: 0.86rem; }
 }
 @media (prefers-reduced-motion: reduce) { .cm-chapter, .cm-panorama { transition: none; } }
 
