@@ -16,8 +16,17 @@ import { ButtonLink } from "@/components/button-link";
 // The server-rendered layout is the static version (overview image, four
 // chapter blocks with matching crops, CTA). Mobile, short or narrow screens and
 // reduced motion keep it; the stage enhances only when it fits.
+//
+// The tablet on the desk carries a real coffee film. A rectangular media plane
+// (poster + video) is projected into the tablet's inner display with a
+// four-corner homography (matrix3d) inside the same image plane as the desk,
+// so the camera moves it with the photograph. The film plays in real time only
+// while chapter 03 Film is active; scroll never touches currentTime.
 
-const IMG_SRC = "/images/coffee-worktable/worktable.webp";
+const IMG_SRC = "/images/coffee-worktable/worktable-v2.webp";
+const FILM_SRC = "/videos/coffee-film.mp4";
+const POSTER_SRC = "/images/coffee-worktable/coffee-poster.jpg";
+const FILM_STOP = 2; // index of "03 Film" in STOPS
 const IW = 1586;
 const IH = 992;
 
@@ -86,7 +95,7 @@ const STOPS: Stop[] = [
     screen: [0.4, 0.05, 0.95, 0.95],
     side: "left",
     outlines: [
-      [[769, 482], [1086, 457], [1120, 645], [782, 680]],
+      [[765, 479], [1092, 455], [1119, 654], [779, 684]], // tablet outer edge, recalibrated on v2 artwork
       [[780, 678], [1176, 682], [1184, 848], [778, 840]],
     ],
   },
@@ -151,6 +160,37 @@ function buildTimeline(holdPx: number) {
 }
 const DISCLOSURE = "AI-assisted creative concept demonstration.";
 
+// ── Tablet screen mapping ───────────────────────────────────────────────
+// Inner-display corners in source px (clockwise from top-left), measured on
+// the full-resolution artwork and kept ~1.5px inside the bezel so no media
+// pixel can land on the frame.
+const SCREEN_QUAD: [number, number][] = [
+  [788, 493],
+  [1070, 471.5],
+  [1096.5, 638],
+  [799.5, 663],
+];
+// Media plane: the display's mean aspect (~1.71). The 16:9 film covers it with
+// a ~4% side crop rather than being stretched.
+const PLANE_W = 1280;
+const PLANE_H = 748;
+
+/** CSS matrix3d projecting the rect (0,0)–(w,h) onto quad q (Heckbert's
+ *  square-to-quad, pre-scaled to the rect). */
+function rectToQuad(w: number, h: number, q: [number, number][]): string {
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q;
+  const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3;
+  const dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+  const den = dx1 * dy2 - dx2 * dy1;
+  const g = (dx3 * dy2 - dx2 * dy3) / den;
+  const k = (dx1 * dy3 - dx3 * dy1) / den;
+  const a = x1 - x0 + g * x1, b = x3 - x0 + k * x3;
+  const d = y1 - y0 + g * y1, e = y3 - y0 + k * y3;
+  const m = [a / w, d / w, 0, g / w, b / h, e / h, 0, k / h, 0, 0, 1, 0, x0, y0, 0, 1];
+  return `matrix3d(${m.map((v) => +v.toFixed(9)).join(",")})`;
+}
+const SCREEN_MATRIX = rectToQuad(PLANE_W, PLANE_H, SCREEN_QUAD);
+
 const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const ease = (t: number) => 1 - (1 - t) ** 3;
@@ -194,11 +234,14 @@ export function CoffeeWorktable() {
     const controls = root.querySelector<HTMLElement>(".cw-controls")!;
     const cta = final.querySelector<HTMLAnchorElement>("a")!;
     const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+    const screen = root.querySelector<HTMLElement>(".cw-screen")!;
+    const film = screen.querySelector<HTMLVideoElement>("video")!;
+    const playButton = root.querySelector<HTMLButtonElement>(".cw-play")!;
 
     let enabled = false;
     let W = 0;
     let H = 0;
-    let start = 0;
+    let pinTop = 0; // header height the stage pins beneath
     let overview: Cam = { s: 1, tx: 0, ty: 0 };
     let cams: Cam[] = [];
     let keys: { p: number; cam: Cam }[] = [];
@@ -252,7 +295,9 @@ export function CoffeeWorktable() {
       return { i, o, op: i * (1 - o) };
     }
 
+    let lastP = 0; // last rendered progress; the resize anchor
     function render(p: number) {
+      lastP = p;
       const cam = camAt(p);
       setStyle(world, `transform:translate3d(${cam.tx.toFixed(2)}px,${cam.ty.toFixed(2)}px,0) scale(${cam.s.toFixed(5)})`);
 
@@ -289,6 +334,7 @@ export function CoffeeWorktable() {
       setStyle(controls, `opacity:${(1 - fin).toFixed(3)};visibility:${fin > 0.98 ? "hidden" : "visible"}`);
 
       const navCurrent = p >= tl.finalIn[0] ? -1 : current;
+      setFilmActive(navCurrent === FILM_STOP);
       if (navCurrent !== shown) {
         shown = navCurrent;
         navButtons.forEach((b, j) => {
@@ -298,8 +344,97 @@ export function CoffeeWorktable() {
       }
     }
 
-    const progress = () => clamp((scrollY - start) / tl.travel);
-    const toScroll = (p: number) => start + p * tl.travel;
+    // ── Film playback ────────────────────────────────────────────────
+    // Eligibility = active Film chapter ∧ tour on screen ∧ tab visible ∧ no
+    // reduced motion ∧ media not failed. Playback changes only when that
+    // boolean flips — never per scroll frame.
+    let filmActive = false;
+    let onScreen = false;
+    let wanted = false;
+    let failed = false;
+    let token = 0;
+    let fresh = true; // next start is a new visit to Film → play from frame 0
+
+    function setFilmActive(v: boolean) {
+      if (v === filmActive) return;
+      filmActive = v;
+      if (v) fresh = true;
+      syncFilm();
+    }
+    function loadFilm() {
+      if (film.getAttribute("src") || failed) return;
+      film.preload = "auto";
+      film.src = FILM_SRC;
+      film.load();
+    }
+    function attempt(t: number) {
+      film.play().then(
+        () => {
+          if (t !== token || !wanted) film.pause(); // stale: chapter already changed
+        },
+        () => {
+          if (t === token && wanted) root.setAttribute("data-film-blocked", "");
+        },
+      );
+    }
+    function syncFilm() {
+      const eligible =
+        enabled && filmActive && onScreen && !document.hidden && !reduce.matches && !failed;
+      if (eligible === wanted) return;
+      wanted = eligible;
+      const t = ++token;
+      if (eligible) {
+        loadFilm();
+        // a new visit to Film starts from the first frame; tab/visibility
+        // pauses resume where they left off
+        if (fresh) film.currentTime = 0;
+        fresh = false;
+        if (film.readyState >= 2) attempt(t);
+        else
+          film.addEventListener("canplay", () => t === token && wanted && attempt(t), { once: true });
+      } else {
+        film.pause();
+        screen.classList.remove("is-playing");
+        root.removeAttribute("data-film-blocked");
+      }
+    }
+    const onPlaying = () => {
+      if (wanted) screen.classList.add("is-playing"); // poster stays underneath
+    };
+    const onFilmError = () => {
+      failed = true;
+      wanted = false;
+      screen.classList.remove("is-playing");
+      root.removeAttribute("data-film-blocked");
+    };
+    const onPlayClick = () => {
+      root.removeAttribute("data-film-blocked");
+      if (wanted) film.play().catch(() => root.setAttribute("data-film-blocked", ""));
+    };
+    film.addEventListener("playing", onPlaying);
+    film.addEventListener("error", onFilmError);
+    playButton.addEventListener("click", onPlayClick);
+    const onVisibility = () => syncFilm();
+    document.addEventListener("visibilitychange", onVisibility);
+    // Preload as the tour approaches; track actual on-screen visibility.
+    const nearIO = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && enabled && !reduce.matches) loadFilm();
+      },
+      { rootMargin: "100% 0px" },
+    );
+    const seenIO = new IntersectionObserver(([e]) => {
+      onScreen = e.isIntersecting;
+      syncFilm();
+    });
+    nearIO.observe(journey);
+    seenIO.observe(journey);
+
+    // Read from the journey's live position (one rect read per frame), so
+    // sections above changing height can never leave progress stale.
+    const startY = () => scrollY + journey.getBoundingClientRect().top - pinTop;
+    const progress = () => clamp((pinTop - journey.getBoundingClientRect().top) / tl.travel);
+    const toScroll = (p: number) => startY() + p * tl.travel;
     const behavior = (): ScrollBehavior => (reduce.matches ? "instant" : "smooth");
 
     function update() {
@@ -336,13 +471,22 @@ export function CoffeeWorktable() {
         root.classList.remove("enhanced");
         journey.style.height = "";
         clearInline();
+        // static layout: the desk image is fluid, so the mapped poster scales with it
+        root.style.setProperty("--cw-k", (world.clientWidth / IW).toFixed(5));
+        setFilmActive(false);
+        syncFilm();
         return;
       }
+      root.style.setProperty("--cw-k", "1");
+      // keep the tour where it is across resizes: the timeline length depends
+      // on the viewport, so re-anchor scroll to the last rendered progress
+      // (reading scroll here is unreliable — sections above may be mid-measure)
+      const keep = enabled ? lastP : null;
       root.classList.add("enhanced");
       enabled = true;
       tl = buildTimeline(CFG.holdVh * innerHeight);
       journey.style.height = `${H + tl.travel}px`;
-      start = scrollY + journey.getBoundingClientRect().top - top;
+      pinTop = top;
 
       // Overview: cover the stage, anchored to the top so the headline sits
       // in the desk's upper negative space.
@@ -363,7 +507,12 @@ export function CoffeeWorktable() {
         { p: tl.overviewBack, cam: overview },
         { p: 1, cam: overview },
       ];
+      if (keep !== null) {
+        const target = toScroll(keep);
+        if (Math.abs(target - scrollY) > 1) scrollTo({ top: target, behavior: "instant" });
+      }
       render(progress());
+      syncFilm();
     }
     function schedule() {
       if (!measureFrame) measureFrame = requestAnimationFrame(measure);
@@ -405,6 +554,16 @@ export function CoffeeWorktable() {
     measure();
 
     return () => {
+      token++;
+      nearIO.disconnect();
+      seenIO.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      film.removeEventListener("playing", onPlaying);
+      film.removeEventListener("error", onFilmError);
+      playButton.removeEventListener("click", onPlayClick);
+      film.pause();
+      film.removeAttribute("src");
+      film.load();
       ro.disconnect();
       removeEventListener("scroll", request);
       removeEventListener("resize", schedule);
@@ -432,6 +591,13 @@ export function CoffeeWorktable() {
               unoptimized
               className="cw-img"
             />
+            {/* Tablet display: poster + film on one media plane, projected into
+                the inner display. Decorative; never takes focus or pointer. */}
+            <div className="cw-screen" style={{ width: PLANE_W, height: PLANE_H, transform: `scale(var(--cw-k, 1)) ${SCREEN_MATRIX}` }} aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={POSTER_SRC} alt="" width={1280} height={720} decoding="async" />
+              <video muted playsInline loop preload="none" tabIndex={-1} disablePictureInPicture />
+            </div>
             <svg className="cw-outlines" viewBox={`0 0 ${IW} ${IH}`} aria-hidden="true">
               {STOPS.map((s) => (
                 <g key={s.id} className="cw-outline">
@@ -467,7 +633,21 @@ export function CoffeeWorktable() {
           <ol className="cw-chapters">
             {STOPS.map((s) => (
               <li key={s.id} id={`cw-${s.id}`} className={`cw-chapter cw-side-${s.side}`}>
-                <div className="cw-crop" style={cropStyle(s.region)} aria-hidden="true" />
+                {s.id === "film" ? (
+                  // Static layout: the real film as an ordinary, accessible player.
+                  <video
+                    className="cw-inline-film"
+                    controls
+                    playsInline
+                    muted
+                    preload="none"
+                    poster={POSTER_SRC}
+                    src={FILM_SRC}
+                    aria-label="Coffee concept film, 6 seconds, no audio"
+                  />
+                ) : (
+                  <div className="cw-crop" style={cropStyle(s.region)} aria-hidden="true" />
+                )}
                 <p className="cw-kicker">
                   <span className="cw-num">{s.num}</span> {s.label}
                 </p>
@@ -477,6 +657,11 @@ export function CoffeeWorktable() {
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
+                {s.id === "film" && (
+                  <button type="button" className="cw-play">
+                    <span aria-hidden="true">▶</span> Play film
+                  </button>
+                )}
               </li>
             ))}
           </ol>

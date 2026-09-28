@@ -77,8 +77,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // data-scroll-behavior: Next disables the CSS smooth scrolling during route
+    // changes, so a new page starts at the top instantly instead of gliding up
+    // through scroll-driven sections (e.g. the /work journey playing 5 → 1).
     <html
       lang="en-CA"
+      data-scroll-behavior="smooth"
       className={`${plusJakarta.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full overflow-x-clip bg-navy font-sans text-ink">

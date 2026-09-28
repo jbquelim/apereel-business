@@ -993,6 +993,22 @@ body {
 .cw-world { position: relative; width: 100%; }
 .cw-img { display: block; width: 100%; height: auto; }
 .cw-outlines, .cw-labels, .cw-scrim, .cw-controls { display: none; }
+/* Tablet display: media plane projected into the inner screen (matrix3d set
+   inline). Same box, fit and origin for poster and video. */
+.cw-world { position: relative; overflow: hidden; }
+.cw-screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; border-radius: 22px; pointer-events: none; background: #120c08; }
+.cw-screen img, .cw-screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; display: block; max-width: none; }
+.cw-screen video { opacity: 0; transition: opacity 0.35s ease; }
+.cw-screen.is-playing video { opacity: 1; }
+.cw-inline-film { display: block; width: 100%; aspect-ratio: 16 / 9; background: #120c08; border-radius: 3px; margin-bottom: 1rem; }
+.cw-play { display: none; }
+.cw.enhanced[data-film-blocked] .cw-play {
+  display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 1rem; align-self: flex-start; pointer-events: auto; cursor: pointer;
+  padding: 0.4rem 0.85rem; border-radius: 999px; border: 1px solid rgba(244, 241, 234, 0.35); background: rgba(4, 9, 18, 0.6); color: var(--ink);
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.cw-play span { font-size: 8px; }
+.cw.enhanced .cw-inline-film { display: none; }
 .cw-num { color: var(--electric); font-family: var(--font-geist-mono), monospace; }
 
 .cw-intro, .cw-chapters, .cw-final { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: 1.5rem; }
@@ -1015,7 +1031,7 @@ body {
 .cw-disclosure { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.06em; color: rgba(154, 164, 184, 0.85); }
 
 /* Enhanced: pinned stage below the measured header */
-.cw.enhanced .cw-journey { position: relative; }
+.cw.enhanced .cw-journey { position: relative; overflow-anchor: none; } /* pinned content must not become the browser's scroll anchor */
 .cw.enhanced .cw-stage { position: sticky; top: var(--cw-top); height: var(--cw-stage-h); overflow: hidden; background: var(--navy); }
 .cw.enhanced .cw-world { position: absolute; left: 0; top: 0; width: 1586px; height: 992px; transform-origin: 0 0; will-change: transform; }
 .cw.enhanced .cw-img { width: 100%; height: 100%; }

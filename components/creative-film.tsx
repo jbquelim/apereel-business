@@ -26,7 +26,9 @@ const CFG = {
   span: 0.8, // leaves a 15% closing hold on the finished hero frame
   stageMinWidth: 1024,
   minStageHeight: 420,
-  maxCrop: 0.2, // never crop more than 20% of the frame's height (the Action shot loses the operator's head beyond that)
+  // wide-and-short windows crop the frame's height; per-shot framing (FOCUS_Y)
+  // keeps each subject in view up to ~34%, beyond that use the static layout
+  maxCrop: 0.34,
   enterPx: 32,
   exitPx: 16,
 };
@@ -37,12 +39,15 @@ const FILM_DURATION = 30.041667;
 // Cut times from the supplied chapters.json; `read` is the point a chapter
 // jump lands on: that chapter's copy fully in and holding.
 const CHAPTERS = [
-  { id: "capture", start: 0, label: "Starting point", read: 0.6 },
-  { id: "direct", start: 4.791667, label: "Direction", read: 8.3 },
-  { id: "transform", start: 9.708333, label: "Product", read: 13.0 },
-  { id: "demonstrate", start: 14.958333, label: "Action", read: 16.6 },
-  { id: "refine", start: 19.5, label: "Detail", read: 22.9 },
-  { id: "deliver", start: 24.333333, label: "Payoff", read: 29.4 },
+  // focusY: vertical object-position per shot, chosen by inspecting every shot
+  // at a 32% height crop (Action anchors high to keep the operator's head;
+  // Payoff anchors low to keep the whole saw). Applied only at cuts.
+  { id: "capture", start: 0, label: "Starting point", read: 0.6, focusY: 72 },
+  { id: "direct", start: 4.791667, label: "Direction", read: 8.3, focusY: 60 },
+  { id: "transform", start: 9.708333, label: "Product", read: 13.0, focusY: 65 },
+  { id: "demonstrate", start: 14.958333, label: "Action", read: 16.6, focusY: 5 },
+  { id: "refine", start: 19.5, label: "Detail", read: 22.9, focusY: 40 },
+  { id: "deliver", start: 24.333333, label: "Payoff", read: 29.4, focusY: 80 },
 ];
 const ENDS = [...CHAPTERS.slice(1).map((c) => c.start), FILM_DURATION];
 
@@ -175,6 +180,8 @@ export function CreativeFilm() {
       const i = chapterAt(time);
       if (i !== shownChapter) {
         shownChapter = i;
+        // re-frame at the cut (invisible there); no effect when uncropped
+        video.style.objectPosition = `50% ${CHAPTERS[i].focusY}%`;
         jumps.forEach((b, j) => {
           if (j === i) b.setAttribute("aria-current", "step");
           else b.removeAttribute("aria-current");
