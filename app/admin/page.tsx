@@ -26,6 +26,11 @@ export default async function AdminPage() {
       <section className="mx-auto w-full max-w-[1120px] px-6 py-20 sm:px-8">
         <p className="font-mono text-[11px] tracking-[0.24em] text-electric uppercase">Apereel admin</p>
         <h1 className="font-display mt-4 text-4xl text-ink">Growth Plan orders</h1>
+        <p className="mt-3 text-[14px]">
+          <Link href="/admin/pricing" className="text-electric underline underline-offset-4">
+            Set service prices
+          </Link>
+        </p>
         {orders.length === 0 ? (
           <p className="mt-8 text-muted">No orders yet.</p>
         ) : (

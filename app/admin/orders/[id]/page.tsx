@@ -5,6 +5,7 @@ import { isAdmin } from "@/lib/admin-auth";
 import { getOrderDetail } from "@/lib/orders";
 import { GrowthReportView } from "@/components/growth-report-view";
 import type { GrowthReport } from "@/lib/growth-report";
+import { pricedServices } from "@/lib/service-prices";
 import { ReviewPanel } from "./review-panel";
 
 export const metadata: Metadata = { title: "Review Growth Plan", robots: { index: false, follow: false } };
@@ -53,7 +54,12 @@ export default async function OrderReviewPage({ params }: { params: Promise<{ id
               Preview: exactly what the customer will see
             </p>
             {report ? (
-              <GrowthReportView report={report} preparedFor={order.name} date={order.sent_at ?? new Date().toISOString()} />
+              <GrowthReportView
+                report={report}
+                preparedFor={order.name}
+                date={order.sent_at ?? new Date().toISOString()}
+                services={await pricedServices()}
+              />
             ) : (
               <p className="text-muted">No report yet.</p>
             )}

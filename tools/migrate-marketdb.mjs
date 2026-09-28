@@ -167,5 +167,18 @@ await sql`
 await sql`CREATE INDEX IF NOT EXISTS idx_growth_orders_status ON growth_orders (status, created_at)`;
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS generation_error TEXT`;
 
+// Service tier prices, edited by John at /admin/pricing. A tier without a
+// row (or with a null price) is unpriced.
+await sql`
+  CREATE TABLE IF NOT EXISTS service_prices (
+    slug TEXT NOT NULL,
+    tier TEXT NOT NULL,
+    price INTEGER,
+    price_prefix TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (slug, tier)
+  )
+`;
+
 const [{ count }] = await sql`SELECT count(*)::int AS count FROM businesses`;
 console.log("Schema ready. businesses rows:", count);

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ButtonLink } from "@/components/button-link";
 import { ServiceTiersSection } from "@/components/service-tiers-section";
 import { isPriced, tiersForService } from "@/lib/service-tiers";
+import { pricedServices } from "@/lib/service-prices";
 import { Container } from "@/components/container";
 import { getServicePage, servicePages } from "@/lib/service-pages";
 import { getSiteUrl } from "@/lib/site";
@@ -41,7 +42,7 @@ export default async function ServicePage({
   if (!page) notFound();
 
   const others = servicePages.filter((s) => s.slug !== page.slug);
-  const tiers = tiersForService(page.slug);
+  const tiers = tiersForService(page.slug, await pricedServices());
 
   const base = getSiteUrl();
   const pageUrl = `${base}/services/${page.slug}`;

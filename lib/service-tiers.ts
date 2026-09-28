@@ -282,8 +282,8 @@ export const SERVICE_TIERS: ServiceTiers[] = [
   },
 ];
 
-export function tiersForService(slugOrTag: string): ServiceTiers | undefined {
-  return SERVICE_TIERS.find((s) => s.slug === slugOrTag || s.tag === slugOrTag);
+export function tiersForService(slugOrTag: string, services: ServiceTiers[] = SERVICE_TIERS): ServiceTiers | undefined {
+  return services.find((s) => s.slug === slugOrTag || s.tag === slugOrTag);
 }
 
 export const isPriced = (s: ServiceTiers) => s.tiers.every((t) => t.price != null);
@@ -301,13 +301,16 @@ export function priceLabel(t: Tier): string {
  * Fix, so a service can get both. Grow is suggested when the plan spans three
  * or more services.
  */
-export function recommendTiers(priorities: { service: string; effort: string }[]) {
+export function recommendTiers(
+  priorities: { service: string; effort: string }[],
+  services: ServiceTiers[] = SERVICE_TIERS,
+) {
   const groups = new Map<string, { service: ServiceTiers; tier: Tier; covers: number[] }>();
-  const services = new Set<string>();
+  const seenServices = new Set<string>();
   priorities.forEach((p, i) => {
-    const service = tiersForService(p.service);
+    const service = tiersForService(p.service, services);
     if (!service) return;
-    services.add(service.slug);
+    seenServices.add(service.slug);
     const tierId: TierId = p.effort === "high" ? "build" : "fix";
     const key = `${service.slug}:${tierId}`;
     const existing = groups.get(key);
@@ -315,5 +318,5 @@ export function recommendTiers(priorities: { service: string; effort: string }[]
     else groups.set(key, { service, tier: service.tiers.find((t) => t.id === tierId)!, covers: [i + 1] });
   });
   const recs = [...groups.values()].sort((a, b) => a.covers[0] - b.covers[0]);
-  return { recs, suggestGrow: services.size >= 3 };
+  return { recs, suggestGrow: seenServices.size >= 3 };
 }

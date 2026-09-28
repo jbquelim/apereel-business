@@ -1,5 +1,5 @@
 import type { GrowthReport } from "@/lib/growth-report";
-import { priceLabel, recommendTiers, tiersForService } from "@/lib/service-tiers";
+import { priceLabel, recommendTiers, type ServiceTiers } from "@/lib/service-tiers";
 import { BuyerDemandSection } from "@/components/buyer-demand-section";
 
 // The Growth Plan as the customer reads it. Also rendered in John's review
@@ -33,10 +33,13 @@ export function GrowthReportView({
   report,
   preparedFor,
   date,
+  services,
 }: {
   report: GrowthReport;
   preparedFor: string | null;
   date: string | null;
+  /** Services with current prices (from the database). */
+  services?: ServiceTiers[];
 }) {
   const plan = report.plan;
   const tech = report.audit.techStack;
@@ -226,7 +229,7 @@ export function GrowthReportView({
         </Section>
       )}
 
-      {plan && <HowWeCanHelp priorities={plan.priorities} />}
+      {plan && <HowWeCanHelp priorities={plan.priorities} services={services} />}
 
       <section className="mt-14 rounded-2xl border border-electric/30 bg-electric/5 p-6 sm:p-8">
         <p className="font-display text-2xl text-ink">Want help putting this into action?</p>
@@ -245,10 +248,16 @@ export function GrowthReportView({
   );
 }
 
-function HowWeCanHelp({ priorities }: { priorities: { service: string; effort: string }[] }) {
-  const { recs, suggestGrow } = recommendTiers(priorities);
+function HowWeCanHelp({
+  priorities,
+  services,
+}: {
+  priorities: { service: string; effort: string }[];
+  services?: ServiceTiers[];
+}) {
+  const { recs, suggestGrow } = recommendTiers(priorities, services);
   if (recs.length === 0) return null;
-  const grow = suggestGrow ? tiersForService("SEO")?.tiers.find((t) => t.id === "grow") : undefined;
+  const grow = suggestGrow;
   return (
     <Section eyebrow="How Apereel can help" title="Where we'd start">
       <div className="grid gap-4 md:grid-cols-2">
