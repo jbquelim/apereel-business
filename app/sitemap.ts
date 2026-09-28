@@ -6,7 +6,14 @@ import { insights } from "@/lib/insights";
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = getSiteUrl();
   return [
-    ...["work", "approach", "services", "contact"].map((path) => ({
+    // The Growth Plan page is listed only once live payments are switched on.
+    ...[
+      "work",
+      "approach",
+      "services",
+      "contact",
+      ...(process.env.NEXT_PUBLIC_GROWTH_PLAN === "on" ? ["growth-plan"] : []),
+    ].map((path) => ({
       url: `${base}/${path}`,
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
