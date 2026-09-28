@@ -54,10 +54,14 @@ async function suggest(q: string, gl: string | null): Promise<string[]> {
       headers: { "User-Agent": "Mozilla/5.0" },
       signal: AbortSignal.timeout(6000),
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error("Autocomplete HTTP", res.status, "for", q);
+      return [];
+    }
     const data = JSON.parse(await res.text()) as [string, string[]];
     return Array.isArray(data[1]) ? data[1] : [];
-  } catch {
+  } catch (err) {
+    console.error("Autocomplete failed for", q, err instanceof Error ? err.message : err);
     return [];
   }
 }
@@ -86,6 +90,7 @@ export async function buyerDemand(opts: {
   /** product page URLs already known (e.g. from a live product feed) */
   knownProductUrls?: string[];
 }): Promise<BuyerDemand | null> {
+  console.log("Buyer demand seeds:", opts.seeds);
   if (opts.seeds.length === 0) return null;
   const gl = opts.country ? GL[opts.country.toLowerCase()] ?? null : null;
 
