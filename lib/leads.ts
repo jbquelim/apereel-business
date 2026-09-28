@@ -40,6 +40,15 @@ function buildProspectEmail(lead: LeadInput): { subject: string; html: string; t
       ? `These are not template checks. While you waited, we pulled live market data on ${compNames.join(", ")} and compared it against ${lead.domain}.`
       : `These are not template checks. They come from live data about your market, pulled while you waited.`;
 
+  // The paid Growth Plan is offered only once live payments are switched on.
+  const growthPlanUrl =
+    process.env.NEXT_PUBLIC_GROWTH_PLAN === "on"
+      ? `https://www.apereel.com/growth-plan?site=${encodeURIComponent(lead.domain)}`
+      : null;
+  const planText = growthPlanUrl
+    ? `\n\nWant the full picture? The Growth Plan ($20) goes deeper: your pages checked one by one, the searches your buyers use that you have no page for, and a 90-day plan I review personally before it's sent. ${growthPlanUrl}`
+    : "";
+
   const text = `Hi ${first},
 
 Thanks for running an audit on ${lead.domain}. The findings worth your attention:
@@ -50,10 +59,10 @@ ${crawledLine}
 
 Most agencies would turn this into a proposal for more content or more ads. We would rather talk about what is actually limiting revenue first.
 
-If one finding above surprised you, reply and tell me which. I will tell you what we would do about it. No deck, no discovery script.
+If one finding above surprised you, reply and tell me which. I will tell you what we would do about it. No deck, no discovery script.${planText}
 
 John Lim
-Apereel — a digital growth consultancy for e-commerce businesses
+Apereel — business-first digital growth
 https://www.apereel.com`;
 
   const html = `<div style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1a2233; line-height: 1.6; font-size: 15px;">
@@ -65,8 +74,9 @@ https://www.apereel.com`;
   <p>${esc(crawledLine)}</p>
   <p>Most agencies would turn this into a proposal for more content or more ads. We would rather talk about what is actually limiting revenue first.</p>
   <p><strong>If one finding above surprised you, reply and tell me which.</strong> I will tell you what we would do about it. No deck, no discovery script.</p>
+  ${growthPlanUrl ? `<p>Want the full picture? <a href="${growthPlanUrl}" style="color: #1d6fd4;">The Growth Plan</a> ($20) goes deeper: your pages checked one by one, the searches your buyers use that you have no page for, and a 90-day plan I review personally before it&#39;s sent.</p>` : ""}
   <p style="margin-top: 28px;">John Lim<br/>
-  <span style="color: #5a6478;">Apereel — a digital growth consultancy for e-commerce businesses</span><br/>
+  <span style="color: #5a6478;">Apereel — business-first digital growth</span><br/>
   <a href="https://www.apereel.com" style="color: #1d6fd4;">apereel.com</a></p>
 </div>`;
 
