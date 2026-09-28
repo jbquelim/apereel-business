@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ButtonLink } from "@/components/button-link";
 import { ServiceTiersSection } from "@/components/service-tiers-section";
-import { tiersForService } from "@/lib/service-tiers";
+import { isPriced, tiersForService } from "@/lib/service-tiers";
 import { Container } from "@/components/container";
 import { getServicePage, servicePages } from "@/lib/service-pages";
 import { getSiteUrl } from "@/lib/site";
@@ -125,7 +125,7 @@ export default async function ServicePage({
         </Container>
       </section>
 
-      {tiers && <ServiceTiersSection service={tiers} />}
+      {tiers && <ServiceTiersSection service={isPriced(tiers) ? tiers : null} slug={tiers.slug} />}
 
       <section className="py-20 sm:py-28">
         <Container>

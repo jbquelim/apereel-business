@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { isPriced, priceLabel, type ServiceTiers } from "@/lib/service-tiers";
 
 // Fix / Build / Grow for one service. Hidden on the public page until every
@@ -9,9 +9,25 @@ import { isPriced, priceLabel, type ServiceTiers } from "@/lib/service-tiers";
 const subscribe = () => () => {};
 const previewing = () => new URLSearchParams(window.location.search).get("tiers") === "preview";
 
-export function ServiceTiersSection({ service }: { service: ServiceTiers }) {
+/** `service` is passed only once priced; otherwise preview mode fetches the draft. */
+export function ServiceTiersSection({ service: priced, slug }: { service: ServiceTiers | null; slug: string }) {
   const preview = useSyncExternalStore(subscribe, previewing, () => false);
-  if (!isPriced(service) && !preview) return null;
+  const [draft, setDraft] = useState<ServiceTiers | null>(null);
+  useEffect(() => {
+    if (priced || !preview) return;
+    let live = true;
+    fetch(`/api/service-tiers/${slug}`)
+      .then((r) => r.json())
+      .then((j: { ok: boolean; service?: ServiceTiers }) => {
+        if (live && j.ok && j.service) setDraft(j.service);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [priced, preview, slug]);
+  const service = priced ?? draft;
+  if (!service) return null;
 
   return (
     <section id="packages" className="py-20 sm:py-28">
