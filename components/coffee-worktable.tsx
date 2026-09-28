@@ -507,7 +507,9 @@ export function CoffeeWorktable() {
         { p: tl.overviewBack, cam: overview },
         { p: 1, cam: overview },
       ];
-      if (keep !== null) {
+      // Only while the reader is inside the tour: above or below it (progress
+      // clamped to 0 or 1) the page must never be moved.
+      if (keep !== null && keep > 0 && keep < 1) {
         const target = toScroll(keep);
         if (Math.abs(target - scrollY) > 1) scrollTo({ top: target, behavior: "instant" });
       }
