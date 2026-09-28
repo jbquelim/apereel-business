@@ -46,7 +46,7 @@ function buildProspectEmail(lead: LeadInput): { subject: string; html: string; t
       ? `https://www.apereel.com/growth-plan?site=${encodeURIComponent(lead.domain)}`
       : null;
   const planText = growthPlanUrl
-    ? `\n\nWant the full picture? The Growth Plan ($20) goes deeper: your pages checked one by one, the searches your buyers use that you have no page for, and a 90-day plan I review personally before it's sent. ${growthPlanUrl}`
+    ? `\n\nWant to go deeper? From $10 you get your pages checked one by one and the searches your buyers use that you have no page for; the $20 Growth Plan adds a 90-day plan I review personally. ${growthPlanUrl}`
     : "";
 
   const text = `Hi ${first},
@@ -74,7 +74,7 @@ https://www.apereel.com`;
   <p>${esc(crawledLine)}</p>
   <p>Most agencies would turn this into a proposal for more content or more ads. We would rather talk about what is actually limiting revenue first.</p>
   <p><strong>If one finding above surprised you, reply and tell me which.</strong> I will tell you what we would do about it. No deck, no discovery script.</p>
-  ${growthPlanUrl ? `<p>Want the full picture? <a href="${growthPlanUrl}" style="color: #1d6fd4;">The Growth Plan</a> ($20) goes deeper: your pages checked one by one, the searches your buyers use that you have no page for, and a 90-day plan I review personally before it&#39;s sent.</p>` : ""}
+  ${growthPlanUrl ? `<p>Want to go deeper? <a href="${growthPlanUrl}" style="color: #1d6fd4;">From $10</a> you get your pages checked one by one and the searches your buyers use that you have no page for; the $20 Growth Plan adds a 90-day plan I review personally.</p>` : ""}
   <p style="margin-top: 28px;">John Lim<br/>
   <span style="color: #5a6478;">Apereel — business-first digital growth</span><br/>
   <a href="https://www.apereel.com" style="color: #1d6fd4;">apereel.com</a></p>

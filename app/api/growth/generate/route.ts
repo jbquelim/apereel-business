@@ -2,6 +2,10 @@ import { NextResponse, after } from "next/server";
 import { claimForGeneration, failGeneration, getOrder, saveReport } from "@/lib/orders";
 import { collectEvidence, writePlan, type GrowthReport } from "@/lib/growth-report";
 import { triggerStage } from "@/lib/growth-trigger";
+import { collectShowcase } from "@/lib/showcase";
+import { writePreviewAssets } from "@/lib/preview-assets";
+import { deliverReport } from "@/lib/delivery";
+import { tierById } from "@/lib/analysis-tiers";
 
 // Internal: builds a paid order's Growth Plan in two runs so each fits the
 // function time limit. Called by the Stripe webhook after payment, and by
@@ -24,7 +28,7 @@ export async function POST(request: Request) {
   if (!authorized(request)) return NextResponse.json({ ok: false }, { status: 401 });
   const { orderId, stage = "collect", regenerate = false } = (await request.json().catch(() => ({}))) as {
     orderId?: string;
-    stage?: "collect" | "plan";
+    stage?: "collect" | "plan" | "assets";
     regenerate?: boolean;
   };
   if (!orderId) return NextResponse.json({ ok: false, error: "orderId required" }, { status: 400 });
@@ -50,13 +54,46 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, stage: "collect" }, { status: 202 });
   }
 
+  if (stage === "assets") {
+    after(async () => {
+      try {
+        const order = await getOrder(orderId);
+        if (!order || order.status !== "generating" || !(order.report as GrowthReport | null)?.plan) {
+          throw new Error("No plan to build preview assets from");
+        }
+        const report = order.report as GrowthReport;
+        const showcase = await collectShowcase(order.domain);
+        const preview = await writePreviewAssets(report, showcase);
+        await saveReport(orderId, { ...report, preview }, "needs_review");
+        await notifyJohn(orderId, "ready", `${order.domain}: plan + preview (${showcase.length} products)`);
+      } catch (err) {
+        await failGeneration(orderId, err instanceof Error ? err.message : String(err));
+        await notifyJohn(orderId, "failed", err instanceof Error ? err.message : String(err));
+      }
+    });
+    return NextResponse.json({ ok: true, stage: "assets" }, { status: 202 });
+  }
+
   after(async () => {
     try {
       const order = await getOrder(orderId);
       if (!order || order.status !== "generating" || !order.report) throw new Error("No collected evidence to plan from");
       const report = order.report as GrowthReport;
       const { plan, model } = await writePlan(report);
-      await saveReport(orderId, { ...report, plan, plannedAt: new Date().toISOString(), planModel: model }, "needs_review");
+      const planned = { ...report, plan, plannedAt: new Date().toISOString(), planModel: model };
+      if (order.tier === "preview") {
+        // $30: keep generating — the preview assets build on the plan.
+        await saveReport(orderId, planned, "generating");
+        await triggerStage(base, orderId, "assets");
+        return;
+      }
+      await saveReport(orderId, planned, "needs_review");
+      if (!tierById(order.tier).reviewed) {
+        // $10 Teardown: delivered automatically, no review step.
+        const delivered = await deliverReport(orderId, base);
+        await notifyJohn(orderId, "ready", `${order.domain}: Teardown delivered automatically${delivered?.emailed ? "" : " (customer email FAILED — send the link manually)"}`);
+        return;
+      }
       await notifyJohn(orderId, "ready", `${order.domain}: ${plan.priorities.length} priorities`);
     } catch (err) {
       await failGeneration(orderId, err instanceof Error ? err.message : String(err));

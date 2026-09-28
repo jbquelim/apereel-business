@@ -1,6 +1,8 @@
 import type { GrowthReport } from "@/lib/growth-report";
 import { priceLabel, recommendTiers, type ServiceTiers } from "@/lib/service-tiers";
 import { BuyerDemandSection } from "@/components/buyer-demand-section";
+import { PreviewSection } from "@/components/preview-section";
+import { tierById } from "@/lib/analysis-tiers";
 
 // The Growth Plan as the customer reads it. Also rendered in John's review
 // page, so what he approves is exactly what is sent.
@@ -34,13 +36,17 @@ export function GrowthReportView({
   preparedFor,
   date,
   services,
+  tier,
 }: {
   report: GrowthReport;
   preparedFor: string | null;
   date: string | null;
   /** Services with current prices (from the database). */
   services?: ServiceTiers[];
+  /** Analysis tier purchased: teardown | growth | preview */
+  tier?: string;
 }) {
+  const analysis = tierById(tier);
   const plan = report.plan;
   const tech = report.audit.techStack;
   const when = date ? new Date(date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
@@ -48,10 +54,12 @@ export function GrowthReportView({
   return (
     <article className="text-ink">
       <header>
-        <p className="font-mono text-[11px] tracking-[0.24em] text-electric uppercase">Apereel Growth Plan</p>
+        <p className="font-mono text-[11px] tracking-[0.24em] text-electric uppercase">Apereel {analysis.name}</p>
         <h1 className="font-display mt-4 text-4xl tracking-[-0.02em] sm:text-5xl">{report.domain}</h1>
         <p className="mt-4 text-[15px] text-muted">
-          {[preparedFor && `Prepared for ${preparedFor}`, when, "Reviewed by John Lim"].filter(Boolean).join(" · ")}
+          {[preparedFor && `Prepared for ${preparedFor}`, when, analysis.reviewed ? "Reviewed by John Lim" : "Generated automatically from live data"]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
       </header>
 
@@ -89,6 +97,7 @@ export function GrowthReportView({
             </ol>
           </Section>
 
+          {analysis.reviewed && (
           <Section eyebrow="The next 90 days" title="Your roadmap">
             <div className="grid gap-4 md:grid-cols-3">
               {([
@@ -110,6 +119,24 @@ export function GrowthReportView({
               ))}
             </div>
           </Section>
+          )}
+
+          {report.preview && (
+            <Section eyebrow="Your preview" title="A better version of your site, drafted">
+              <PreviewSection preview={report.preview} domain={report.domain} />
+            </Section>
+          )}
+
+          {!analysis.reviewed && (
+            <section className="mt-14 rounded-2xl border border-white/15 bg-navy-mid p-6 sm:p-8">
+              <p className="font-display text-xl text-ink">Want it reviewed, with a 90-day roadmap?</p>
+              <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">
+                This Teardown is generated automatically. The Growth Plan adds a 30/60/90-day roadmap and
+                John Lim&apos;s review before it reaches you. Reply to the email this came with and we&apos;ll
+                upgrade it.
+              </p>
+            </section>
+          )}
         </>
       ) : (
         <p className="mt-10 text-muted">The plan hasn&apos;t been written yet.</p>

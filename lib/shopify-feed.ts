@@ -8,6 +8,7 @@ export type ShopifyProduct = {
   handle?: string;
   product_type?: string;
   variants?: { price: string }[];
+  images?: { src?: string }[];
 };
 
 export const GIFT_CARD_RE = /gift ?cards?|e-?gift/i;

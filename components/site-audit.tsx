@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BuyerDemandSection, type DemandData } from "@/components/buyer-demand-section";
+import { ANALYSIS_TIERS, formatUsd, type AnalysisTierId } from "@/lib/analysis-tiers";
 import { CountUp } from "@/components/count-up";
 import { HeroGraphVideo } from "@/components/hero-graph-video";
 import { LogoMark } from "@/components/logo";
@@ -1344,76 +1345,73 @@ function growthPlanEnabled() {
   return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("growthplan") === "preview";
 }
 
-const GROWTH_PLAN_ITEMS = [
-  "Your full catalog and pricing compared against each competitor",
-  "Marketing tools your competitors use that you don\u2019t",
-  "Speed and search fixes for each type of page on your site",
-  "A 90-day plan, ranked by likely impact on revenue",
-];
-
 function GrowthPlanOffer({ lead }: { lead: { url: string; email: string; name: string } }) {
-  const [state, setState] = useState<"idle" | "loading" | "error">("idle");
+  const [busy, setBusy] = useState<AnalysisTierId | null>(null);
   const [message, setMessage] = useState("");
 
-  async function start() {
-    setState("loading");
+  async function start(tier: AnalysisTierId) {
+    setBusy(tier);
     setMessage("");
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lead),
+        body: JSON.stringify({ ...lead, tier }),
       });
       const json = (await res.json()) as { ok: boolean; url?: string; error?: string };
       if (!json.ok || !json.url) throw new Error(json.error || "Checkout failed");
       window.location.assign(json.url);
     } catch (err) {
-      setState("error");
+      setBusy(null);
       setMessage(err instanceof Error ? err.message : "Checkout failed. Please try again.");
     }
   }
 
   return (
     <div className="rounded-2xl border border-electric/30 bg-electric/5 p-6 sm:p-8">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <p className="font-display text-2xl text-ink">The Growth Plan</p>
-        <p className="font-mono text-2xl text-ink">
-          $20 <span className="text-[12px] tracking-[0.12em] text-muted uppercase">one time</span>
-        </p>
-      </div>
+      <p className="font-display text-2xl text-ink">Go deeper than this scan</p>
       <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">
-        This scan shows where you stand. The Growth Plan shows what to do about it, built from
-        data we collect directly from your site and your competitors&apos; and reviewed by John
-        Lim before it reaches you.
+        Built from data we read directly from your site and your competitors&apos;, not guessed by a
+        chatbot. Pick the depth you need.
       </p>
-      <ul className="mt-5 grid gap-2 sm:grid-cols-2">
-        {GROWTH_PLAN_ITEMS.map((item) => (
-          <li key={item} className="flex gap-2.5 text-[14px] leading-relaxed text-ink/90">
-            <span aria-hidden="true" className="mt-[0.55em] h-1.5 w-1.5 shrink-0 rounded-full bg-electric" />
-            {item}
-          </li>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        {ANALYSIS_TIERS.map((t) => (
+          <div
+            key={t.id}
+            className={`flex flex-col rounded-2xl border p-5 ${t.id === "growth" ? "border-electric/50 bg-navy-mid" : "border-white/10 bg-navy-mid/60"}`}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-[16px] font-medium text-ink">{t.name}</p>
+              <p className="font-mono text-xl text-ink">{formatUsd(t.priceCents)}</p>
+            </div>
+            <p className="mt-1 text-[13px] text-muted">{t.tagline}</p>
+            <ul className="mt-4 flex-1 space-y-2">
+              {t.includes.map((item) => (
+                <li key={item} className="flex gap-2.5 text-[13px] leading-relaxed text-ink/90">
+                  <span aria-hidden="true" className="mt-[0.55em] h-1.5 w-1.5 shrink-0 rounded-full bg-electric" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-[12px] text-muted">{t.delivery}</p>
+            <button
+              type="button"
+              onClick={() => start(t.id)}
+              disabled={busy !== null}
+              className={`press-scale mt-4 inline-flex h-11 items-center justify-center rounded-full px-5 text-[12px] font-semibold tracking-[0.06em] uppercase transition-colors duration-200 disabled:opacity-60 ${t.id === "growth" ? "bg-electric text-navy hover:bg-electric-deep" : "border border-white/25 text-ink hover:border-electric"}`}
+            >
+              {busy === t.id ? "Opening checkout\u2026" : `Get the ${t.name}`}
+            </button>
+          </div>
         ))}
-      </ul>
-      <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-        <button
-          type="button"
-          onClick={start}
-          disabled={state === "loading"}
-          className="press-scale inline-flex h-11 items-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.06em] text-navy uppercase transition-colors duration-200 hover:bg-electric-deep disabled:opacity-60"
-        >
-          {state === "loading" ? "Opening secure checkout\u2026" : "Get my Growth Plan"}
-        </button>
-        <p className="text-[13px] text-muted">
-          Delivered by email within two business days. Secure payment by Stripe.
-        </p>
       </div>
-      {state === "error" && (
+      {message && (
         <p role="alert" className="mt-3 text-[13px] text-signal">
           {message}
         </p>
       )}
       <p className="mt-5 text-[13px] text-muted">
-        Prefer to talk first?{" "}
+        Secure payment by Stripe. Prefer to talk first?{" "}
         <a href="#contact" className="text-electric underline underline-offset-4">
           Tell us about your business
         </a>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin-auth";
 import { getOrderDetail } from "@/lib/orders";
+import { tierById } from "@/lib/analysis-tiers";
 import { GrowthReportView } from "@/components/growth-report-view";
 import type { GrowthReport } from "@/lib/growth-report";
 import { pricedServices } from "@/lib/service-prices";
@@ -30,6 +31,15 @@ export default async function OrderReviewPage({ params }: { params: Promise<{ id
             {order.livemode === false ? " · TEST" : ""} · {order.email}
           </span>
         </div>
+        <p className="mt-2 font-mono text-[12px] text-electric">
+          {tierById(order.tier).name} · {tierById(order.tier).reviewed ? "needs your review" : "sent automatically"}
+        </p>
+        {report?.preview?.reviewNotes && (
+          <p className="mt-4 max-w-3xl rounded-xl border border-electric/30 bg-electric/5 p-4 text-[14px] text-ink">
+            <span className="font-semibold">Check before sending:</span> {report.preview.reviewNotes}{" "}
+            <span className="text-muted">(Preview drafts aren&apos;t editable here; regenerate if they need redoing.)</span>
+          </p>
+        )}
         {order.generation_error && (
           <p role="alert" className="mt-4 text-[14px] text-signal">Last generation error: {order.generation_error}</p>
         )}
@@ -59,6 +69,7 @@ export default async function OrderReviewPage({ params }: { params: Promise<{ id
                 preparedFor={order.name}
                 date={order.sent_at ?? new Date().toISOString()}
                 services={await pricedServices()}
+                tier={order.tier}
               />
             ) : (
               <p className="text-muted">No report yet.</p>

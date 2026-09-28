@@ -18,10 +18,11 @@ export async function createOrder(o: {
   name: string | null;
   amountCents: number;
   currency: string;
+  tier: string;
 }): Promise<void> {
   await sql()`
-    INSERT INTO growth_orders (id, domain, url, email, name, amount_cents, currency)
-    VALUES (${o.id}, ${o.domain}, ${o.url}, ${o.email}, ${o.name}, ${o.amountCents}, ${o.currency})
+    INSERT INTO growth_orders (id, domain, url, email, name, amount_cents, currency, tier)
+    VALUES (${o.id}, ${o.domain}, ${o.url}, ${o.email}, ${o.name}, ${o.amountCents}, ${o.currency}, ${o.tier})
   `;
 }
 
@@ -43,7 +44,7 @@ export async function markPaid(p: {
         stripe_payment_intent = ${p.paymentIntent}, livemode = ${p.livemode},
         amount_cents = COALESCE(${p.amountCents}, amount_cents)
     WHERE id = ${p.id} AND status = 'pending'
-    RETURNING id, domain, url, email, name, amount_cents, currency, livemode
+    RETURNING id, domain, url, email, name, amount_cents, currency, livemode, tier
   `) as {
     id: string;
     domain: string;
@@ -53,6 +54,7 @@ export async function markPaid(p: {
     amount_cents: number;
     currency: string;
     livemode: boolean;
+    tier: string;
   }[];
   return rows[0] ?? null;
 }
@@ -70,11 +72,12 @@ export type GrowthOrder = {
   status: OrderStatus | "generation_failed";
   report: unknown;
   livemode: boolean | null;
+  tier: string;
 };
 
 export async function getOrder(id: string): Promise<GrowthOrder | null> {
   const rows = (await sql()`
-    SELECT id, domain, url, email, name, status, report, livemode FROM growth_orders WHERE id = ${id}
+    SELECT id, domain, url, email, name, status, report, livemode, tier FROM growth_orders WHERE id = ${id}
   `) as GrowthOrder[];
   return rows[0] ?? null;
 }
@@ -114,11 +117,12 @@ export type OrderRow = {
   paid_at: string | null;
   sent_at: string | null;
   generation_error: string | null;
+  tier: string;
 };
 
 export async function listOrders(limit = 100): Promise<OrderRow[]> {
   return (await sql()`
-    SELECT id, domain, email, name, status, livemode, created_at, paid_at, sent_at, generation_error
+    SELECT id, domain, email, name, status, livemode, created_at, paid_at, sent_at, generation_error, tier
     FROM growth_orders WHERE status <> 'pending'
     ORDER BY COALESCE(paid_at, created_at) DESC LIMIT ${limit}
   `) as OrderRow[];
@@ -127,7 +131,7 @@ export async function listOrders(limit = 100): Promise<OrderRow[]> {
 export async function getOrderDetail(id: string) {
   const rows = (await sql()`
     SELECT id, domain, url, email, name, status, livemode, report, review_notes, access_token,
-           created_at, paid_at, sent_at, generation_error
+           created_at, paid_at, sent_at, generation_error, tier
     FROM growth_orders WHERE id = ${id}
   `) as (OrderRow & { url: string; report: unknown; review_notes: string | null; access_token: string | null })[];
   return rows[0] ?? null;
@@ -149,16 +153,16 @@ export async function markSent(id: string, token: string) {
   const rows = (await sql()`
     UPDATE growth_orders SET status = 'sent', sent_at = now(), access_token = ${token}
     WHERE id = ${id} AND status = 'needs_review'
-    RETURNING id, domain, email, name, livemode
-  `) as { id: string; domain: string; email: string; name: string | null; livemode: boolean | null }[];
+    RETURNING id, domain, email, name, livemode, tier
+  `) as { id: string; domain: string; email: string; name: string | null; livemode: boolean | null; tier: string }[];
   return rows[0] ?? null;
 }
 
 export async function getSentReport(token: string) {
   if (!/^[A-Za-z0-9_-]{32,64}$/.test(token)) return null;
   const rows = (await sql()`
-    SELECT domain, name, report, sent_at FROM growth_orders
+    SELECT domain, name, report, sent_at, tier FROM growth_orders
     WHERE access_token = ${token} AND status = 'sent'
-  `) as { domain: string; name: string | null; report: unknown; sent_at: string }[];
+  `) as { domain: string; name: string | null; report: unknown; sent_at: string; tier: string }[];
   return rows[0] ?? null;
 }

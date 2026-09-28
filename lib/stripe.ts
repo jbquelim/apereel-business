@@ -14,10 +14,5 @@ export function getStripe(): Stripe {
   return client;
 }
 
-export const GROWTH_PLAN = {
-  name: "Apereel Growth Plan",
-  description:
-    "A deeper competitive analysis of your business, reviewed by John Lim before it's sent: catalog and pricing comparison, marketing tools your competitors use, page-by-page fixes, and a 90-day plan ranked by impact.",
-  amountCents: 2000,
-  currency: "usd",
-} as const;
+// Checkout details per analysis tier (lib/analysis-tiers.ts holds prices).
+export const CHECKOUT_CURRENCY = "usd";

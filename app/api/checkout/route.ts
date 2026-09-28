@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes, randomUUID } from "node:crypto";
-import { GROWTH_PLAN, getStripe } from "@/lib/stripe";
+import { CHECKOUT_CURRENCY, getStripe } from "@/lib/stripe";
+import { tierById } from "@/lib/analysis-tiers";
 import { attachSession, createOrder } from "@/lib/orders";
 
 // Starts a Growth Plan purchase: records a pending order, then hands the
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
-  let body: { url?: unknown; email?: unknown; name?: unknown };
+  let body: { url?: unknown; email?: unknown; name?: unknown; tier?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Please enter a valid email." }, { status: 400 });
   }
 
+  const tier = tierById(typeof body.tier === "string" ? body.tier : "growth");
   const orderId = randomUUID();
   try {
     await createOrder({
@@ -73,8 +75,9 @@ export async function POST(request: Request) {
       url: site.url,
       email,
       name: name || null,
-      amountCents: GROWTH_PLAN.amountCents,
-      currency: GROWTH_PLAN.currency,
+      amountCents: tier.priceCents,
+      currency: CHECKOUT_CURRENCY,
+      tier: tier.id,
     });
 
     const base = siteUrl(request);
@@ -84,21 +87,21 @@ export async function POST(request: Request) {
         {
           quantity: 1,
           price_data: {
-            currency: GROWTH_PLAN.currency,
-            unit_amount: GROWTH_PLAN.amountCents,
+            currency: CHECKOUT_CURRENCY,
+            unit_amount: tier.priceCents,
             product_data: {
-              name: `${GROWTH_PLAN.name}: ${site.domain}`,
-              description: GROWTH_PLAN.description,
+              name: `Apereel ${tier.name}: ${site.domain}`,
+              description: `${tier.tagline} ${tier.delivery}`,
             },
           },
         },
       ],
       customer_email: email,
       client_reference_id: orderId,
-      metadata: { order_id: orderId, domain: site.domain },
-      payment_intent_data: { metadata: { order_id: orderId, domain: site.domain } },
+      metadata: { order_id: orderId, domain: site.domain, tier: tier.id },
+      payment_intent_data: { metadata: { order_id: orderId, domain: site.domain, tier: tier.id } },
       integration_identifier: INTEGRATION_ID,
-      success_url: `${base}/growth-plan/thanks?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${base}/growth-plan/thanks?tier=${tier.id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/?growthplan=cancelled#audit`,
     });
 

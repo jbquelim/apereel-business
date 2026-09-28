@@ -25,6 +25,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
           preparedFor={row.name}
           date={row.sent_at}
           services={await pricedServices()}
+          tier={row.tier}
         />
       </div>
     </main>

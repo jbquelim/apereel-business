@@ -166,6 +166,7 @@ await sql`
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_growth_orders_status ON growth_orders (status, created_at)`;
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS generation_error TEXT`;
+await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'growth'`;
 
 // Service tier prices, edited by John at /admin/pricing. A tier without a
 // row (or with a null price) is unpriced.

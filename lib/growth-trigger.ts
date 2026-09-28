@@ -1,6 +1,6 @@
 // Starts a Growth Plan generation stage on the internal route. The route
 // answers 202 immediately and does the work after responding.
-export async function triggerStage(base: string, orderId: string, stage: "collect" | "plan", regenerate = false) {
+export async function triggerStage(base: string, orderId: string, stage: "collect" | "plan" | "assets", regenerate = false) {
   // NEXT_PUBLIC_SITE_URL can be empty at runtime (sensitive vars aren't
   // inlined), so an empty base must never produce a relative URL.
   if (!/^https?:\/\//.test(base)) throw new Error(`Invalid base URL "${base}"`);

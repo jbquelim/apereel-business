@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "node:crypto";
 import { isAdmin, sameOrigin } from "@/lib/admin-auth";
-import { getOrderDetail, markSent, updatePlan } from "@/lib/orders";
+import { getOrderDetail, updatePlan } from "@/lib/orders";
+import { deliverReport } from "@/lib/delivery";
 import { triggerStage } from "@/lib/growth-trigger";
 import type { GrowthPlan } from "@/lib/growth-report";
 
@@ -69,46 +69,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!order || order.status !== "needs_review") {
       return NextResponse.json({ ok: false, error: "Only reports awaiting review can be sent." }, { status: 409 });
     }
-    const token = randomBytes(24).toString("base64url");
-    const sent = await markSent(id, token);
-    if (!sent) return NextResponse.json({ ok: false, error: "Already sent." }, { status: 409 });
-    const link = `${base}/report/${token}`;
-    const emailed = await emailCustomer(sent, link);
-    return NextResponse.json({ ok: true, link, emailed });
+    const delivered = await deliverReport(id, base);
+    if (!delivered) return NextResponse.json({ ok: false, error: "Already sent." }, { status: 409 });
+    return NextResponse.json({ ok: true, ...delivered });
   }
 
   return NextResponse.json({ ok: false, error: "Unknown action" }, { status: 400 });
-}
-
-async function emailCustomer(
-  o: { domain: string; email: string; name: string | null; livemode: boolean | null },
-  link: string,
-): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) return false;
-  const first = o.name?.split(/\s+/)[0];
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "John Lim at Apereel <noreply@apereel.com>",
-      reply_to: "john@apereel.com",
-      to: [o.email],
-      subject: `${o.livemode === false ? "[TEST] " : ""}Your Growth Plan for ${o.domain} is ready`,
-      text: [
-        `${first ? `Hi ${first},` : "Hi,"}`,
-        "",
-        `Your Growth Plan for ${o.domain} is ready. I've reviewed it personally.`,
-        "",
-        `Read it here: ${link}`,
-        "",
-        "It covers where you stand against your competitors, what to fix first and why, and a 30/60/90-day plan. The link is private to you.",
-        "",
-        "If you'd like help putting any of it into action, just reply to this email.",
-        "",
-        "John Lim",
-        "Founder, Apereel",
-      ].join("\n"),
-    }),
-  }).catch(() => null);
-  return !!res?.ok;
 }

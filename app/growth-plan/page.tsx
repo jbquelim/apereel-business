@@ -20,7 +20,8 @@ const INSIDE = [
   ["What your buyers search for", "Real searches people type into Google around what you sell, and which ones have no page on your site."],
   ["Your competitors, measured", "Their catalogs, prices and marketing tools read directly from their sites, plus what's changed since we started tracking them."],
   ["Your pages, checked", "Your homepage, a category page and a product page: speed, titles, headings and the product data Google needs."],
-  ["A 90-day roadmap", "What to do in the first 30 days, the next 30 and the 30 after, built from the priorities."],
+  ["A 90-day roadmap", "Growth Plan and up: what to do in the first 30 days, the next 30 and the 30 after."],
+  ["A better version of your site", "With the $30 Preview: your homepage reimagined with your own products, rewritten product copy and ready-to-run ads."],
   ["Honest limits", "What the plan couldn't measure, stated plainly, so you know exactly what it rests on."],
 ] as const;
 
@@ -45,12 +46,15 @@ export default async function GrowthPlanPage({ searchParams }: { searchParams: P
           Know exactly what to fix first.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
-          A plan for your business built from live data on your site and your competitors&apos;,
-          reviewed by John Lim before it reaches you. $20, one time.
+          Analysis built from live data on your site and your competitors&apos;. Three depths: an
+          instant $10 Teardown, the $20 Growth Plan reviewed by John Lim, or the $30 plan with a
+          preview of a better version of your site.
         </p>
         <div className="mt-10 max-w-2xl">
           <GrowthPlanCheckoutForm site={prefill} />
-          <p className="mt-3 text-[13px] text-muted">Delivered by email within two business days.</p>
+          <p className="mt-3 text-[13px] text-muted">
+            Teardown in about five minutes; reviewed plans within two business days.
+          </p>
         </div>
       </section>
 

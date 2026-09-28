@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin-auth";
 import { listOrders } from "@/lib/orders";
+import { formatUsd, tierById } from "@/lib/analysis-tiers";
 
 export const metadata: Metadata = { title: "Growth Plan orders", robots: { index: false, follow: false } };
 
@@ -50,6 +51,7 @@ export default async function AdminPage() {
                   <tr key={o.id} className="border-t border-white/10">
                     <td className="py-3 pr-4 text-ink">
                       {o.domain}
+                      <span className="ml-2 font-mono text-[11px] text-muted">{tierById(o.tier).name} · {formatUsd(tierById(o.tier).priceCents)}</span>
                       {o.livemode === false && (
                         <span className="ml-2 rounded-full border border-white/15 px-2 py-0.5 font-mono text-[10px] text-muted">TEST</span>
                       )}

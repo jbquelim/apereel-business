@@ -59,6 +59,8 @@ export type GrowthReport = {
   /** Monthly search volume per buyer search, when DataForSEO is configured. */
   demandVolumes?: Record<string, number>;
   plan?: GrowthPlan;
+  /** $30 tier: drafts built from the business's own products. */
+  preview?: import("./preview-assets").PreviewAssets;
   plannedAt?: string;
   planModel?: string;
 };
