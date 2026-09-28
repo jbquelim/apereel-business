@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { triggerStage } from "@/lib/growth-trigger";
+import { refreshTrackedStores } from "@/lib/tracked-refresh";
 
 // Snowball discovery: drain the crawl queue by running the audit pipeline in
 // ingest mode (classification + inventory + competitor discovery only) on
@@ -15,6 +16,8 @@ const MAX_PER_RUN = 30;
 // wave (audit timeout 120s) still finishes inside maxDuration.
 const TIME_BUDGET_MS = 170_000;
 const MAX_ATTEMPTS = 3;
+// The tracked-store refresh runs first and its time comes out of the budget.
+const REFRESH_BUDGET_MS = 60_000;
 
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
@@ -62,12 +65,22 @@ export async function GET(request: Request) {
     );
   }
 
+  // Cheap, AI-free refresh of tracked stores (competitors of audited
+  // businesses) so price and catalog history accrues on a steady cadence.
+  const refreshStarted = Date.now();
+  const refreshed = await refreshTrackedStores(REFRESH_BUDGET_MS).catch((err) => {
+    console.error("Tracked refresh failed:", err instanceof Error ? err.message : err);
+    return [];
+  });
+  // Discovery gets whatever time the refresh didn't use.
+  const discoveryBudget = TIME_BUDGET_MS - (Date.now() - refreshStarted);
+
   const startedAt = Date.now();
   const processed: { domain: string; ok: boolean; detail?: string }[] = [];
 
   while (
     processed.length < MAX_PER_RUN &&
-    Date.now() - startedAt < TIME_BUDGET_MS
+    Date.now() - startedAt < discoveryBudget
   ) {
     const batch = (await sql`
       UPDATE crawl_queue SET status = 'running', attempts = attempts + 1
@@ -123,5 +136,5 @@ export async function GET(request: Request) {
   console.log(
     `Discovery run: ${processed.filter((p) => p.ok).length}/${processed.length} ok in ${Math.round((Date.now() - startedAt) / 1000)}s`,
   );
-  return NextResponse.json({ ok: true, count: processed.length, processed });
+  return NextResponse.json({ ok: true, count: processed.length, processed, refreshed: refreshed.length });
 }

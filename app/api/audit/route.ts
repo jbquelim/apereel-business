@@ -12,7 +12,15 @@ import {
   normalizeClassification,
 } from "@/lib/taxonomy";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
-import { BROWSER_UA, fetchSitemapCatalog, fetchTextDirect, isBlockedPage } from "@/lib/site-fetch";
+import { fetchSitemapCatalog, fetchTextDirect, isBlockedPage } from "@/lib/site-fetch";
+import {
+  GIFT_CARD_RE,
+  SHOPIFY_PAGE_LIMIT,
+  fetchShopifyJson,
+  readShopifyCatalog,
+  shopifyMinPrice,
+  type ShopifyProduct,
+} from "@/lib/shopify-feed";
 import { historyForMany, type HistoryFacts } from "@/lib/market-history";
 import { buyerDemand, type BuyerDemand } from "@/lib/buyer-demand";
 import {
@@ -449,40 +457,12 @@ async function fetchCompetitorSearchResults(queries: string[]): Promise<string |
 
 const MAX_RAW_PRODUCTS = 150;
 
-type ShopifyProduct = {
-  title?: string;
-  handle?: string;
-  product_type?: string;
-  variants?: { price: string }[];
-};
-
-const GIFT_CARD_RE = /gift ?cards?|e-?gift/i;
-const SHOPIFY_PAGE_LIMIT = 8; // 8 × 250 = 2,000 products read per store
-
-function shopifyMinPrice(p: ShopifyProduct): number | null {
-  const prices = (p.variants ?? []).map((v) => parseFloat(v.price)).filter((n) => Number.isFinite(n) && n > 0);
-  return prices.length > 0 ? Math.min(...prices) : null;
-}
-
 function describePrices(prices: number[]): string {
   if (prices.length === 0) return "";
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
   return `, avg price $${Math.round(avg).toLocaleString()}, price range $${Math.round(min).toLocaleString()} - $${Math.round(max).toLocaleString()}`;
-}
-
-async function fetchShopifyJson<T>(url: string): Promise<T | null> {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
-      signal: AbortSignal.timeout(6000),
-    });
-    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
 }
 
 async function fetchShopifyInventory(
@@ -492,24 +472,7 @@ async function fetchShopifyInventory(
     // 1) The whole public catalog, grouped by product type: real categories
     //    with exact counts. Collections are often merchandising views (price
     //    bands, months, "shop all") that overlap and mislead.
-    const catalog: ShopifyProduct[] = [];
-    let complete = false;
-    for (let page = 1; page <= SHOPIFY_PAGE_LIMIT; page++) {
-      const data = await fetchShopifyJson<{ products?: ShopifyProduct[] }>(
-        `https://${domain}/products.json?limit=250&page=${page}`,
-      );
-      const batch = data?.products;
-      if (!Array.isArray(batch)) {
-        if (page === 1) break;
-        complete = true;
-        break;
-      }
-      catalog.push(...batch);
-      if (batch.length < 250) {
-        complete = true;
-        break;
-      }
-    }
+    const { products: catalog, complete } = await readShopifyCatalog(domain);
 
     const sellable = catalog.filter((p) => p.title && p.handle && !GIFT_CARD_RE.test(`${p.title} ${p.product_type ?? ""}`));
     const rawProducts: RawProduct[] = sellable.slice(0, MAX_RAW_PRODUCTS).map((p) => {
