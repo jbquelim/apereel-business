@@ -184,7 +184,7 @@ Rules:
 - Missing or unmeasured data is a limitation of our crawler, never a claim about the client's site; a tool "not seen" on a homepage may still be in use
 - Never promise outcomes ("will double traffic"); describe what each fix enables
 - Roadmap: 2-4 items per period, each a concrete deliverable, building on the priorities
-- Plain language for a business owner; no jargon without a short explanation
+- Plain language for a business owner; no jargon without a short explanation. Write evidence as normal sentences; never copy the bracketed severity labels like [high] from the evidence
 - Respond with ONLY the JSON object`;
 
   let lastError = "";
