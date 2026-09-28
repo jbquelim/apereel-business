@@ -4,14 +4,19 @@ import { GrowthReportView } from "@/components/growth-report-view";
 import { getSentReport } from "@/lib/orders";
 import type { GrowthReport } from "@/lib/growth-report";
 import { pricedServices } from "@/lib/service-prices";
+import { tierById } from "@/lib/analysis-tiers";
 
-// A customer's approved Growth Plan. The unguessable token in the URL is the
-// only key; reports are reachable only after John has approved and sent them.
+// A customer's delivered report. The unguessable token in the URL is the only
+// key; reports are reachable only once sent (approved by John, or delivered
+// automatically for the unreviewed tier).
 
-export const metadata: Metadata = {
-  title: "Your Growth Plan",
-  robots: { index: false, follow: false, nocache: true },
-};
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const row = await getSentReport((await params).token);
+  return {
+    title: `Your ${tierById(row?.tier).name}`,
+    robots: { index: false, follow: false, nocache: true },
+  };
+}
 
 export default async function ReportPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

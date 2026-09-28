@@ -69,7 +69,7 @@ Return ONLY JSON:
     "google": [ { "headlines": ["3 headlines, each max 30 characters"], "descriptions": ["2 descriptions, each max 90 characters"] } ],
     "meta": [ { "primaryText": "max 125 characters", "headline": "max 40 characters" } ]
   },
-  "reviewNotes": "1-3 sentences for John: anything he must verify before sending (e.g. a claim or detail to confirm with the client)"
+  "reviewNotes": "at most 3 short sentences (under 400 characters) for John: anything he must verify before sending (e.g. a claim or detail to confirm with the client)"
 }
 
 Rules:
@@ -136,7 +136,7 @@ Rules:
             headline: cut(m.headline, 40),
           })),
         },
-        reviewNotes: cut(raw.reviewNotes, 500),
+        reviewNotes: cut(raw.reviewNotes, 1200),
       };
     } catch (err) {
       lastError = `${model} ${err instanceof Error ? err.message : String(err)}`;
