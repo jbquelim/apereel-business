@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BuyerDemandSection, type DemandData } from "@/components/buyer-demand-section";
 import { CountUp } from "@/components/count-up";
 import { HeroGraphVideo } from "@/components/hero-graph-video";
 import { LogoMark } from "@/components/logo";
@@ -186,6 +187,7 @@ type AuditData = {
   marketPosition?: MarketPosition;
   techStack?: TechStack;
   history?: { domain: string; name: string; since: string; facts: string[] }[];
+  demand?: DemandData;
   competitorInventories?: CompetitorInventory[];
   productComparisons?: ProductComparison[];
   inventoryInsights?: string[];
@@ -964,6 +966,8 @@ function AuditResults({
       )}
 
       {data.marketPosition && <MarketPositionSection mp={data.marketPosition} />}
+
+      {data.demand && <BuyerDemandSection demand={data.demand} compact />}
 
       {data.techStack && <TechStackSection stack={data.techStack} />}
 

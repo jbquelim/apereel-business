@@ -1,5 +1,6 @@
 import type { GrowthReport } from "@/lib/growth-report";
 import { priceLabel, recommendTiers, tiersForService } from "@/lib/service-tiers";
+import { BuyerDemandSection } from "@/components/buyer-demand-section";
 
 // The Growth Plan as the customer reads it. Also rendered in John's review
 // page, so what he approves is exactly what is sent.
@@ -132,6 +133,12 @@ export function GrowthReportView({
               </div>
             ))}
           </div>
+        </Section>
+      )}
+
+      {report.audit.demand && report.audit.demand.rows.length > 0 && (
+        <Section eyebrow="Demand" title="What your buyers search for">
+          <BuyerDemandSection demand={report.audit.demand} />
         </Section>
       )}
 

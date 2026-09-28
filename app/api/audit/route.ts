@@ -14,6 +14,7 @@ import {
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
 import { BROWSER_UA, fetchSitemapCatalog, fetchTextDirect, isBlockedPage } from "@/lib/site-fetch";
 import { historyForMany, type HistoryFacts } from "@/lib/market-history";
+import { buyerDemand, demandSeeds, type BuyerDemand } from "@/lib/buyer-demand";
 import {
   fetchSiteStack,
   stackGaps,
@@ -200,6 +201,7 @@ type AuditResult = {
   experience?: ExperienceCheckResult | null;
   marketPosition?: MarketPosition;
   history?: HistoryFacts[];
+  demand?: BuyerDemand;
   techStack?: {
     client: SiteStack;
     competitors: SiteStack[];
@@ -1860,10 +1862,18 @@ Respond with ONLY a JSON array:
   let trends: TrendsData = null;
   let siteStacks: (SiteStack | null)[] = [];
   let history: HistoryFacts[] = [];
+  let demand: BuyerDemand | null = null;
 
   if (industry && industry.competitors.length > 0) {
     const top3 = industry.competitors.slice(0, 3);
-    const [inventoryResult, trendsResult, stacks, historyResult] = await Promise.all([
+    const seeds = demandSeeds(
+      [...industry.inventoryCategories]
+        .sort((a, b) => (b.productCount ?? 0) - (a.productCount ?? 0))
+        .map((c) => c.category),
+      industry.competitorQueries ?? [],
+      country ?? industry.detectedCountry ?? null,
+    );
+    const [inventoryResult, trendsResult, stacks, historyResult, demandResult] = await Promise.all([
       fetchCompetitorInventories(top3),
       isIngest ? Promise.resolve(null) : fetchGoogleTrends(brandName, industry.competitors),
       Promise.all([
@@ -1876,9 +1886,18 @@ Respond with ONLY a JSON array:
             { domain, name: "You" },
             ...industry.competitors.map((c) => ({ domain: c.domain, name: c.name })),
           ]),
+      isIngest
+        ? Promise.resolve(null)
+        : buyerDemand({
+            domain,
+            seeds,
+            country: country ?? industry.detectedCountry ?? null,
+            knownProductUrls: (inventorySearchData?.products ?? []).map((p) => p.url).filter((u): u is string => !!u),
+          }),
     ]);
     siteStacks = stacks;
     history = historyResult;
+    demand = demandResult;
     competitorInventories = inventoryResult.inventories;
     competitorCatalogs = inventoryResult.catalogs;
     trends = trendsResult;
@@ -2121,6 +2140,7 @@ Respond with ONLY a JSON array:
     marketPosition,
     techStack,
     history: history.length > 0 ? history : undefined,
+    demand: demand ?? undefined,
     competitorInventories:
       competitorInventories.length > 0
         ? competitorInventories.map((c) => ({

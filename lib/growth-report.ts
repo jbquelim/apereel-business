@@ -25,6 +25,7 @@ type Audit = {
   };
   competitorInventories?: { name: string; domain: string; categories: { category: string; productCount: number | null; avgPrice: string | null }[] }[];
   experience?: { findings: { label: string; status: string; detail?: string }[] } | null;
+  demand?: { rows: { query: string; coverage: "category" | "products" | "none" | null }[]; coverageChecked: boolean };
   industry?: {
     industry: string;
     subIndustry: string;
@@ -156,6 +157,10 @@ function evidenceBlock(r: GrowthReport): string {
   for (const p of r.pages) {
     const speed = p.speed ? `mobile performance ${p.speed.performance ?? "n/a"}, LCP ${p.speed.lcp ?? "n/a"}, CLS ${p.speed.cls ?? "n/a"}` : "speed not measured";
     lines.push(`PAGE ${p.type} ${p.url}: ${speed}; issues: ${p.issues.length ? p.issues.map((i) => `[${i.severity}] ${i.text}`).join(" ") : "none found"}`);
+  }
+  if (a.demand?.rows.length) {
+    const tag = (c: string | null) => (c === "category" ? "category page" : c === "products" ? "product pages only" : c === "none" ? "NO PAGE" : "not checked");
+    lines.push(`REAL BUYER SEARCHES (Google autocomplete; no volumes) and site coverage from the sitemap: ${a.demand.rows.map((x) => `"${x.query}" → ${tag(x.coverage)}`).join("; ")}`);
   }
   for (const h of r.history ?? []) {
     lines.push(`TRACKED CHANGES ${h.name === "You" ? "(the client)" : h.name} since ${h.since}: ${h.facts.join(" ")}`);
