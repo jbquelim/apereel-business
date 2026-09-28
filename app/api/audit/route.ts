@@ -14,7 +14,7 @@ import {
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
 import { BROWSER_UA, fetchSitemapCatalog, fetchTextDirect, isBlockedPage } from "@/lib/site-fetch";
 import { historyForMany, type HistoryFacts } from "@/lib/market-history";
-import { buyerDemand, demandSeeds, type BuyerDemand } from "@/lib/buyer-demand";
+import { buyerDemand, type BuyerDemand } from "@/lib/buyer-demand";
 import {
   fetchSiteStack,
   stackGaps,
@@ -1866,13 +1866,6 @@ Respond with ONLY a JSON array:
 
   if (industry && industry.competitors.length > 0) {
     const top3 = industry.competitors.slice(0, 3);
-    const seeds = demandSeeds(
-      [...industry.inventoryCategories]
-        .sort((a, b) => (b.productCount ?? 0) - (a.productCount ?? 0))
-        .map((c) => c.category),
-      industry.competitorQueries ?? [],
-      country ?? industry.detectedCountry ?? null,
-    );
     const [inventoryResult, trendsResult, stacks, historyResult, demandResult] = await Promise.all([
       fetchCompetitorInventories(top3),
       isIngest ? Promise.resolve(null) : fetchGoogleTrends(brandName, industry.competitors),
@@ -1890,7 +1883,10 @@ Respond with ONLY a JSON array:
         ? Promise.resolve(null)
         : buyerDemand({
             domain,
-            seeds,
+            categories: [...industry.inventoryCategories]
+              .sort((a, b) => (b.productCount ?? 0) - (a.productCount ?? 0))
+              .map((c) => c.category),
+            buyerQueries: industry.competitorQueries ?? [],
             country: country ?? industry.detectedCountry ?? null,
             knownProductUrls: (inventorySearchData?.products ?? []).map((p) => p.url).filter((u): u is string => !!u),
           }),
