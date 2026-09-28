@@ -10,7 +10,16 @@ const LABEL = {
   none: { text: "No page", cls: "border-signal/40 text-signal" },
 } as const;
 
-export function BuyerDemandSection({ demand, compact = false }: { demand: DemandData; compact?: boolean }) {
+export function BuyerDemandSection({
+  demand,
+  compact = false,
+  volumes,
+}: {
+  demand: DemandData;
+  compact?: boolean;
+  /** Monthly searches per query (lower-cased), when real volume data exists. */
+  volumes?: Record<string, number>;
+}) {
   const rows = compact ? demand.rows.slice(0, 12) : demand.rows;
   if (rows.length === 0) return null;
   const gaps = demand.rows.filter((r) => r.coverage === "none").length;
@@ -21,13 +30,13 @@ export function BuyerDemandSection({ demand, compact = false }: { demand: Demand
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">What Buyers Search For</p>
         <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
-          Google Autocomplete
+          Google Autocomplete{volumes ? " + search volumes" : ""}
         </span>
       </div>
       <p className="mt-3 text-sm leading-relaxed text-muted">
         Real searches people type into Google around what you sell
         {demand.coverageChecked ? ", matched against the pages on your site" : ""}. Autocomplete
-        shows what&apos;s searched, not how often.
+        {volumes ? "shows what's searched; monthly volumes come from Google Ads data." : "shows what's searched, not how often."}
       </p>
       {demand.coverageChecked && gaps + weak > 0 && (
         <p className="mt-4 text-[15px] leading-relaxed text-ink">
@@ -48,7 +57,14 @@ export function BuyerDemandSection({ demand, compact = false }: { demand: Demand
       <ul className="mt-5 divide-y divide-white/5">
         {rows.map((r) => (
           <li key={r.query} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
-            <span className="text-[14px] text-ink/90">{r.query}</span>
+            <span className="text-[14px] text-ink/90">
+              {r.query}
+              {volumes && volumes[r.query.toLowerCase()] != null && (
+                <span className="ml-2 font-mono text-[12px] text-muted">
+                  {volumes[r.query.toLowerCase()].toLocaleString("en-US")}/mo
+                </span>
+              )}
+            </span>
             {r.coverage && (
               <span className={`rounded-full border px-2.5 py-0.5 font-mono text-[10px] tracking-[0.08em] uppercase ${LABEL[r.coverage].cls}`}>
                 {LABEL[r.coverage].text}

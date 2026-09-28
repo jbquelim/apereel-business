@@ -141,7 +141,57 @@ export function GrowthReportView({
 
       {report.audit.demand && report.audit.demand.rows.length > 0 && (
         <Section eyebrow="Demand" title="What your buyers search for">
-          <BuyerDemandSection demand={report.audit.demand} />
+          <BuyerDemandSection demand={report.audit.demand} volumes={report.demandVolumes} />
+        </Section>
+      )}
+
+      {report.rankings && (
+        <Section eyebrow="Search visibility" title="Where you rank on Google">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-navy-mid p-6">
+              <p className="text-[15px] font-medium text-ink">Your top rankings</p>
+              <p className="mt-1 text-[13px] text-muted">
+                {report.rankings.client.keywords.length} searches found; highest-volume shown.
+              </p>
+              <ul className="mt-4 divide-y divide-white/5 font-mono text-[13px]">
+                {report.rankings.client.keywords.slice(0, 12).map((k) => (
+                  <li key={k.keyword} className="flex justify-between gap-4 py-2 text-ink/85">
+                    <span className="truncate font-sans text-[14px]">{k.keyword}</span>
+                    <span className="shrink-0 text-muted">
+                      #{k.position ?? "—"}
+                      {k.volume != null ? ` · ${k.volume.toLocaleString("en-US")}/mo` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-electric/30 bg-electric/5 p-6">
+              <p className="text-[15px] font-medium text-ink">Searches your competitors win</p>
+              <p className="mt-1 text-[13px] text-muted">
+                They rank in the top 20; you don&apos;t rank at all.
+              </p>
+              {report.rankings.gaps.length > 0 ? (
+                <ul className="mt-4 divide-y divide-white/5">
+                  {report.rankings.gaps.map((g) => (
+                    <li key={g.keyword} className="py-2">
+                      <p className="flex justify-between gap-4 text-[14px] text-ink">
+                        <span>{g.keyword}</span>
+                        {g.volume != null && (
+                          <span className="shrink-0 font-mono text-[12px] text-muted">{g.volume.toLocaleString("en-US")}/mo</span>
+                        )}
+                      </p>
+                      <p className="mt-0.5 font-mono text-[11px] text-muted">
+                        {g.competitors.map((c) => `${c.name} #${c.position}`).join(" · ")}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 text-[14px] text-muted">No clear gaps among the searches we checked.</p>
+              )}
+            </div>
+          </div>
+          <p className="mt-3 text-[12px] text-muted/70">Rankings and volumes from DataForSEO (Google, your country).</p>
         </Section>
       )}
 

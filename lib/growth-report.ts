@@ -1,6 +1,7 @@
 import { checkPage, pageSpeed, samplePages, type PageCheck, type PageSpeedResult } from "./page-checks";
 import { fetchCompetitorSet } from "./marketdb";
 import { historyForMany, type HistoryFacts } from "./market-history";
+import { dataForSeoConfigured, rankedKeywords, rankingGaps, searchVolumes, type Rankings } from "./dataforseo";
 
 // The paid Growth Plan report. Two stages so each fits one function run:
 //   collect — the full free audit (internal call) plus paid-only evidence:
@@ -29,6 +30,7 @@ type Audit = {
   industry?: {
     industry: string;
     subIndustry: string;
+    detectedCountry?: string | null;
     offering?: string;
     businessModel: string | null;
     competitors: { name: string; domain: string; strength: string }[];
@@ -48,6 +50,14 @@ export type GrowthReport = {
   pages: ClientPage[];
   competitorSpeed: { name: string; domain: string; speed: PageSpeedResult | null }[];
   history?: HistoryFacts[];
+  /** Real Google rankings (DataForSEO) when configured. */
+  rankings?: {
+    client: Rankings;
+    competitors: Rankings[];
+    gaps: { keyword: string; volume: number | null; competitors: { name: string; position: number | null }[] }[];
+  };
+  /** Monthly search volume per buyer search, when DataForSEO is configured. */
+  demandVolumes?: Record<string, number>;
   plan?: GrowthPlan;
   plannedAt?: string;
   planModel?: string;
@@ -102,6 +112,24 @@ export async function collectEvidence(url: string, domain: string, base: string)
     earlySpeed && sameSet ? earlySpeed : speedOf(auditCompetitors),
     historyForMany([{ domain, name: "You" }, ...auditCompetitors.map((c) => ({ domain: c.domain, name: c.name }))]),
   ]);
+  // Real rankings and volumes (paid data) — only when configured.
+  let rankings: GrowthReport["rankings"];
+  let demandVolumes: GrowthReport["demandVolumes"];
+  if (dataForSeoConfigured()) {
+    const country = audit.industry?.detectedCountry ?? null;
+    const [client, ...comps] = await Promise.all([
+      rankedKeywords(domain, "You", country, 100),
+      ...auditCompetitors.slice(0, 3).map((c) => rankedKeywords(c.domain, c.name, country, 100)),
+    ]);
+    const competitorsRanked = comps.filter((c): c is Rankings => c !== null);
+    if (client) rankings = { client, competitors: competitorsRanked, gaps: rankingGaps(client, competitorsRanked) };
+    const phrases = audit.demand?.rows.map((r) => r.query) ?? [];
+    if (phrases.length > 0) {
+      const vols = await searchVolumes(phrases, country);
+      if (vols.size > 0) demandVolumes = Object.fromEntries(vols);
+    }
+  }
+
   return {
     version: REPORT_VERSION,
     domain,
@@ -111,6 +139,8 @@ export async function collectEvidence(url: string, domain: string, base: string)
     pages,
     competitorSpeed,
     history,
+    rankings,
+    demandVolumes,
   };
 }
 
@@ -161,6 +191,17 @@ function evidenceBlock(r: GrowthReport): string {
   if (a.demand?.rows.length) {
     const tag = (c: string | null) => (c === "category" ? "category page" : c === "products" ? "product pages only" : c === "none" ? "NO PAGE" : "not checked");
     lines.push(`REAL BUYER SEARCHES (Google autocomplete; no volumes) and site coverage from the sitemap: ${a.demand.rows.map((x) => `"${x.query}" → ${tag(x.coverage)}`).join("; ")}`);
+  }
+  if (r.rankings) {
+    const top = r.rankings.client.keywords
+      .filter((k) => k.position != null && k.position <= 20)
+      .slice(0, 15)
+      .map((k) => `"${k.keyword}" #${k.position}${k.volume != null ? ` (${k.volume}/mo)` : ""}`);
+    lines.push(`REAL GOOGLE RANKINGS (DataForSEO) for the client, top by search volume: ${top.join("; ") || "no top-20 rankings found"}`);
+    lines.push(`RANKING GAPS — searches competitors rank top-20 for and the client doesn't rank for at all: ${r.rankings.gaps.map((g) => `"${g.keyword}"${g.volume != null ? ` (${g.volume}/mo)` : ""} — ${g.competitors.map((c) => `${c.name} #${c.position}`).join(", ")}`).join("; ") || "none found"}`);
+  }
+  if (r.demandVolumes) {
+    lines.push(`SEARCH VOLUMES (Google Ads data, monthly) for buyer searches: ${Object.entries(r.demandVolumes).map(([k, v]) => `"${k}" ${v}`).join("; ")}`);
   }
   for (const h of r.history ?? []) {
     lines.push(`TRACKED CHANGES ${h.name === "You" ? "(the client)" : h.name} since ${h.since}: ${h.facts.join(" ")}`);
