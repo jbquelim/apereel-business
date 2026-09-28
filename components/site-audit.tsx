@@ -185,6 +185,7 @@ type AuditData = {
   credibility?: Credibility;
   marketPosition?: MarketPosition;
   techStack?: TechStack;
+  history?: { domain: string; name: string; since: string; facts: string[] }[];
   competitorInventories?: CompetitorInventory[];
   productComparisons?: ProductComparison[];
   inventoryInsights?: string[];
@@ -965,6 +966,38 @@ function AuditResults({
       {data.marketPosition && <MarketPositionSection mp={data.marketPosition} />}
 
       {data.techStack && <TechStackSection stack={data.techStack} />}
+
+      {data.history && data.history.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-navy-mid p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-electric uppercase">
+              Market Movement
+            </p>
+            <span className="rounded-full border border-electric/20 bg-electric/5 px-2.5 py-0.5 text-[10px] tracking-wide text-electric/60 uppercase">
+              Tracked Over Time
+            </span>
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            We re-read stores in your market on a schedule. Each line compares the same products or
+            categories on two dates.
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {data.history.map((h) => (
+              <div key={h.domain} className="rounded-[var(--radius-child)] bg-navy-lift p-5">
+                <p className="text-[15px] font-medium text-ink">
+                  {h.name}
+                  <span className="ml-2 font-mono text-[11px] text-muted">since {h.since}</span>
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {h.facts.map((f, i) => (
+                    <li key={i} className="text-[14px] leading-relaxed text-ink/85">{f}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {data.credibility && <CredibilitySection credibility={data.credibility} url={data.url} />}
 

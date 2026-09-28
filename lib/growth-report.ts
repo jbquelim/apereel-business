@@ -1,5 +1,6 @@
 import { checkPage, pageSpeed, samplePages, type PageCheck, type PageSpeedResult } from "./page-checks";
 import { fetchCompetitorSet } from "./marketdb";
+import { historyForMany, type HistoryFacts } from "./market-history";
 
 // The paid Growth Plan report. Two stages so each fits one function run:
 //   collect — the full free audit (internal call) plus paid-only evidence:
@@ -45,6 +46,7 @@ export type GrowthReport = {
   audit: Audit;
   pages: ClientPage[];
   competitorSpeed: { name: string; domain: string; speed: PageSpeedResult | null }[];
+  history?: HistoryFacts[];
   plan?: GrowthPlan;
   plannedAt?: string;
   planModel?: string;
@@ -94,9 +96,10 @@ export async function collectEvidence(url: string, domain: string, base: string)
   const auditCompetitors = audit.industry?.competitors ?? [];
   const sameSet =
     saved && saved.slice(0, 3).map((c) => c.domain).join() === auditCompetitors.slice(0, 3).map((c) => c.domain).join();
-  const [pages, competitorSpeed] = await Promise.all([
+  const [pages, competitorSpeed, history] = await Promise.all([
     pagesPromise,
     earlySpeed && sameSet ? earlySpeed : speedOf(auditCompetitors),
+    historyForMany([{ domain, name: "You" }, ...auditCompetitors.map((c) => ({ domain: c.domain, name: c.name }))]),
   ]);
   return {
     version: REPORT_VERSION,
@@ -106,6 +109,7 @@ export async function collectEvidence(url: string, domain: string, base: string)
     audit,
     pages,
     competitorSpeed,
+    history,
   };
 }
 
@@ -152,6 +156,9 @@ function evidenceBlock(r: GrowthReport): string {
   for (const p of r.pages) {
     const speed = p.speed ? `mobile performance ${p.speed.performance ?? "n/a"}, LCP ${p.speed.lcp ?? "n/a"}, CLS ${p.speed.cls ?? "n/a"}` : "speed not measured";
     lines.push(`PAGE ${p.type} ${p.url}: ${speed}; issues: ${p.issues.length ? p.issues.map((i) => `[${i.severity}] ${i.text}`).join(" ") : "none found"}`);
+  }
+  for (const h of r.history ?? []) {
+    lines.push(`TRACKED CHANGES ${h.name === "You" ? "(the client)" : h.name} since ${h.since}: ${h.facts.join(" ")}`);
   }
   for (const c of r.competitorSpeed) {
     lines.push(`COMPETITOR HOMEPAGE SPEED ${c.name}: ${c.speed ? `mobile performance ${c.speed.performance ?? "n/a"}, LCP ${c.speed.lcp ?? "n/a"}` : "not measured"}`);

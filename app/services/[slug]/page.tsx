@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ButtonLink } from "@/components/button-link";
+import { ServiceTiersSection } from "@/components/service-tiers-section";
+import { tiersForService } from "@/lib/service-tiers";
 import { Container } from "@/components/container";
 import { getServicePage, servicePages } from "@/lib/service-pages";
 import { getSiteUrl } from "@/lib/site";
@@ -39,6 +41,7 @@ export default async function ServicePage({
   if (!page) notFound();
 
   const others = servicePages.filter((s) => s.slug !== page.slug);
+  const tiers = tiersForService(page.slug);
 
   const base = getSiteUrl();
   const pageUrl = `${base}/services/${page.slug}`;
@@ -121,6 +124,8 @@ export default async function ServicePage({
           </p>
         </Container>
       </section>
+
+      {tiers && <ServiceTiersSection service={tiers} />}
 
       <section className="py-20 sm:py-28">
         <Container>

@@ -13,6 +13,7 @@ import {
 } from "@/lib/taxonomy";
 import { fetchProofSignals, type ProofSignals } from "@/lib/proofSignals";
 import { BROWSER_UA, fetchSitemapCatalog, fetchTextDirect, isBlockedPage } from "@/lib/site-fetch";
+import { historyForMany, type HistoryFacts } from "@/lib/market-history";
 import {
   fetchSiteStack,
   stackGaps,
@@ -198,6 +199,7 @@ type AuditResult = {
   };
   experience?: ExperienceCheckResult | null;
   marketPosition?: MarketPosition;
+  history?: HistoryFacts[];
   techStack?: {
     client: SiteStack;
     competitors: SiteStack[];
@@ -1857,18 +1859,26 @@ Respond with ONLY a JSON array:
   let competitorCatalogs: CatalogSize[] = [];
   let trends: TrendsData = null;
   let siteStacks: (SiteStack | null)[] = [];
+  let history: HistoryFacts[] = [];
 
   if (industry && industry.competitors.length > 0) {
     const top3 = industry.competitors.slice(0, 3);
-    const [inventoryResult, trendsResult, stacks] = await Promise.all([
+    const [inventoryResult, trendsResult, stacks, historyResult] = await Promise.all([
       fetchCompetitorInventories(top3),
       isIngest ? Promise.resolve(null) : fetchGoogleTrends(brandName, industry.competitors),
       Promise.all([
         fetchSiteStack(brandName, domain),
         ...industry.competitors.map((c) => fetchSiteStack(c.name, c.domain)),
       ]),
+      isIngest
+        ? Promise.resolve([] as HistoryFacts[])
+        : historyForMany([
+            { domain, name: "You" },
+            ...industry.competitors.map((c) => ({ domain: c.domain, name: c.name })),
+          ]),
     ]);
     siteStacks = stacks;
+    history = historyResult;
     competitorInventories = inventoryResult.inventories;
     competitorCatalogs = inventoryResult.catalogs;
     trends = trendsResult;
@@ -2110,6 +2120,7 @@ Respond with ONLY a JSON array:
     credibility,
     marketPosition,
     techStack,
+    history: history.length > 0 ? history : undefined,
     competitorInventories:
       competitorInventories.length > 0
         ? competitorInventories.map((c) => ({

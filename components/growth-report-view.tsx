@@ -1,4 +1,5 @@
 import type { GrowthReport } from "@/lib/growth-report";
+import { priceLabel, recommendTiers, tiersForService } from "@/lib/service-tiers";
 
 // The Growth Plan as the customer reads it. Also rendered in John's review
 // page, so what he approves is exactly what is sent.
@@ -110,6 +111,30 @@ export function GrowthReportView({
         <p className="mt-10 text-muted">The plan hasn&apos;t been written yet.</p>
       )}
 
+      {report.history && report.history.length > 0 && (
+        <Section eyebrow="Tracked over time" title="What we've seen change">
+          <p className="max-w-2xl text-[14px] leading-relaxed text-muted">
+            Apereel re-reads these stores on a schedule. Each figure compares the same products or
+            categories on two dates.
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {report.history.map((h) => (
+              <div key={h.domain} className="rounded-2xl border border-white/10 bg-navy-mid p-6">
+                <p className="text-[15px] font-medium text-ink">
+                  {h.name}
+                  <span className="ml-2 font-mono text-[11px] text-muted">tracked since {h.since}</span>
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {h.facts.map((f, i) => (
+                    <li key={i} className="text-[14px] leading-relaxed text-ink/85">{f}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
       <Section eyebrow="The evidence" title="What we measured on your site">
         <div className="space-y-4">
           {report.pages.map((p) => (
@@ -194,6 +219,8 @@ export function GrowthReportView({
         </Section>
       )}
 
+      {plan && <HowWeCanHelp priorities={plan.priorities} />}
+
       <section className="mt-14 rounded-2xl border border-electric/30 bg-electric/5 p-6 sm:p-8">
         <p className="font-display text-2xl text-ink">Want help putting this into action?</p>
         <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">
@@ -208,5 +235,43 @@ export function GrowthReportView({
         </a>
       </section>
     </article>
+  );
+}
+
+function HowWeCanHelp({ priorities }: { priorities: { service: string; effort: string }[] }) {
+  const { recs, suggestGrow } = recommendTiers(priorities);
+  if (recs.length === 0) return null;
+  const grow = suggestGrow ? tiersForService("SEO")?.tiers.find((t) => t.id === "grow") : undefined;
+  return (
+    <Section eyebrow="How Apereel can help" title="Where we'd start">
+      <div className="grid gap-4 md:grid-cols-2">
+        {recs.map(({ service, tier, covers }) => (
+          <div key={`${service.slug}-${tier.id}`} className="flex flex-col rounded-2xl border border-white/10 bg-navy-mid p-6">
+            <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">
+              {service.tag} · {tier.id === "fix" ? "Fix" : "Build"}
+            </p>
+            <p className="mt-2 text-lg font-medium text-ink">{tier.name}</p>
+            <p className="mt-1 text-[14px] text-muted">
+              Covers priorit{covers.length > 1 ? "ies" : "y"} {covers.join(", ")}
+            </p>
+            <ul className="mt-4 flex-1 space-y-2">
+              {tier.scope.map((s) => (
+                <li key={s} className="flex gap-2.5 text-[14px] leading-relaxed text-ink/85">
+                  <span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rounded-full bg-electric" />
+                  {s}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 font-mono text-[13px] text-ink">{priceLabel(tier)}</p>
+          </div>
+        ))}
+      </div>
+      {grow && (
+        <p className="mt-5 max-w-3xl text-[14px] leading-relaxed text-muted">
+          This plan spans several areas. If you&apos;d rather hand it over than run separate projects,
+          our monthly Grow engagements cover the ongoing work across them.
+        </p>
+      )}
+    </Section>
   );
 }

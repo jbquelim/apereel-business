@@ -22,10 +22,11 @@ export type ProductMatch = {
   confidence: number;
 };
 
-// Materials and marketing words describe the variant, not the product — two
-// stores' "Beaded Bracelet" should pair even when one is plated and one is
-// solid gold. The titles ship verbatim, so the material difference (and why
-// the prices differ) stays visible to the reader.
+// Materials and marketing words are left out of the title SIMILARITY score
+// (they'd dominate it), but the metal is checked separately below: a solid
+// gold piece never pairs with a silver or plated one, because the price gap
+// would reflect the material, not the store (a $1,398 gold lab-diamond
+// earring was once compared with a $195 silver one as a "7x premium").
 const STOPWORDS = new Set([
   "the", "and", "with", "for", "of", "in", "a", "an", "on", "to", "by",
   "set", "new", "our", "your", "from",
@@ -69,6 +70,26 @@ function typeFamily(a: string, b: string): boolean | null {
   return a.split(" ").some((w) => bWords.includes(w));
 }
 
+type Metal = "platinum" | "solid gold" | "gold plated" | "silver";
+
+/** The metal a title/type states, or null when it doesn't say. */
+export function metalOf(text: string): Metal | null {
+  const t = text.toLowerCase();
+  if (/\bplatinum\b/.test(t)) return "platinum";
+  if (/vermeil|plated|gold[- ]filled|gold[- ]tone|gold over/.test(t)) return "gold plated";
+  // A bare "gold" can be a colour or a name ("Gold Coast"), so only a karat
+  // mark or "solid gold" counts.
+  if (/\b(9|10|14|18|22|24)\s?(k|kt|ct|karat|carat)\b|solid gold/.test(t)) return "solid gold";
+  if (/sterling|\b925\b|\bsilver\b/.test(t)) return "silver";
+  return null;
+}
+
+function sameMetal(a: RawProduct, b: RawProduct): boolean {
+  const ma = metalOf(`${a.title} ${a.productType ?? ""}`);
+  const mb = metalOf(`${b.title} ${b.productType ?? ""}`);
+  return ma === null || mb === null || ma === mb;
+}
+
 function similarity(a: Set<string>, b: Set<string>): { jaccard: number; shared: number } {
   let shared = 0;
   for (const t of a) if (b.has(t)) shared++;
@@ -97,6 +118,7 @@ export function matchProducts(
         if (p.priceCents == null) continue;
         const family = typeFamily(clientType, normType(p.productType));
         if (family === false) continue;
+        if (!sameMetal(client, p)) continue;
         const { jaccard, shared } = similarity(clientTokens, tokens(p.title));
         // No declared type on one side → title overlap must clear a higher bar.
         const minJaccard = family === true ? MIN_JACCARD : MIN_JACCARD + 0.15;
