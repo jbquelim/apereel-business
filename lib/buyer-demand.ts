@@ -33,7 +33,7 @@ const NON_TOPIC = new Set([
 ]);
 // Research, jobs and education searches aren't buyers.
 const NOT_BUYER_RE =
-  /^(what|how|why|who|when|is|are|can|does)\b|\b(examples?|meaning|definition|jobs?|salary|salaries|engineers?|engineering|course|degree|diagram|pdf|wiki|reddit|hs code|inc|ltd|llc|corp|corporation|stock|login)\b/i;
+  /^(what|how|why|who|when|is|are|can|does)\b|\b(examples?|meaning|definition|jobs?|salary|salaries|engineers?|engineering|course|degree|diagram|pdf|wiki|reddit|hs code|inc|ltd|llc|corp|corporation|stock|login|vs|versus|names|types|list|circuits?|symbols?|worksheet)\b/i;
 const COUNTRY_RE = /\b(usa|united states|uk|united kingdom|australia|canada|india|china|germany|mexico)\b/i;
 
 const singular = (t: string) => (t.length > 3 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t);
