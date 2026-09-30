@@ -28,6 +28,7 @@ export const site = {
     { href: "/work", label: "Case Studies" },
     { href: "/approach", label: "Approach" },
     { href: "/services", label: "Services" },
+    { href: "/plans", label: "Plans" },
     { href: "/contact", label: "Contact" },
   ],
 } as const;

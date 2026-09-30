@@ -159,7 +159,7 @@ export const servicePages: ServicePage[] = [
           "Spend concentrated where you hold a real advantage: price, selection, availability, or experience.",
       },
       {
-        name: "Google & Meta management",
+        name: "Google, Meta & TikTok management",
         detail:
           "Full-funnel campaign build and management with budgets accountable to revenue and margin, not clicks.",
       },
@@ -186,7 +186,7 @@ export const servicePages: ServicePage[] = [
       {
         question: "Which platforms do you manage?",
         answer:
-          "Google and Meta, full-funnel. Platform choice matters less than what the campaigns point at: we concentrate spend where you hold a real advantage in price, selection, availability, or experience.",
+          "Google, Meta and TikTok, full-funnel. Platform choice matters less than what the campaigns point at: we concentrate spend where you hold a real advantage in price, selection, availability, or experience.",
       },
       {
         question: "What ad budget do we need?",
@@ -325,7 +325,7 @@ export const servicePages: ServicePage[] = [
   {
     slug: "premium-creative",
     tag: "Premium Creative",
-    title: "Compete visually without the six-figure budget",
+    title: "Premium content, every month, without the six-figure budget",
     metaTitle: "Premium Creative Production for E-Commerce",
     metaDescription:
       "Campaign and product creative at global-brand production quality, delivered with AI-assisted workflows at a fraction of the cost.",
@@ -333,6 +333,7 @@ export const servicePages: ServicePage[] = [
       "Customers judge your business by its creative before they read a word. Competing against companies ten times your size used to mean six-figure production budgets — or looking like the smaller player you are.",
       "AI-assisted creative workflows changed that equation. Production quality that matches global brands is now a process problem, not a budget problem — if the direction is right.",
       "We produce campaign, product, and brand creative that holds its own next to the biggest players in your market, art-directed so it looks designed, not generated.",
+      "And because buyers need to see you week after week, not once a season, it comes as a monthly content subscription: social posts, short-form video, buying guides and ad creative from one plan.",
     ],
     deliverablesLabel: "What the work covers",
     deliverables: [
@@ -350,6 +351,11 @@ export const servicePages: ServicePage[] = [
         name: "Brand-compliant execution",
         detail:
           "Work inside exacting brand standards — we've maintained full brand authorization across multiple global-brand partnerships.",
+      },
+      {
+        name: "Monthly content",
+        detail:
+          "Social posts, short videos for Reels, TikTok and Shorts, buying guides and newsletters, planned around what your buyers search for.",
       },
       {
         name: "Creative direction",

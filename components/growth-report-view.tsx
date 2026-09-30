@@ -366,8 +366,9 @@ function HowWeCanHelp({
       </div>
       {grow && (
         <p className="mt-5 max-w-3xl text-[14px] leading-relaxed text-muted">
-          This plan spans several areas. If you&apos;d rather hand it over than run separate projects,
-          our monthly Grow engagements cover the ongoing work across them.
+          This plan spans several areas. If you&apos;d rather hand it over than run separate projects,{" "}
+          <a href="/plans" className="text-electric underline underline-offset-4">our monthly plans</a> cover
+          search, ads, content and site work together.
         </p>
       )}
     </Section>

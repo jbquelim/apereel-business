@@ -11,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       "work",
       "approach",
       "services",
+      "plans",
       "contact",
       ...(process.env.NEXT_PUBLIC_GROWTH_PLAN === "on" ? ["growth-plan"] : []),
     ].map((path) => ({
