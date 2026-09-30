@@ -76,6 +76,8 @@ form.lead{display:grid;gap:12px;max-width:620px}form.lead input,form.lead textar
 .crumbs{font-size:.88rem;color:var(--muted);margin-bottom:22px}.crumbs a{text-decoration:none}
 .pdp{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}.pdp .ph{background:#fff;border:1px solid var(--line);border-radius:var(--r);aspect-ratio:1;display:flex;align-items:center;justify-content:center;overflow:hidden}.pdp .ph img{width:100%;height:100%;object-fit:contain}
 .pdp .price{font-size:1.5rem;margin:14px 0 22px}
+.promise{list-style:none;padding:22px 0 0;margin:26px 0 0;border-top:1px solid var(--line);display:grid;gap:10px}.promise li{padding-left:26px;position:relative}.promise li:before{content:"";position:absolute;left:0;top:.55em;width:12px;height:6px;border-left:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg)}
+table.specs{width:100%;max-width:760px;border-collapse:collapse;margin-top:18px}table.specs th,table.specs td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}table.specs th{width:38%;color:var(--muted);font-weight:500}
 .chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px}.chips a{padding:8px 16px;border:1px solid var(--line);border-radius:999px;text-decoration:none;font-size:.92rem}.chips a[aria-current]{background:var(--text);color:var(--bg)}
 footer.site{border-top:1px solid var(--line);padding:48px 0;color:var(--muted);font-size:.93rem}footer.site .wrap{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
 .notice{background:#111;color:#fff;text-align:center;font:13px/1.4 system-ui;padding:8px}
@@ -237,7 +239,10 @@ function productPage(t: RenderTarget, p: SiteProduct): string {
     description: p.description.slice(0, 155),
     current: "/products",
     body: `<section><div class="wrap"><nav class="crumbs" aria-label="Breadcrumb"><a href="${t.base || "/"}">Home</a> / <a href="${t.base}/products">Products</a>${cat ? ` / <a href="${t.base}/collections/${esc(cat.slug)}">${esc(cat.name)}</a>` : ""}</nav>
-<div class="pdp"><div class="ph">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" fetchpriority="high" onerror="this.remove()">` : ""}</div><div><h1 style="font-size:clamp(1.8rem,3.5vw,2.7rem)">${esc(p.title)}</h1>${p.price != null ? `<div class="price">${esc(money(p))}</div>` : ""}<div class="muted">${para(p.description)}</div><div class="actions" style="margin-top:26px">${action}</div></div></div>
+<div class="pdp"><div class="ph">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" fetchpriority="high" onerror="this.remove()">` : ""}</div><div><h1 style="font-size:clamp(1.8rem,3.5vw,2.7rem)">${esc(p.title)}</h1>${p.price != null ? `<div class="price">${esc(money(p))}</div>` : ""}<div class="muted">${para(p.description)}</div><div class="actions" style="margin-top:26px">${action}</div>${
+      doc.productPromise?.length ? `<ul class="promise">${doc.productPromise.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""
+    }</div></div>
+${p.specs?.length ? `<div style="margin-top:56px"><h2>Specifications</h2><table class="specs">${p.specs.map((r) => `<tr><th scope="row">${esc(r.label)}</th><td>${esc(r.value)}</td></tr>`).join("")}</table></div>` : ""}
 ${enquire ? `<div id="enquire" style="margin-top:72px"><h2>Ask about ${esc(p.title)}</h2><div style="margin-top:22px">${leadForm(t, `product:${p.slug}`, "Send enquiry", true)}</div></div>` : ""}
 ${related.length ? `<div style="margin-top:80px"><h2>More ${cat ? esc(cat.name) : "products"}</h2><div class="grid g4" style="margin-top:26px">${related.map((r) => productCard(r, t)).join("")}</div></div>` : ""}</div></section>`,
     jsonLd: [

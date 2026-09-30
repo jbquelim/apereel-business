@@ -1,7 +1,8 @@
 import { neon } from "@neondatabase/serverless";
 import { callClaude, parseJson } from "./ai";
 import { allowance, tierFor, type Client } from "./clients";
-import { fetchAuditResult } from "./marketdb";
+import { fetchAuditResult, fetchCompetitorSet } from "./marketdb";
+import { historyForMany } from "./market-history";
 import { crawlSite } from "./site-crawl";
 import { queueMediaJob, type MediaBrief, type MediaKind } from "./media";
 import { storeImages, storedUrls } from "./image-store";
@@ -14,17 +15,26 @@ import { storeImages, storedUrls } from "./image-store";
 
 export type Product = { url: string; title: string; price: number | null; currency: string | null; image: string | null; rating: number | null };
 
-export type PostData = { platform: string; hook: string; caption: string; hashtags: string[]; cta: string; productTitle: string };
+export type PostData = { platform: string; hook: string; caption: string; hashtags: string[]; cta: string; productTitle: string; suggestedDate?: string };
 export type GuideData = { title: string; targetSearch: string; summary: string; body: string };
 export type NewsletterData = { subject: string; preview: string; body: string };
 
 // What each content tier produces per month. Videos are briefed now and
 // rendered by the media queue (lib/media) once a provider is connected.
-const VOLUME: Record<string, { posts: number; guides: number; newsletters: number; videos: number }> = {
-  fix: { posts: 12, guides: 0, newsletters: 0, videos: 0 },
-  build: { posts: 20, guides: 2, newsletters: 0, videos: 4 },
-  grow: { posts: 30, guides: 4, newsletters: 2, videos: 8 },
+const VOLUME: Record<string, { posts: number; guides: number; newsletters: number; videos: number; visuals: number; competitorNote: boolean }> = {
+  fix: { posts: 12, guides: 0, newsletters: 0, videos: 0, visuals: 0, competitorNote: false },
+  build: { posts: 20, guides: 2, newsletters: 0, videos: 4, visuals: 0, competitorNote: false },
+  grow: { posts: 30, guides: 4, newsletters: 2, videos: 8, visuals: 4, competitorNote: true },
 };
+
+/** Posting dates spread over the rest of the month (from tomorrow). */
+function postingDates(n: number): string[] {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+  const days = Math.max(7, Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1);
+  return Array.from({ length: n }, (_, i) => new Date(start.getTime() + Math.floor((i * days) / n) * 86_400_000).toISOString().slice(0, 10));
+}
 
 function sql() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
@@ -186,7 +196,7 @@ export async function writeVideoBriefs(
   client: Client,
   brief: string,
   products: Product[],
-  opts: { batch: string; itemKind: string; mediaKind: MediaKind; style: string; duration: number; aspect: MediaBrief["aspect"] },
+  opts: { batch: string; itemKind: string; mediaKind: MediaKind; style: string; duration: number; aspect: MediaBrief["aspect"]; alsoAspects?: MediaBrief["aspect"][] },
 ): Promise<number> {
   if (products.length === 0) return 0;
   const text = await callClaude({
@@ -221,13 +231,15 @@ ${RULES}
     };
     const itemId = await saveItem(client.id, opts.batch, opts.itemKind, { ...media, productTitle: product?.title ?? b.productTitle, caption: cut(b.caption, 400) }, product ?? null, opts.aspect === "9:16" ? "reels / tiktok" : null);
     await queueMediaJob({ clientId: client.id, itemId, kind: opts.mediaKind, brief: media });
+    // Extra sizes of the same film (e.g. 16:9 for YouTube beside 9:16 for Reels and TikTok).
+    for (const aspect of opts.alsoAspects ?? []) await queueMediaJob({ clientId: client.id, itemId, kind: opts.mediaKind, brief: { ...media, aspect } });
     n++;
   }
   return n;
 }
 
 /** Generates this month's content for a client. Crawls first when we have no recent product data. */
-export async function generateMonth(client: Client): Promise<{ batch: string; posts: number; guides: number; newsletters: number; videos: number }> {
+export async function generateMonth(client: Client): Promise<{ batch: string; posts: number; guides: number; newsletters: number; videos: number; visuals: number; notes: number }> {
   const volume = VOLUME[client.tier] ?? VOLUME.fix;
   const batch = new Date().toISOString().slice(0, 7);
   const catalog = await catalogWithPhotos(client.domain);
@@ -237,9 +249,10 @@ export async function generateMonth(client: Client): Promise<{ batch: string; po
   const featured = pickProducts(catalog, volume.posts);
 
   const posts = await writePosts(client, brief, featured);
+  const dates = postingDates(posts.length);
   for (const [i, post] of posts.entries()) {
     const product = featured.find((p) => p.title === post.productTitle) ?? featured[i] ?? null;
-    await save(client.id, batch, "post", post, product, post.platform);
+    await save(client.id, batch, "post", { ...post, suggestedDate: dates[i] }, product, post.platform);
   }
 
   const searches = (audit?.demand?.rows ?? []).filter((r) => r.coverage === "none").map((r) => r.query).slice(0, volume.guides);
@@ -269,13 +282,76 @@ export async function generateMonth(client: Client): Promise<{ batch: string; po
     duration: 8,
     aspect: "9:16",
   });
-  return { batch, posts: posts.length, guides, newsletters, videos };
+  const visuals = await writeVisualBriefs(client, brief, pickProducts(catalog.filter((p) => p.image).slice(3), volume.visuals), batch);
+  const notes = volume.competitorNote ? await writeCompetitorNote(client, audit, batch) : 0;
+  return { batch, posts: posts.length, guides, newsletters, videos, visuals, notes };
+}
+
+/**
+ * Premium product visuals: the real product photo as the reference, staged
+ * in a premium scene by the image model (lib/media). Claude writes the scene.
+ */
+export async function writeVisualBriefs(client: Client, brief: string, products: Product[], batch: string, siteId?: string): Promise<number> {
+  if (products.length === 0) return 0;
+  const text = await callClaude({
+    clientId: client.id,
+    purpose: "visuals:briefs",
+    maxTokens: 3000,
+    prompt: `Write a premium product photography scene for each product below, for the business described. The product itself comes from its real photo; you only describe the setting.
+
+${brief}
+
+PRODUCTS:
+${products.map((p, i) => `${i + 1}. ${p.title}`).join("\n")}
+
+Return ONLY a JSON array, one per product in order: [{ "productTitle": "exactly as given", "title": "short name for the visual", "prompt": "the scene: surface, background, light, a few props that suit the product and its buyers; editorial, premium, photographic; the product is the hero, centred and sharp" }]`,
+  });
+  const briefs = parseJson<{ productTitle: string; title: string; prompt: string }[]>(text) ?? [];
+  let n = 0;
+  for (const [i, b] of briefs.slice(0, products.length).entries()) {
+    const product = products.find((p) => p.title === b.productTitle) ?? products[i];
+    if (!product?.image) continue;
+    const media: MediaBrief = { title: cut(b.title, 120), duration: 0, aspect: siteId ? "4:3" : "1:1", images: [product.image], shots: [], prompt: cut(b.prompt, 1500) };
+    const itemId = siteId ? null : await saveItem(client.id, batch, "visual", { ...media, productTitle: product.title }, product, null);
+    await queueMediaJob({ clientId: client.id, itemId, siteId: siteId ?? null, kind: siteId ? "site-visual" : "product-visual", brief: media });
+    n++;
+  }
+  return n;
+}
+
+/** What the client's tracked competitors changed since we started watching them. */
+async function writeCompetitorNote(client: Client, audit: AuditLike | null, batch: string): Promise<number> {
+  const set = (await fetchCompetitorSet(client.domain)) ?? (audit?.industry?.competitors ?? []).map((c) => ({ name: c.name, domain: (c as { domain?: string }).domain ?? "" }));
+  const competitors = set.filter((c) => c.domain).slice(0, 5);
+  const history = await historyForMany(competitors.map((c) => ({ domain: c.domain, name: c.name })));
+  if (history.length === 0) {
+    await saveItem(client.id, batch, "note", {
+      title: "We're now tracking your competitors",
+      points: competitors.map((c) => `${c.name} (${c.domain}): catalog, prices and marketing tools recorded; changes appear from next month.`),
+      suggestion: "",
+    });
+    return 1;
+  }
+  const text = await callClaude({
+    clientId: client.id,
+    purpose: "content:competitor-note",
+    maxTokens: 1500,
+    prompt: `Summarise what these competitors of ${client.domain} changed, for the business owner. Use ONLY these measured facts:
+
+${history.map((h) => `${h.name} (since ${h.since}): ${h.facts.join(" ")}`).join("\n")}
+
+Return ONLY JSON: { "title": "max 60 chars", "points": ["3-5 plain sentences, one change each, with the numbers given"], "suggestion": "one practical thing the owner could do about it this month" }`,
+  });
+  const note = parseJson<{ title: string; points: string[]; suggestion: string }>(text);
+  if (!note?.points?.length) return 0;
+  await saveItem(client.id, batch, "note", { title: cut(note.title, 80), points: note.points.map((p) => cut(p, 300)).slice(0, 5), suggestion: cut(note.suggestion, 300) });
+  return 1;
 }
 
 export type ContentItem = {
   id: number;
   batch: string;
-  kind: "post" | "guide" | "newsletter" | "video" | "ad" | "carousel" | "animated-ad" | "video-ad";
+  kind: "post" | "guide" | "newsletter" | "video" | "ad" | "carousel" | "animated-ad" | "video-ad" | "visual" | "note";
   platform: string | null;
   product_url: string | null;
   image: string | null;

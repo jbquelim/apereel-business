@@ -247,6 +247,8 @@ await sql`
   )
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_media_jobs_status ON media_jobs (status, created_at)`;
+await sql`ALTER TABLE media_jobs ADD COLUMN IF NOT EXISTS provider_request_id TEXT`;
+await sql`ALTER TABLE media_jobs ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ`;
 // Customer websites: the whole site as one JSON document, rendered to HTML.
 await sql`
   CREATE TABLE IF NOT EXISTS sites (

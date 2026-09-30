@@ -65,7 +65,7 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
         token={token}
         items={current}
         left={left.left}
-        media={Object.fromEntries([...jobs].map(([id, j]) => [id, { status: j.status, url: j.output_url }]))}
+        media={Object.fromEntries([...jobs].map(([id, list]) => [id, list.map((j) => ({ status: j.status, url: j.output_url, aspect: j.brief.aspect }))]))}
       />
     ) : (
       <p className="mt-12 text-[15px] text-muted">This month&apos;s batch is being prepared. Check back in a few minutes.</p>

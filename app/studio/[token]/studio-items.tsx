@@ -9,7 +9,8 @@ import type { MediaBrief } from "@/lib/media";
 // platform, approve, and "ask for a change". Videos show their script and
 // shot list until rendered, then the video itself.
 
-type Media = Record<string, { status: string; url: string | null }>;
+type Render = { status: string; url: string | null; aspect: string };
+type Media = Record<string, Render[]>;
 type VideoData = MediaBrief & { productTitle?: string; caption?: string };
 
 const SECTIONS: { kinds: string[]; title: string; cols: string }[] = [
@@ -18,6 +19,8 @@ const SECTIONS: { kinds: string[]; title: string; cols: string }[] = [
   { kinds: ["animated-ad", "video-ad"], title: "Animated and video ads", cols: "sm:grid-cols-2 lg:grid-cols-3" },
   { kinds: ["post"], title: "Social posts", cols: "sm:grid-cols-2 lg:grid-cols-3" },
   { kinds: ["video"], title: "Short videos", cols: "sm:grid-cols-2 lg:grid-cols-3" },
+  { kinds: ["visual"], title: "Premium product visuals", cols: "sm:grid-cols-2 lg:grid-cols-3" },
+  { kinds: ["note"], title: "Your competitors this month", cols: "lg:grid-cols-2" },
   { kinds: ["guide"], title: "Buying guides", cols: "lg:grid-cols-2" },
   { kinds: ["newsletter"], title: "Newsletters", cols: "lg:grid-cols-2" },
 ];
@@ -80,7 +83,7 @@ function Downloads({ token, id, frames }: { token: string; id: number; frames?: 
   );
 }
 
-function Body({ item, token, media }: { item: ContentItem; token: string; media?: { status: string; url: string | null } }) {
+function Body({ item, token, media }: { item: ContentItem; token: string; media?: Render[] }) {
   const d = item.data as unknown as Record<string, unknown>;
   const kind = item.kind as string;
   if (kind === "post") {
@@ -91,6 +94,7 @@ function Body({ item, token, media }: { item: ContentItem; token: string; media?
         <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-ink/85">{p.caption}</p>
         <p className="mt-2 text-[14px] text-electric">{p.cta}</p>
         <p className="mt-2 text-[13px] text-muted">{p.hashtags.map(tag).join(" ")}</p>
+        {p.suggestedDate && <p className="mt-2 font-mono text-[11px] text-muted">Suggested for {new Date(p.suggestedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</p>}
       </>
     );
   }
@@ -150,15 +154,42 @@ function Body({ item, token, media }: { item: ContentItem; token: string; media?
       </>
     );
   }
-  // Videos: the finished file, or the brief while it renders.
+  if (kind === "note") {
+    const n = d as unknown as { title: string; points: string[]; suggestion: string };
+    return (
+      <>
+        <p className="mt-2 text-[17px] font-medium text-ink">{n.title}</p>
+        <ul className="mt-3 space-y-2 text-[14px] leading-relaxed text-ink/85">
+          {n.points.map((p, i) => (
+            <li key={i} className="flex gap-2"><span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rounded-full bg-electric" />{p}</li>
+          ))}
+        </ul>
+        {n.suggestion && <p className="mt-3 text-[14px] text-electric">{n.suggestion}</p>}
+      </>
+    );
+  }
+  // Videos and visuals: the finished files, or the brief while they render.
   const v = d as unknown as VideoData;
+  const done = (media ?? []).filter((m) => m.url);
+  const pending = (media ?? []).filter((m) => !m.url);
   return (
     <>
-      {media?.url ? (
-        <video src={media.url} controls playsInline className="mt-3 w-full rounded-lg bg-black" />
-      ) : (
+      {done.map((m, i) =>
+        kind === "visual" ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <a key={i} href={m.url!} target="_blank" rel="noopener"><img src={m.url!} alt={v.title} className="mt-3 w-full rounded-lg" /></a>
+        ) : (
+          <div key={i} className="mt-3">
+            <video src={m.url!} controls playsInline className="w-full rounded-lg bg-black" />
+            <a href={m.url!} download className="font-mono text-[12px] text-electric underline underline-offset-4">Download {m.aspect}</a>
+          </div>
+        ),
+      )}
+      {pending.length > 0 && (
         <p className="mt-2 inline-flex rounded-full border border-white/15 px-3 py-1 font-mono text-[11px] text-muted">
-          {media?.status === "failed" ? "Rendering failed; we'll retry" : "Script ready · video rendering soon"}
+          {pending.some((m) => m.status === "failed") && done.length === 0
+            ? "Rendering failed; we'll look into it"
+            : `${kind === "visual" ? "Visual" : "Video"} rendering${pending.length > 1 ? ` (${pending.map((m) => m.aspect).join(", ")})` : ""}: usually ready within the hour`}
         </p>
       )}
       <p className="mt-3 text-[15px] font-medium text-ink">{v.title}</p>
@@ -179,7 +210,7 @@ function Body({ item, token, media }: { item: ContentItem; token: string; media?
   );
 }
 
-function Card({ token, initial, canRevise, onUsed, media }: { token: string; initial: ContentItem; canRevise: boolean; onUsed: () => void; media?: { status: string; url: string | null } }) {
+function Card({ token, initial, canRevise, onUsed, media }: { token: string; initial: ContentItem; canRevise: boolean; onUsed: () => void; media?: Render[] }) {
   const [item, setItem] = useState(initial);
   const [open, setOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
@@ -217,10 +248,11 @@ function Card({ token, initial, canRevise, onUsed, media }: { token: string; ini
   }
 
   const kind = item.kind as string;
-  const hero = kind === "ad" ? `/api/creative/${item.id}?t=${token}&size=square&v=${version}` : kind === "post" || kind === "video" || kind.endsWith("-ad") ? item.image : null;
+  const rendered = (media ?? []).some((m) => m.url);
+  const hero = kind === "ad" ? `/api/creative/${item.id}?t=${token}&size=square&v=${version}` : kind === "post" || kind === "video" || kind === "visual" || kind.endsWith("-ad") ? item.image : null;
   return (
     <article className={`flex flex-col overflow-hidden rounded-2xl border bg-navy-mid ${item.status === "approved" ? "border-electric/50" : "border-white/10"}`}>
-      {hero && !(media?.url) && (
+      {hero && !rendered && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={hero} alt="" className="aspect-square w-full bg-white object-contain" loading="lazy" />
       )}

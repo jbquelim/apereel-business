@@ -2,7 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { randomBytes, randomUUID } from "node:crypto";
 import { callClaude, parseJson } from "./ai";
 import { allowance, tierFor, type Client } from "./clients";
-import { RULES, catalogWithPhotos, type Product } from "./content-engine";
+import { RULES, catalogWithPhotos, marketBrief, writeVisualBriefs, type Product } from "./content-engine";
 import { fetchAuditResult } from "./marketdb";
 import { queueMediaJob } from "./media";
 import { pickTemplate } from "./site-templates";
@@ -137,6 +137,23 @@ faq: { "type":"faq", "heading":"...", "items":[{ "q":"...", "a":"..." }] } (4-6 
 cta: { "type":"cta", "heading":"...", "body":"one sentence", "ctaLabel":"...", "ctaHref":"/contact" }
 contact: { "type":"contact", "heading":"...", "body":"one sentence" }`;
 
+/** What competitors' product pages carry, from the pages we've read (for Custom and Signature). */
+async function competitorBenchmark(domain: string): Promise<string> {
+  const rows = (await sql()`
+    WITH comp AS (
+      SELECT lower(regexp_replace(c->>'domain', '^www\\.', '')) AS d FROM competitor_sets, jsonb_array_elements(competitors) c WHERE domain = ${domain}
+    )
+    SELECT count(*)::int AS pages, round(avg(words))::int AS words, round(avg(images))::int AS images,
+           round(100.0 * avg(CASE WHEN spec_table THEN 1 ELSE 0 END))::int AS specs,
+           round(100.0 * avg(CASE WHEN review_widget THEN 1 ELSE 0 END))::int AS reviews
+    FROM page_snapshots WHERE role = 'competitor' AND kind = 'product' AND NOT blocked AND domain IN (SELECT d FROM comp)
+  `) as { pages: number; words: number | null; images: number | null; specs: number | null; reviews: number | null }[];
+  const r = rows[0];
+  return r && r.pages > 0
+    ? `COMPETITOR PRODUCT PAGES (${r.pages} read by us): about ${r.words} words, ${r.images} photos, specification tables on ${r.specs}%, reviews on ${r.reviews}%. Write product descriptions at least as useful as theirs.`
+    : "";
+}
+
 /** Builds (or rebuilds) the client's site. */
 export async function buildSite(client: Client): Promise<SiteRow> {
   const tier = client.tier;
@@ -156,6 +173,8 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   const featured = products.filter((p) => p.image).slice(0, limits.featured);
   featured.forEach((p) => (p.featured = true));
   const gaps = (audit?.demand?.rows ?? []).filter((r) => r.coverage === "none").map((r) => r.query);
+  const rich = tier !== "fix";
+  const benchmark = rich ? await competitorBenchmark(client.domain).catch(() => "") : "";
 
   const text = await callClaude({
     clientId: client.id,
@@ -165,7 +184,7 @@ export async function buildSite(client: Client): Promise<SiteRow> {
 
 BUSINESS: ${client.domain}${audit?.industry?.subIndustry ? ` (${audit.industry.subIndustry})` : ""}
 ${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${audit.translateAdvantage.strength}\n` : ""}CATALOG: ${catalog.length} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
-${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}
+${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}${benchmark ? `${benchmark}\n` : ""}
 FEATURED PRODUCTS (write a description for each):
 ${featured.map((p) => `- ${p.slug}: ${p.title}${p.price != null ? ` (${p.currency ?? "$"}${p.price})` : ""}`).join("\n")}
 
@@ -183,7 +202,9 @@ Return ONLY JSON:
     "contact": { "navLabel": "Contact", "metaTitle": "...", "metaDescription": "...", "sections": [...] }
   },
   "categories": { ${categories.length ? categories.map((c) => `"${c.slug}": "one sentence describing this category"`).join(", ") : ""} },
-  "products": { "<slug>": "2-3 sentence description, facts from the product name only" }
+  "products": { "<slug>": "${rich ? "3-4 sentence description: what it is, what it's for, who it suits; facts from the product name only" : "2-3 sentence description, facts from the product name only"}" }${rich ? `,
+  "specs": { "<slug>": [{ "label": "e.g. Wattage", "value": "e.g. 75W" }] },
+  "productPromise": ["3 short reasons to buy from this business, from its advantage above, max 60 chars each"]` : ""}
 }
 
 ${RULES}
@@ -195,6 +216,8 @@ ${RULES}
     pages?: Record<string, { navLabel?: string; metaTitle?: string; metaDescription?: string; sections?: Section[] }>;
     categories?: Record<string, string>;
     products?: Record<string, string>;
+    specs?: Record<string, { label?: string; value?: string }[]>;
+    productPromise?: string[];
   }>(text);
   if (!out?.pages?.home?.sections?.length) throw new Error("The site copy came back incomplete");
 
@@ -220,6 +243,8 @@ ${RULES}
   });
   for (const c of categories) c.description = cut(out.categories?.[c.slug], 200);
   for (const p of products) {
+    const specs = rich && Array.isArray(out.specs?.[p.slug]) ? out.specs![p.slug].map((r) => ({ label: cut(r.label, 40), value: cut(r.value, 120) })).filter((r) => r.label && r.value).slice(0, 12) : [];
+    if (specs.length) p.specs = specs;
     const d = cut(out.products?.[p.slug], 600);
     if (d) p.description = d;
     else if (p.category) p.description = `${p.title}, part of the ${categories.find((c) => c.slug === p.category)?.name ?? ""} range from ${name}.`;
@@ -234,6 +259,7 @@ ${RULES}
     categories,
     productAction: b2b ? "enquire" : "link",
     redirects: await redirectsFrom(client.domain, products, categories),
+    ...(rich && Array.isArray(out.productPromise) ? { productPromise: out.productPromise.map((x) => cut(x, 80)).filter(Boolean).slice(0, 3) } : {}),
   };
 
   const existing = await getSiteForClient(client.id);
@@ -251,7 +277,12 @@ ${RULES}
         RETURNING *
       `) as SiteRow[])[0];
 
-  // Signature: a cinematic hero film from the lead product's photo.
+  // Signature: premium product visuals for the story sections, and a cinematic hero film.
+  if (tier === "grow") {
+    await writeVisualBriefs(client, marketBrief(client.domain, audit), featured.slice(1, 3).map((p) => ({ url: p.sourceUrl, title: p.title, price: p.price, currency: p.currency, image: p.image, rating: null })), new Date().toISOString().slice(0, 7), row.id).catch((err) =>
+      console.error("Site visuals not queued:", err instanceof Error ? err.message : err),
+    );
+  }
   if (tier === "grow" && heroImage) {
     await queueMediaJob({
       clientId: client.id,

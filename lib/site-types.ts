@@ -41,6 +41,8 @@ export type SiteProduct = {
   /** The product's page on the business's current site. */
   sourceUrl: string;
   featured?: boolean;
+  /** Specification rows read from the product's own name (Custom and Signature). */
+  specs?: { label: string; value: string }[];
 };
 
 export type SiteDoc = {
@@ -57,6 +59,8 @@ export type SiteDoc = {
   /** Old addresses (from our crawl of their current site) → new ones. */
   redirects: Record<string, string>;
   footerNote?: string;
+  /** Short reasons to buy from this business, shown on every product page. */
+  productPromise?: string[];
 };
 
 export type SiteTemplate = {

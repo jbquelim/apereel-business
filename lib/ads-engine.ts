@@ -158,6 +158,7 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
     style: "a cinematic hero product film, premium lighting and slow deliberate camera work, like a big-brand launch ad",
     duration: 15,
     aspect: "9:16",
+    alsoAspects: ["16:9"],
   });
   return { batch, statics: statics.length, carousels: carousels.length, animated, videos };
 }

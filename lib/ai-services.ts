@@ -10,7 +10,7 @@ import { buildSite } from "./site-builder";
 export async function runService(client: Client): Promise<string> {
   if (client.service === "premium-creative") {
     const r = await generateMonth(client);
-    return `${r.posts} posts, ${r.guides} guides, ${r.newsletters} newsletters, ${r.videos} videos`;
+    return `${r.posts} posts, ${r.guides} guides, ${r.newsletters} newsletters, ${r.videos} videos, ${r.visuals} visuals, ${r.notes} competitor notes`;
   }
   if (client.service === "advertising") {
     const r = await generateAdsMonth(client);
