@@ -307,13 +307,32 @@ ${RULES}
         RETURNING *
       `) as SiteRow[])[0];
 
-  // Signature: premium product visuals for the story sections, and a cinematic hero film.
-  if (tier === "grow") {
+  // Signature: premium product visuals for the story sections, and a cinematic hero film,
+  // once per site: a rebuild keeps the renders it already has (queued, running or done).
+  const renders = ((await sql()`
+    SELECT kind, count(*)::int AS n FROM media_jobs WHERE site_id = ${row.id} AND status <> 'failed' GROUP BY kind
+  `) as { kind: string; n: number }[]).reduce<Record<string, number>>((m, r) => ({ ...m, [r.kind]: r.n }), {});
+  if (existing) {
+    // Keep a finished hero film and visuals on the rebuilt pages.
+    const done = (await sql()`SELECT kind, output_url FROM media_jobs WHERE site_id = ${row.id} AND status = 'done' ORDER BY id`) as { kind: string; output_url: string }[];
+    const film = done.find((d) => d.kind === "hero-film")?.output_url;
+    const visuals = done.filter((d) => d.kind === "site-visual").map((d) => d.output_url);
+    if (film || visuals.length) {
+      for (const page of doc.pages) {
+        for (const s of page.sections) {
+          if (s.type === "hero" && page.slug === "" && film) s.video = film;
+          if (s.type === "story" && visuals.length) s.image = visuals.shift()!;
+        }
+      }
+      await sql()`UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb WHERE id = ${row.id}`;
+    }
+  }
+  if (tier === "grow" && !renders["site-visual"]) {
     await writeVisualBriefs(client, marketBrief(client.domain, audit), featured.slice(1, 3).map((p) => ({ url: p.sourceUrl, title: p.title, price: p.price, currency: p.currency, image: p.image, rating: null })), new Date().toISOString().slice(0, 7), row.id).catch((err) =>
       console.error("Site visuals not queued:", err instanceof Error ? err.message : err),
     );
   }
-  if (tier === "grow" && heroImage) {
+  if (tier === "grow" && heroImage && !renders["hero-film"]) {
     await queueMediaJob({
       clientId: client.id,
       siteId: row.id,
