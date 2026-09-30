@@ -1787,14 +1787,15 @@ Respond with ONLY a JSON array:
             body: JSON.stringify({
               model,
               max_tokens: 2000,
-              // deterministic picks: the first saved set for a domain sticks for 30 days
-              temperature: 0,
+              // Deterministic picks (the first saved set sticks for 30 days). Sonnet 5
+              // rejects temperature, so only the Haiku fallback gets it.
+              ...(model === "claude-haiku-4-5" ? { temperature: 0 } : {}),
               thinking: { type: "disabled" },
               messages: [{ role: "user", content: refinePrompt }],
             }),
           });
           if (!refineRes.ok) {
-            console.error(`Competitor refine ${model} failed:`, refineRes.status);
+            console.error(`Competitor refine ${model} failed:`, refineRes.status, (await refineRes.text().catch(() => "")).slice(0, 300));
             continue;
           }
           const refineData = await refineRes.json();

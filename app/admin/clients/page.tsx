@@ -35,7 +35,7 @@ export default async function ClientsPage() {
                 <th className="py-2 pr-4 font-normal">Client</th>
                 <th className="py-2 pr-4 font-normal">Service</th>
                 <th className="py-2 pr-4 font-normal">Requests this month</th>
-                <th className="py-2 pr-4 font-normal">Items</th>
+                <th className="py-2 pr-4 font-normal">Items / site</th>
                 <th className="py-2 pr-4 font-normal">AI cost to date</th>
                 <th className="py-2 font-normal" />
               </tr>
@@ -55,7 +55,14 @@ export default async function ClientsPage() {
                       {t?.price != null && <span className="block font-mono text-[12px] text-muted">${t.price}{t.cadence === "monthly" ? "/mo" : ""}</span>}
                     </td>
                     <td className="py-3 pr-4 font-mono text-ink/85">{c.used} / {t?.requests ?? 0}</td>
-                    <td className="py-3 pr-4 font-mono text-ink/85">{c.items}</td>
+                    <td className="py-3 pr-4 font-mono text-ink/85">
+                      {c.service === "web-development" ? (
+                        c.site_slug ? <a href={`/sites/${c.site_slug}`} className="text-electric underline underline-offset-4">View site</a> : "Not built"
+                      ) : (
+                        c.items
+                      )}
+                      {c.running_since && <span className="block text-[11px] text-muted">Running since {new Date(c.running_since).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>}
+                    </td>
                     <td className="py-3 pr-4 font-mono text-ink/85">${c.cost.toFixed(2)}</td>
                     <td className="py-3 text-right">
                       <a href={`/studio/${c.token}`} className="text-electric underline underline-offset-4">Studio</a>

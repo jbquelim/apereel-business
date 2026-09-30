@@ -267,6 +267,7 @@ await sql`
   )
 `;
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT`;
+await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS running_since TIMESTAMPTZ`;
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT`;
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_checkout_session TEXT UNIQUE`;
 await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS stripe_account_id TEXT`;

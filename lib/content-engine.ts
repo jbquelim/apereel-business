@@ -126,6 +126,20 @@ ${RULES}
   return out;
 }
 
+/** Long text in a simple labelled format: JSON breaks too easily on long Markdown. */
+function parseLabelled(text: string, labels: string[]): Record<string, string> | null {
+  const out: Record<string, string> = {};
+  const bodyAt = text.search(/^---\s*$/m);
+  const head = bodyAt >= 0 ? text.slice(0, bodyAt) : text;
+  for (const l of labels) {
+    const m = head.match(new RegExp(`^${l}:\\s*(.+)$`, "mi"));
+    if (m) out[l.toLowerCase()] = m[1].trim();
+  }
+  if (bodyAt < 0) return null;
+  out.body = text.slice(bodyAt).replace(/^---\s*/, "").trim();
+  return out.body.length > 100 ? out : null;
+}
+
 async function writeGuide(client: Client, brief: string, search: string, products: Product[]): Promise<GuideData | null> {
   const text = await callClaude({
     clientId: client.id,
@@ -135,13 +149,18 @@ async function writeGuide(client: Client, brief: string, search: string, product
 
 ${brief}
 
-RELEVANT PRODUCTS (link to them by name): ${products.slice(0, 8).map((p) => p.title).join("; ")}
+RELEVANT PRODUCTS (mention them by name where they fit): ${products.slice(0, 8).map((p) => p.title).join("; ")}
 
-Return ONLY JSON: { "title": "max 65 characters, includes the search", "targetSearch": "${search}", "summary": "one sentence", "body": "the guide in Markdown, 500-800 words, with ## headings, practical advice and where the products fit" }
+Reply in exactly this format and nothing else:
+TITLE: max 65 characters, includes the search
+SUMMARY: one sentence
+---
+The guide in Markdown, 500-800 words, with ## headings, practical advice and where the products fit.
 
 ${RULES}`,
   });
-  return parseJson<GuideData>(text);
+  const r = parseLabelled(text, ["TITLE", "SUMMARY"]);
+  return r?.title ? { title: cut(r.title, 90), targetSearch: search, summary: cut(r.summary, 300), body: r.body } : null;
 }
 
 async function writeNewsletter(client: Client, brief: string, products: Product[], n: number): Promise<NewsletterData | null> {
@@ -153,11 +172,16 @@ async function writeNewsletter(client: Client, brief: string, products: Product[
 
 ${brief}
 
-Return ONLY JSON: { "subject": "max 60 characters", "preview": "max 90 characters", "body": "Markdown, 200-350 words, one clear call to action" }
+Reply in exactly this format and nothing else:
+SUBJECT: max 60 characters
+PREVIEW: max 90 characters
+---
+The email in Markdown, 200-350 words, one clear call to action.
 
 ${RULES}`,
   });
-  return parseJson<NewsletterData>(text);
+  const r = parseLabelled(text, ["SUBJECT", "PREVIEW"]);
+  return r?.subject ? { subject: cut(r.subject, 80), preview: cut(r.preview, 120), body: r.body } : null;
 }
 
 export async function saveItem(clientId: string, batch: string, kind: string, data: object, product?: Product | null, platform?: string | null): Promise<number> {
@@ -239,42 +263,65 @@ ${RULES}
 }
 
 /** Generates this month's content for a client. Crawls first when we have no recent product data. */
-export async function generateMonth(client: Client): Promise<{ batch: string; posts: number; guides: number; newsletters: number; videos: number; visuals: number; notes: number }> {
+export type MonthStage = "posts" | "long" | "media";
+export const NEXT_STAGE: Record<MonthStage, MonthStage | null> = { posts: "long", long: "media", media: null };
+
+async function countItems(clientId: string, batch: string): Promise<Record<string, number>> {
+  const rows = (await sql()`SELECT kind, count(*)::int AS n FROM content_items WHERE client_id = ${clientId} AND batch = ${batch} GROUP BY kind`) as { kind: string; n: number }[];
+  return Object.fromEntries(rows.map((r) => [r.kind, r.n]));
+}
+
+/**
+ * One step of this month's content. A Scale month doesn't fit one 5-minute
+ * run, so it's done in three steps (posts, then guides and newsletters,
+ * then video briefs, visuals and the competitor note), each its own run.
+ * Every step only makes what's missing, so a re-run finishes a partial month.
+ */
+export async function generateMonth(client: Client, stage: MonthStage = "posts"): Promise<string> {
   const volume = VOLUME[client.tier] ?? VOLUME.fix;
   const batch = new Date().toISOString().slice(0, 7);
+  const have = await countItems(client.id, batch);
   const catalog = await catalogWithPhotos(client.domain);
-
   const audit = await fetchAuditResult<AuditLike>(client.domain);
   const brief = marketBrief(client.domain, audit);
-  const featured = pickProducts(catalog, volume.posts);
 
-  const posts = await writePosts(client, brief, featured);
-  const dates = postingDates(posts.length);
-  for (const [i, post] of posts.entries()) {
-    const product = featured.find((p) => p.title === post.productTitle) ?? featured[i] ?? null;
-    await save(client.id, batch, "post", { ...post, suggestedDate: dates[i] }, product, post.platform);
-  }
-
-  const searches = (audit?.demand?.rows ?? []).filter((r) => r.coverage === "none").map((r) => r.query).slice(0, volume.guides);
-  let guides = 0;
-  for (const s of searches) {
-    const g = await writeGuide(client, brief, s, catalog);
-    if (g) {
-      await save(client.id, batch, "guide", g);
-      guides++;
+  if (stage === "posts") {
+    const missing = volume.posts - (have.post ?? 0);
+    if (missing <= 0) return "posts already made";
+    const featured = pickProducts(catalog, volume.posts).slice(volume.posts - missing);
+    const posts = await writePosts(client, brief, featured);
+    const dates = postingDates(volume.posts).slice(volume.posts - missing);
+    for (const [i, post] of posts.entries()) {
+      const product = featured.find((p) => p.title === post.productTitle) ?? featured[i] ?? null;
+      await save(client.id, batch, "post", { ...post, suggestedDate: dates[i] }, product, post.platform);
     }
+    return `${posts.length} posts`;
   }
 
-  let newsletters = 0;
-  for (let n = 1; n <= volume.newsletters; n++) {
-    const picks = pickProducts(catalog.slice((n - 1) * 3), 3);
-    const nl = await writeNewsletter(client, brief, picks, n);
-    if (nl) {
-      await save(client.id, batch, "newsletter", nl);
-      newsletters++;
+  if (stage === "long") {
+    const done = ((await sql()`SELECT data->>'targetSearch' AS s FROM content_items WHERE client_id = ${client.id} AND batch = ${batch} AND kind = 'guide'`) as { s: string }[]).map((r) => r.s);
+    const searches = (audit?.demand?.rows ?? []).filter((r) => r.coverage === "none" && !done.includes(r.query)).map((r) => r.query).slice(0, Math.max(0, volume.guides - done.length));
+    let guides = 0;
+    for (const s of searches) {
+      const g = await writeGuide(client, brief, s, catalog);
+      if (g) {
+        await save(client.id, batch, "guide", g);
+        guides++;
+      }
     }
+    let newsletters = 0;
+    for (let n = (have.newsletter ?? 0) + 1; n <= volume.newsletters; n++) {
+      const nl = await writeNewsletter(client, brief, pickProducts(catalog.slice((n - 1) * 3), 3), n);
+      if (nl) {
+        await save(client.id, batch, "newsletter", nl);
+        newsletters++;
+      }
+    }
+    return `${guides} guides, ${newsletters} newsletters`;
   }
-  const videos = await writeVideoBriefs(client, brief, pickProducts(catalog.filter((p) => p.image), volume.videos), {
+
+  const withPhotos = catalog.filter((p) => p.image);
+  const videos = await writeVideoBriefs(client, brief, pickProducts(withPhotos, Math.max(0, volume.videos - (have.video ?? 0))), {
     batch,
     itemKind: "video",
     mediaKind: "short-video",
@@ -282,9 +329,9 @@ export async function generateMonth(client: Client): Promise<{ batch: string; po
     duration: 8,
     aspect: "9:16",
   });
-  const visuals = await writeVisualBriefs(client, brief, pickProducts(catalog.filter((p) => p.image).slice(3), volume.visuals), batch);
-  const notes = volume.competitorNote ? await writeCompetitorNote(client, audit, batch) : 0;
-  return { batch, posts: posts.length, guides, newsletters, videos, visuals, notes };
+  const visuals = await writeVisualBriefs(client, brief, pickProducts(withPhotos.slice(3), Math.max(0, volume.visuals - (have.visual ?? 0))), batch);
+  const notes = volume.competitorNote && !have.note ? await writeCompetitorNote(client, audit, batch) : 0;
+  return `${videos} videos, ${visuals} visuals, ${notes} competitor notes`;
 }
 
 /**

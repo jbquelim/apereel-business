@@ -41,15 +41,15 @@ export async function createClient(c: { domain: string; name: string | null; ema
   return rows[0];
 }
 
-export async function listClients(): Promise<(Client & { used: number; items: number; cost: number })[]> {
+export async function listClients(): Promise<(Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null })[]> {
   return (await sql()`
-    SELECT c.*,
+    SELECT c.*, (SELECT slug FROM sites s WHERE s.client_id = c.id) AS site_slug,
       (SELECT count(*)::int FROM ai_requests r WHERE r.client_id = c.id AND r.counts_toward_allowance AND r.ok
          AND r.created_at >= date_trunc('month', now())) AS used,
       (SELECT count(*)::int FROM content_items i WHERE i.client_id = c.id) AS items,
       (SELECT COALESCE(sum(cost_usd), 0)::float FROM ai_requests r WHERE r.client_id = c.id) AS cost
     FROM clients c ORDER BY c.created_at DESC
-  `) as (Client & { used: number; items: number; cost: number })[];
+  `) as (Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null })[];
 }
 
 export async function getClient(id: string): Promise<Client | null> {
