@@ -84,15 +84,42 @@ function toProducts(catalog: Product[], limit: number): SiteProduct[] {
   });
 }
 
+/** Category names from the category pages we crawled (title minus the brand), broadest first. */
+async function crawledCategoryNames(domain: string): Promise<string[]> {
+  const rows = (await sql()`
+    SELECT DISTINCT ON (url) url, title, product_links FROM page_snapshots
+    WHERE domain = ${domain} AND role = 'client' AND kind = 'category' AND NOT blocked AND title IS NOT NULL
+    ORDER BY url, crawled_at DESC
+  `) as { url: string; title: string; product_links: number | null }[];
+  const brand = domain.split(".")[0].replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const names = rows
+    .sort((a, b) => a.url.split("/").filter(Boolean).length - b.url.split("/").filter(Boolean).length || (b.product_links ?? 0) - (a.product_links ?? 0))
+    .map((r) => r.title.split(/\s+[|–—-]\s+/).filter((part) => !part.replace(/[^a-z0-9]/gi, "").toLowerCase().includes(brand))[0]?.trim() ?? "")
+    .filter((n) => n.length > 2 && n.length < 50);
+  return [...new Set(names)];
+}
+
 /** Categories from the audit's catalog reading, products matched to them by name. */
 function assignCategories(products: SiteProduct[], names: string[], max: number): SiteDoc["categories"] {
   if (max === 0) return [];
-  const cats = names.slice(0, max).map((name) => ({ slug: slugify(name), name, words: name.split(/[^a-z0-9]+/i).filter((w) => w.length > 2).map(stem) }));
-  for (const p of products) {
-    const words = new Set(p.title.split(/[^a-z0-9]+/i).map(stem));
-    const hit = cats.find((c) => c.words.some((w) => words.has(w)));
-    if (hit) p.category = hit.slug;
-  }
+  // Words in over a third of product names ("lamp", "brass") say nothing about the category.
+  const titleWords = products.map((p) => new Set(p.title.split(/[^a-z0-9]+/i).map(stem)));
+  const df = new Map<string, number>();
+  for (const set of titleWords) for (const w of set) df.set(w, (df.get(w) ?? 0) + 1);
+  const generic = (w: string) => (df.get(w) ?? 0) > products.length / 3;
+  const cats = names
+    .map((name) => ({ slug: slugify(name), name, words: name.split(/[^a-z0-9]+/i).filter((w) => w.length > 2).map(stem).filter((w) => !generic(w)) }))
+    .filter((c) => c.words.length > 0)
+    .slice(0, max);
+  products.forEach((p, i) => {
+    // The category sharing the most distinctive words wins.
+    let best: { slug: string; score: number } | null = null;
+    for (const c of cats) {
+      const score = c.words.filter((w) => titleWords[i].has(w)).length;
+      if (score > 0 && (!best || score > best.score)) best = { slug: c.slug, score };
+    }
+    if (best) p.category = best.slug;
+  });
   return cats.filter((c) => products.some((p) => p.category === c.slug)).map((c) => ({ slug: c.slug, name: c.name, description: "" }));
 }
 
@@ -169,7 +196,10 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   const b2b = /b2b|wholesale|distribut|manufactur|oem|trade/i.test(`${audit?.industry?.businessModel ?? ""} ${audit?.industry?.offering ?? ""}`);
 
   const products = toProducts(catalog, limits.products);
-  const categories = assignCategories(products, (audit?.industry?.inventoryCategories ?? []).map((c) => c.category), limits.categories);
+  // Category names from the audit, or else from the category pages our crawl read.
+  let categoryNames = (audit?.industry?.inventoryCategories ?? []).map((c) => c.category);
+  if (categoryNames.length === 0 && limits.categories > 0) categoryNames = await crawledCategoryNames(client.domain);
+  const categories = assignCategories(products, categoryNames, limits.categories);
   const featured = products.filter((p) => p.image).slice(0, limits.featured);
   featured.forEach((p) => (p.featured = true));
   const gaps = (audit?.demand?.rows ?? []).filter((r) => r.coverage === "none").map((r) => r.query);
