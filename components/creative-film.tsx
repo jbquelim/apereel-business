@@ -14,8 +14,9 @@ import { useEffect, useRef, type ReactNode } from "react";
 // scroll position so a fast flick glides instead of jumping.
 //
 // Seeking a streamed file stalls on every range that hasn't downloaded yet,
-// so the whole scrub film is fetched into memory as soon as the section is
-// near; it streams only until that copy is ready.
+// so the whole scrub film is fetched into memory once the page is idle
+// (while the visitor is still above it); it streams only until that copy is
+// ready.
 //
 // Text positions were chosen per shot to sit in negative space — never over
 // the tool, hands or cutting action. Each overlay element carries a window in
@@ -154,6 +155,7 @@ export function CreativeFilm() {
     let target = 0; // film time for the current scroll position
     let eased = 0; // film time being sought, easing toward target
     let blobUrl = "";
+    let idle = 0;
     let fetching: AbortController | null = null;
     let presented = -1;
     let shownChapter = -1;
@@ -336,6 +338,11 @@ export function CreativeFilm() {
         start = scrollY + journey.getBoundingClientRect().top - top - Math.max(0, (available - height) / 2);
         presented = -1;
         loadScrub();
+        // don't wait for the section to come near: fetch while the reader is above it
+        if (!blobUrl && !fetching) {
+          if ("requestIdleCallback" in window) idle = requestIdleCallback(() => !blobUrl && !fetching && fetchWhole(), { timeout: 2500 });
+          else fetchWhole();
+        }
         update();
         if (!ready) render(0);
       } else if (video.getAttribute("src")) {
@@ -431,6 +438,7 @@ export function CreativeFilm() {
       if (measureFrame) cancelAnimationFrame(measureFrame);
       video.removeAttribute("src");
       video.load();
+      if (idle) cancelIdleCallback(idle);
       fetching?.abort();
       if (blobUrl) URL.revokeObjectURL(blobUrl);
       dialogVideo.pause();
