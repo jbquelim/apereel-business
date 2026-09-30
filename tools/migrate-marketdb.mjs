@@ -166,6 +166,19 @@ await sql`
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_growth_orders_status ON growth_orders (status, created_at)`;
 await sql`
+  CREATE TABLE IF NOT EXISTS proposals (
+    order_id TEXT PRIMARY KEY,
+    service TEXT NOT NULL DEFAULT 'web-development',
+    data JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    token TEXT UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    sent_at TIMESTAMPTZ,
+    accepted_at TIMESTAMPTZ
+  )
+`;
+await sql`
   CREATE TABLE IF NOT EXISTS audit_runs (
     id BIGSERIAL PRIMARY KEY,
     domain TEXT NOT NULL,

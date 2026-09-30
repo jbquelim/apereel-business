@@ -8,6 +8,10 @@ import { GrowthReportView } from "@/components/growth-report-view";
 import type { GrowthReport } from "@/lib/growth-report";
 import { pricedServices } from "@/lib/service-prices";
 import { ReviewPanel } from "./review-panel";
+import { ProposalPanel } from "./proposal-panel";
+import { draftProposal } from "@/lib/build-proposal";
+import { getProposal } from "@/lib/proposals";
+import { tiersForService } from "@/lib/service-tiers";
 
 export const metadata: Metadata = { title: "Review Growth Plan", robots: { index: false, follow: false } };
 
@@ -17,6 +21,9 @@ export default async function OrderReviewPage({ params }: { params: Promise<{ id
   const order = await getOrderDetail(id);
   if (!order) notFound();
   const report = order.report as GrowthReport | null;
+  const services = await pricedServices();
+  const web = tiersForService("web-development", services)!;
+  const saved = report?.plan ? await getProposal(order.id) : null;
 
   return (
     <main id="main" className="bg-navy pt-10">
@@ -68,7 +75,7 @@ export default async function OrderReviewPage({ params }: { params: Promise<{ id
                 report={report}
                 preparedFor={order.name}
                 date={order.sent_at ?? new Date().toISOString()}
-                services={await pricedServices()}
+                services={services}
                 tier={order.tier}
               />
             ) : (
@@ -76,6 +83,16 @@ export default async function OrderReviewPage({ params }: { params: Promise<{ id
             )}
           </div>
         </div>
+
+        {report?.plan && (
+          <ProposalPanel
+            orderId={order.id}
+            initial={saved?.data ?? draftProposal(report, order.amount_cents, services)}
+            status={saved?.status ?? "new"}
+            link={saved?.token ? `/proposal/${saved.token}` : null}
+            web={web}
+          />
+        )}
       </div>
     </main>
   );

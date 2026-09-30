@@ -1,5 +1,5 @@
 import type { GrowthReport } from "@/lib/growth-report";
-import { priceLabel, recommendTiers, type ServiceTiers } from "@/lib/service-tiers";
+import { priceLabel, recommendTiers, tierLabel, type ServiceTiers } from "@/lib/service-tiers";
 import { BuyerDemandSection } from "@/components/buyer-demand-section";
 import { PreviewSection } from "@/components/preview-section";
 import { tierById } from "@/lib/analysis-tiers";
@@ -346,7 +346,7 @@ function HowWeCanHelp({
         {recs.map(({ service, tier, covers }) => (
           <div key={`${service.slug}-${tier.id}`} className="flex flex-col rounded-2xl border border-white/10 bg-navy-mid p-6">
             <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">
-              {service.tag} · {tier.id === "fix" ? "Fix" : "Build"}
+              {service.tag} · {tierLabel(tier)}
             </p>
             <p className="mt-2 text-lg font-medium text-ink">{tier.name}</p>
             <p className="mt-1 text-[14px] text-muted">

@@ -17,7 +17,13 @@ export type Tier = {
   price: number | null;
   /** Shown before the price, e.g. "from". */
   pricePrefix?: string;
+  /** Display name of the level, when not Fix / Build / Grow (e.g. "Refresh"). */
+  label?: string;
+  /** Typical duration, e.g. "1 to 2 weeks". */
+  timeline?: string;
 };
+
+export const tierLabel = (t: Tier) => t.label ?? (t.id === "fix" ? "Fix" : t.id === "build" ? "Build" : "Grow");
 
 export type ServiceTiers = { slug: string; tag: string; tiers: [Tier, Tier, Tier] };
 
@@ -157,40 +163,52 @@ export const SERVICE_TIERS: ServiceTiers[] = [
     tiers: [
       {
         id: "fix",
-        name: "Speed and fix sprint",
-        cadence: "one-time",
-        summary: "Faster pages and fewer broken moments.",
+        label: "Fix",
+        name: "Your analysis, implemented",
+        cadence: "project",
+        summary: "Every problem our crawl found, fixed on the site you have.",
         scope: [
-          "Page speed improvements on key templates",
-          "Bug and usability fixes buyers run into",
-          "Before and after measurements",
+          "Product data, titles, headings and image descriptions fixed on every page we flagged",
+          "Thin categories merged, with redirects so nothing breaks",
+          "Speed fixes on your key page templates",
+          "A reviews tool installed and showing on product pages",
+          "A second crawl at the end to prove every fix",
         ],
-        price: null,
+        price: 1500,
+        pricePrefix: "from",
+        timeline: "1 to 2 weeks",
       },
       {
         id: "build",
-        name: "Site build or rebuild",
+        label: "Refresh",
+        name: "A new design on your current platform",
         cadence: "project",
-        summary: "A site built around how your customers buy.",
+        summary: "A premium design built around why customers choose you.",
         scope: [
-          "E-commerce or B2B site development on the right platform",
-          "AI-assisted delivery for speed and lower cost",
-          "Performance engineered in from the start",
+          "Everything in Fix",
+          "A premium design from our library, adapted to your brand",
+          "Homepage, category and product pages rebuilt around your competitive advantage",
+          "Built from what your competitors' sites do better, measured page by page",
         ],
-        price: null,
+        price: 5000,
         pricePrefix: "from",
+        timeline: "3 to 5 weeks",
       },
       {
         id: "grow",
-        name: "Ongoing development",
-        cadence: "monthly",
-        summary: "Changes in days, not weeks.",
+        label: "Rebuild",
+        name: "A custom site, or a move to a better platform",
+        cadence: "project",
+        summary: "For businesses whose site holds them back.",
         scope: [
-          "A monthly block of development time",
-          "New features, pages and integrations",
-          "Your team trained to make everyday changes",
+          "Custom design and development, or a platform move (for example WooCommerce to Shopify)",
+          "Features your buyers need, such as quote requests, spec sheets and part-number search",
+          "Every existing address redirected from our crawl, so your rankings carry over",
+          "Launch support and a before and after report",
         ],
-        price: null,
+        price: 15000,
+        pricePrefix: "from",
+        timeline: "6 to 12 weeks",
       },
     ],
   },

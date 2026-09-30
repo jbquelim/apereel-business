@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { isPriced, priceLabel, type ServiceTiers } from "@/lib/service-tiers";
+import { isPriced, priceLabel, tierLabel, type ServiceTiers } from "@/lib/service-tiers";
 
 // Fix / Build / Grow for one service. Hidden on the public page until every
 // tier has a price; "?tiers=preview" shows it for review in the meantime.
@@ -46,7 +46,7 @@ export function ServiceTiersSection({ service: priced, slug }: { service: Servic
               className={`flex flex-col rounded-2xl border p-6 sm:p-7 ${t.id === "build" ? "border-electric/40 bg-electric/5" : "border-white/10 bg-navy-mid"}`}
             >
               <p className="font-mono text-[11px] tracking-[0.18em] text-muted uppercase">
-                {t.id === "fix" ? "Fix" : t.id === "build" ? "Build" : "Grow"} · {t.cadence}
+                {tierLabel(t)} · {t.timeline ?? t.cadence}
               </p>
               <h3 className="mt-3 text-xl font-medium text-ink">{t.name}</h3>
               <p className="mt-2 text-[15px] leading-relaxed text-muted">{t.summary}</p>

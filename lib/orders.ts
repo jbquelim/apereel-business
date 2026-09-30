@@ -142,9 +142,9 @@ export async function listOrders(limit = 100): Promise<OrderRow[]> {
 export async function getOrderDetail(id: string) {
   const rows = (await sql()`
     SELECT id, domain, url, email, name, status, livemode, report, review_notes, access_token,
-           created_at, paid_at, sent_at, generation_error, tier
+           created_at, paid_at, sent_at, generation_error, tier, amount_cents
     FROM growth_orders WHERE id = ${id}
-  `) as (OrderRow & { url: string; report: unknown; review_notes: string | null; access_token: string | null })[];
+  `) as (OrderRow & { url: string; report: unknown; review_notes: string | null; access_token: string | null; amount_cents: number })[];
   return rows[0] ?? null;
 }
 
