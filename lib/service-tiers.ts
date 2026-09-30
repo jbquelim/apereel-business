@@ -21,6 +21,8 @@ export type Tier = {
   label?: string;
   /** Typical duration, e.g. "1 to 2 weeks". */
   timeline?: string;
+  /** AI change requests included (per month for monthly tiers). */
+  requests?: number;
 };
 
 export const tierLabel = (t: Tier) => t.label ?? (t.id === "fix" ? "Fix" : t.id === "build" ? "Build" : "Grow");
@@ -131,6 +133,7 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "10 AI change requests a month",
         ],
         price: 50,
+        requests: 10,
       },
       {
         id: "build",
@@ -145,6 +148,7 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "25 AI change requests a month",
         ],
         price: 100,
+        requests: 25,
       },
       {
         id: "grow",
@@ -159,6 +163,7 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "50 AI change requests a month",
         ],
         price: 200,
+        requests: 50,
       },
     ],
   },
@@ -177,9 +182,11 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "Your products, photos and prices brought in from our crawl of your site",
           "Every fix from your analysis built in: product data for Google, titles, headings",
           "Up to 5 pages",
+          "Hosting for 12 months included, then $10 a month",
           "10 AI change requests",
         ],
         price: 100,
+        requests: 10,
       },
       {
         id: "build",
@@ -193,9 +200,11 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "Product pages set up to beat your competitors', measured page by page",
           "Scroll animation and interactive sections",
           "Up to 15 pages, your full catalog",
+          "Hosting for 12 months included, then $10 a month",
           "30 AI change requests",
         ],
         price: 300,
+        requests: 30,
       },
       {
         id: "grow",
@@ -209,9 +218,11 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "Quote request and lead forms",
           "Every page of your old site redirected, so your rankings carry over",
           "Unlimited pages",
+          "Hosting for 12 months included, then $10 a month",
           "60 AI change requests",
         ],
         price: 500,
+        requests: 60,
       },
     ],
   },
@@ -275,6 +286,7 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "10 AI change requests a month",
         ],
         price: 100,
+        requests: 10,
       },
       {
         id: "build",
@@ -288,6 +300,7 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "25 AI change requests a month",
         ],
         price: 200,
+        requests: 25,
       },
       {
         id: "grow",
@@ -302,6 +315,7 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "50 AI change requests a month",
         ],
         price: 300,
+        requests: 50,
       },
     ],
   },

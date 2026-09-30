@@ -32,6 +32,10 @@ export default async function AdminPage() {
           <Link href="/admin/pricing" className="text-electric underline underline-offset-4">
             Set service prices
           </Link>
+          {" · "}
+          <Link href="/admin/clients" className="text-electric underline underline-offset-4">
+            AI service clients
+          </Link>
         </p>
         {orders.length === 0 ? (
           <p className="mt-8 text-muted">No orders yet.</p>

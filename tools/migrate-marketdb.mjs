@@ -165,6 +165,69 @@ await sql`
   )
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_growth_orders_status ON growth_orders (status, created_at)`;
+// AI services: clients, their monthly request allowance, every AI call
+// (tokens and cost), the content we generate, and the industry template library.
+await sql`
+  CREATE TABLE IF NOT EXISTS clients (
+    id TEXT PRIMARY KEY,
+    domain TEXT NOT NULL,
+    name TEXT,
+    email TEXT NOT NULL,
+    service TEXT NOT NULL,
+    tier TEXT NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    period_start DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+await sql`
+  CREATE TABLE IF NOT EXISTS ai_requests (
+    id BIGSERIAL PRIMARY KEY,
+    client_id TEXT,
+    purpose TEXT NOT NULL,
+    counts_toward_allowance BOOLEAN NOT NULL DEFAULT false,
+    model TEXT NOT NULL,
+    input_tokens INT,
+    output_tokens INT,
+    cost_usd NUMERIC(10,5),
+    ok BOOLEAN NOT NULL,
+    error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+await sql`CREATE INDEX IF NOT EXISTS idx_ai_requests_client ON ai_requests (client_id, created_at)`;
+await sql`
+  CREATE TABLE IF NOT EXISTS content_items (
+    id BIGSERIAL PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    batch TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    platform TEXT,
+    product_url TEXT,
+    image TEXT,
+    data JSONB NOT NULL,
+    history JSONB NOT NULL DEFAULT '[]'::jsonb,
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+await sql`CREATE INDEX IF NOT EXISTS idx_content_items_client ON content_items (client_id, batch)`;
+await sql`
+  CREATE TABLE IF NOT EXISTS site_templates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    industries TEXT[] NOT NULL DEFAULT '{}',
+    tier TEXT NOT NULL,
+    style TEXT,
+    sections JSONB NOT NULL DEFAULT '[]'::jsonb,
+    tokens JSONB NOT NULL DEFAULT '{}'::jsonb,
+    preview_image TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
 await sql`
   CREATE TABLE IF NOT EXISTS proposals (
     order_id TEXT PRIMARY KEY,
