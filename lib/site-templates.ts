@@ -9,23 +9,23 @@ import type { Palette, SiteTemplate, SiteTokens } from "./site-types";
 type Family = { id: string; name: string; match: RegExp; palette: Palette; fontHeading: string; fontBody: string; headingCase?: "upper" };
 
 const FAMILIES: Family[] = [
-  { id: "jewelry-fashion", name: "Jewelry & Fashion", match: /jewel|fashion|apparel|cloth|accessor|watch|bridal|ring|earring|necklace/i,
+  { id: "jewelry-fashion", name: "Jewelry & Fashion", match: /\b(jewel\w*|fashion|apparel|clothing|accessor(y|ies)|watch(es)?|bridal|rings?|earrings?|necklaces?)\b/i,
     palette: { bg: "#faf7f2", surface: "#ffffff", text: "#1c1917", muted: "#78716c", accent: "#8a6d3b", accentText: "#ffffff", line: "#e7e0d6" }, fontHeading: "Cormorant Garamond", fontBody: "Inter" },
-  { id: "home-lighting", name: "Home, Lighting & Decor", match: /light|lamp|home|decor|furnit|interior|kitchen|bath|garden/i,
+  { id: "home-lighting", name: "Home, Lighting & Decor", match: /\b(light\w*|lamps?|home\w*|d[eé]cor|furnitur\w*|interiors?|kitchen\w*|bath\w*|garden\w*)\b/i,
     palette: { bg: "#f7f5f2", surface: "#ffffff", text: "#1f2937", muted: "#6b7280", accent: "#b45309", accentText: "#ffffff", line: "#e5e1da" }, fontHeading: "DM Serif Display", fontBody: "DM Sans" },
-  { id: "industrial-b2b", name: "Industrial & B2B Supply", match: /industr|manufactur|b2b|wholesale|distribut|oem|component|part|hardware|electrical|equipment|supply/i,
+  { id: "industrial-b2b", name: "Industrial & B2B Supply", match: /\b(industr\w*|manufactur\w*|b2b|wholesale\w*|distribut\w*|oem|components?|parts?|hardware|electrical|equipment|fasteners?|machin\w*)\b/i,
     palette: { bg: "#f8fafc", surface: "#ffffff", text: "#0f172a", muted: "#64748b", accent: "#1d4ed8", accentText: "#ffffff", line: "#e2e8f0" }, fontHeading: "Inter Tight", fontBody: "Inter", headingCase: "upper" },
-  { id: "beauty-wellness", name: "Beauty & Wellness", match: /beauty|skin|cosmetic|wellness|spa|salon|hair|fragrance|perfume/i,
+  { id: "beauty-wellness", name: "Beauty & Wellness", match: /\b(beauty|skin\w*|cosmetics?|wellness|spas?|salons?|hair\w*|fragrances?|perfumes?)\b/i,
     palette: { bg: "#fdf8f6", surface: "#ffffff", text: "#2a1f24", muted: "#8b7780", accent: "#be185d", accentText: "#ffffff", line: "#f1e4e0" }, fontHeading: "Fraunces", fontBody: "Manrope" },
-  { id: "food-beverage", name: "Food & Beverage", match: /food|beverage|coffee|tea|wine|beer|bakery|restaurant|snack|grocer|drink/i,
+  { id: "food-beverage", name: "Food & Beverage", match: /\b(food\w*|beverages?|coffee|teas?|wines?|beers?|bakery|bakeries|restaurants?|snacks?|grocer\w*|drinks?)\b/i,
     palette: { bg: "#fffbeb", surface: "#ffffff", text: "#1c1917", muted: "#78716c", accent: "#c2410c", accentText: "#ffffff", line: "#f3e8d2" }, fontHeading: "Playfair Display", fontBody: "Work Sans" },
-  { id: "electronics-tech", name: "Electronics & Tech", match: /electronic|tech|software|gadget|computer|audio|camera|phone|gaming/i,
+  { id: "electronics-tech", name: "Electronics & Tech", match: /\b(electronics?|tech\w*|software|gadgets?|computers?|audio|cameras?|phones?|gaming)\b/i,
     palette: { bg: "#0b0f19", surface: "#131a2a", text: "#e5e7eb", muted: "#94a3b8", accent: "#22d3ee", accentText: "#0b0f19", line: "#1f2a3d" }, fontHeading: "Space Grotesk", fontBody: "Inter" },
-  { id: "sports-outdoor", name: "Sports, Outdoor & Fitness", match: /sport|outdoor|fitness|gym|bike|cycl|camp|hik|golf|athlet/i,
+  { id: "sports-outdoor", name: "Sports, Outdoor & Fitness", match: /\b(sports?|sporting|outdoors?|fitness|gyms?|bikes?|bicycles?|cycling|camping|hiking|golf|athlet\w*)\b/i,
     palette: { bg: "#f5f5f4", surface: "#ffffff", text: "#0c0a09", muted: "#57534e", accent: "#16a34a", accentText: "#ffffff", line: "#e7e5e4" }, fontHeading: "Archivo", fontBody: "Archivo", headingCase: "upper" },
-  { id: "professional-services", name: "Professional Services", match: /service|consult|law|legal|account|agency|clinic|dental|medical|real estate|insurance/i,
+  { id: "professional-services", name: "Professional Services", match: /\b(consult\w*|law|legal|accounting|agency|agencies|clinics?|dental|medical|real estate|insurance|professional services)\b/i,
     palette: { bg: "#ffffff", surface: "#f8fafc", text: "#0f172a", muted: "#64748b", accent: "#0f766e", accentText: "#ffffff", line: "#e2e8f0" }, fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
-  { id: "pets-family", name: "Pets, Kids & Family", match: /pet|dog|cat|kid|baby|toy|child|family/i,
+  { id: "pets-family", name: "Pets, Kids & Family", match: /\b(pets?|dogs?|cats?|kids?|baby|babies|toys?|children|family)\b/i,
     palette: { bg: "#fffdf7", surface: "#ffffff", text: "#1f2937", muted: "#6b7280", accent: "#d97706", accentText: "#ffffff", line: "#f1ead8" }, fontHeading: "Nunito", fontBody: "Nunito" },
   { id: "general-retail", name: "General Retail", match: /./,
     palette: { bg: "#ffffff", surface: "#f9fafb", text: "#111827", muted: "#6b7280", accent: "#111827", accentText: "#ffffff", line: "#e5e7eb" }, fontHeading: "Manrope", fontBody: "Manrope" },
@@ -91,7 +91,14 @@ export const BUILT_IN_TEMPLATES: SiteTemplate[] = FAMILIES.flatMap((f) =>
   })),
 );
 
-export const familyFor = (text: string) => FAMILIES.find((f) => f.id !== "general-retail" && f.match.test(text)) ?? FAMILIES[FAMILIES.length - 1];
+/** The industry family for the given texts, most specific first (industry, then offering). */
+export function familyFor(...texts: string[]): Family {
+  for (const text of texts) {
+    const hit = FAMILIES.find((f) => f.id !== "general-retail" && f.match.test(text));
+    if (hit) return hit;
+  }
+  return FAMILIES[FAMILIES.length - 1];
+}
 export const FAMILY_IDS = FAMILIES.map((f) => ({ id: f.id, name: f.name }));
 
 function sql() {
@@ -120,8 +127,8 @@ export async function listTemplates(): Promise<SiteTemplate[]> {
 }
 
 /** The best template for a business: its industry family, in its tier's style. */
-export async function pickTemplate(industryText: string, tier: SiteTemplate["tier"]): Promise<SiteTemplate> {
-  const family = familyFor(industryText);
+export async function pickTemplate(industryTexts: string[], tier: SiteTemplate["tier"]): Promise<SiteTemplate> {
+  const family = familyFor(...industryTexts);
   const all = await listTemplates();
   return (
     all.find((t) => t.tier === tier && t.industries.includes(family.id)) ??

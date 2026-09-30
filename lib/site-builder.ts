@@ -143,8 +143,12 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   const limits = LIMITS[tier];
   const catalog = await catalogWithPhotos(client.domain);
   const audit = await fetchAuditResult<AuditLike>(client.domain);
-  const industryText = [audit?.industry?.industry, audit?.industry?.subIndustry, audit?.industry?.offering].filter(Boolean).join(" ") || client.domain;
-  const template = await pickTemplate(industryText, tier);
+  const industryTexts = [
+    [audit?.industry?.subIndustry, audit?.industry?.industry].filter(Boolean).join(" "),
+    audit?.industry?.offering ?? "",
+    client.domain,
+  ];
+  const template = await pickTemplate(industryTexts, tier);
   const b2b = /b2b|wholesale|distribut|manufactur|oem|trade/i.test(`${audit?.industry?.businessModel ?? ""} ${audit?.industry?.offering ?? ""}`);
 
   const products = toProducts(catalog, limits.products);
