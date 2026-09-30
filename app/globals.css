@@ -705,11 +705,13 @@ body {
 @media (prefers-reduced-motion: reduce) { .cm-chapter, .cm-panorama { transition: none; } }
 
 /* ── Living Business Machine (services intro) ─────────────────────────
-   Five rendered glass panels (flattened raster art) on one platform.
-   Base layout is normal flow and static — Development lit — which is what
-   no-JS, <1100px, short viewports and reduced motion get. The component
-   adds .enhanced when the sticky stage fits, then drives each panel's
-   --w (focus 0–1) and --glow from one scroll timeline. */
+   Five landscape glass cards (flattened raster art) in a carousel on one
+   platform: the focused card sits centred and forward, the rest step out to
+   the sides and overflow the stage. Base layout is static — Development
+   centred — which is what no-JS, <1100px, short viewports and reduced motion
+   get. The component adds .enhanced when the sticky stage fits, then drives
+   each card's --d (signed distance from focus), --a (|d|), --w (focus 0–1)
+   and --glow from one scroll timeline. */
 .lbm {
   --lbm-top: 5rem; --lbm-copy-height: 200px; --lbm-scene-h: min(44vw, 620px);
   background: var(--navy);
@@ -744,33 +746,45 @@ body {
   content: ""; position: absolute; inset: 0 0 auto; height: 22%;
   background: linear-gradient(var(--navy), transparent); pointer-events: none;
 }
-.lbm-world { position: absolute; inset: 0; z-index: 1; }
+.lbm-world {
+  position: absolute; inset: 0; z-index: 1;
+  /* cards run off both edges; let them dissolve rather than clip */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+}
 .lbm-row {
-  position: absolute; left: 2.5%; right: 2.5%; top: 0; bottom: 14cqh;
-  display: flex; align-items: flex-end; justify-content: center;
-  perspective: 1500px;
+  position: absolute; left: 0; right: 0; top: 0; bottom: 14cqh;
+  perspective: 1800px;
 }
 .lbm-plate {
-  --w: 0; --glow: 0;
-  position: relative; flex: none;
-  width: min(20.2cqw, 61cqh);
-  margin: 0 -0.55cqw -1.2cqh;           /* panels' transparent padding overlaps */
-  aspect-ratio: 1086 / 1448;
+  --d: 0; --a: 0; --w: 0; --glow: 0;
+  position: absolute; left: 50%; bottom: -1.2cqh;   /* transparent padding overlaps the slab edge */
+  width: min(39cqw, 76cqh * 1.4082);   /* same height as the uncropped card; the crop only removes width */
+  aspect-ratio: 1473 / 1046;
+  translate: -50% 0;
   transform-style: preserve-3d;
   transform-origin: 50% 95%;
   transform:
-    translateY(calc(var(--w) * -4.5%))
-    rotateY(calc(-15deg + var(--w) * 11deg))
-    scale(calc(0.97 + var(--w) * 0.06));
+    translateX(calc(var(--d) * 86%))
+    translateY(calc(var(--w) * -3%))
+    translateZ(calc(min(var(--a), 2) * -300px))
+    rotateY(calc(var(--d) * -18deg))      /* cover-flow: inner edge tucks behind the focused card */
+    scale(calc(1.04 - min(var(--a), 2) * 0.1));
+  opacity: calc(1 - max(0, var(--a) - 1.6) * 1.5);
   will-change: transform;
   container-type: inline-size;
 }
-.lbm-plate:nth-child(4) { --w: 1; --glow: 1; z-index: 2; }   /* static composition */
+/* static composition: Development centred */
+.lbm-plate:nth-child(1) { --d: -1; --a: 1; z-index: 8; }
+.lbm-plate:nth-child(2) { --d: 0; --a: 0; --w: 1; --glow: 1; z-index: 10; }
+.lbm-plate:nth-child(3) { --d: 1; --a: 1; z-index: 8; }
+.lbm-plate:nth-child(4) { --d: 2; --a: 2; z-index: 6; }
+.lbm-plate:nth-child(5) { --d: -2; --a: 2; z-index: 6; }   /* wraps round to the left */
 /* Folder: a glass back sheet with a tab, joined to the panel by a spine.
    Inset matches the glass edge inside the PNG's transparent padding. */
 .lbm-folder {
   position: absolute; left: 7.5%; right: 7.5%; top: 5%; bottom: 5%;
-  transform: translate3d(-3.5%, -2.5%, -6cqi);
+  transform: translate3d(-1.6%, -3%, -3cqi);
   border: 1px solid rgba(160, 205, 255, calc(0.26 + var(--w) * 0.3));
   border-radius: 3cqi;
   background: linear-gradient(160deg, rgba(90, 150, 225, calc(0.14 + var(--w) * 0.12)), rgba(12, 26, 52, 0.42));
@@ -778,14 +792,14 @@ body {
 }
 .lbm-folder::before {
   /* folder tab */
-  content: ""; position: absolute; left: 6%; top: -4.6%; width: 38%; height: 4.8%;
+  content: ""; position: absolute; left: 4%; top: -6%; width: 22%; height: 6.2%;
   border: 1px solid rgba(160, 205, 255, calc(0.26 + var(--w) * 0.3)); border-bottom: 0;
   border-radius: 2cqi 2cqi 0 0;
   background: linear-gradient(rgba(110, 170, 240, calc(0.16 + var(--w) * 0.14)), rgba(60, 110, 180, 0.1));
   clip-path: polygon(0 100%, 8% 0, 92% 0, 100% 100%);
 }
 .lbm-spine {
-  position: absolute; left: 7.5%; top: 5%; bottom: 5%; width: 6cqi;
+  position: absolute; left: 7.5%; top: 5%; bottom: 5%; width: 3cqi;
   transform-origin: 0 50%;
   transform: rotateY(90deg);
   background: linear-gradient(90deg, rgba(150, 200, 255, 0.35), rgba(60, 110, 180, 0.12));
@@ -797,9 +811,9 @@ body {
 }
 .lbm-face > img { display: block; width: 100%; height: 100%; position: relative; }
 .lbm-plate-glow {
-  position: absolute; left: 4%; right: 4%; top: 6%; bottom: 4%;
-  border-radius: 6%;
-  box-shadow: 0 0 5cqi 1cqi rgba(61, 158, 255, 0.55), 0 7cqi 11cqi rgba(29, 111, 212, 0.45);
+  position: absolute; left: 7%; right: 7%; top: 4.5%; bottom: 4.5%;
+  border-radius: 2cqi;
+  box-shadow: 0 0 3cqi 0.6cqi rgba(61, 158, 255, 0.55), 0 4cqi 7cqi rgba(29, 111, 212, 0.45);
   opacity: var(--glow);
 }
 .lbm-plate-glow::after {
@@ -812,8 +826,8 @@ body {
 .lbm-fx-wrap { position: absolute; inset: 0; pointer-events: none; }
 .lbm-fx { display: block; width: 100%; height: 100%; }
 .lbm-plate-label {
-  position: absolute; left: 15%; top: 8.5%; z-index: 1;
-  font-size: 5.1cqi; letter-spacing: 0.16em; text-transform: uppercase;
+  position: absolute; left: 10.5%; top: 9.5%; z-index: 1;
+  font-size: 2.3cqi; letter-spacing: 0.16em; text-transform: uppercase;
   color: #e9f1ff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
 }
 .lbm-plate-label > span { color: #8ecaff; margin-right: 0.5em; font-family: var(--font-geist-mono), monospace; }
@@ -894,7 +908,7 @@ body {
   .lbm-scene, .lbm-nav { display: none; }
   .lbm-band { border-top: 0; }
   .lbm-copy { padding-block: 2rem; }
-  .lbm-copy-asset { display: block; max-width: 260px; position: relative; }
+  .lbm-copy-asset { display: block; max-width: 520px; position: relative; }
   .lbm-copy-asset img { display: block; width: 100%; height: auto; }
   .lbm-copy-asset[data-failed] { display: none; }
 }

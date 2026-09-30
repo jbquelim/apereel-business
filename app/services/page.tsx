@@ -6,7 +6,7 @@ import { LivingBusinessMachine } from "@/components/living-business-machine";
 export const metadata: Metadata = {
   title: "Services",
   description:
-    "Each capability solves a specific growth constraint: research and competitive analysis, SEO, advertising, conversion optimization, web development, and AI-powered creative production.",
+    "Each capability solves a specific growth constraint: research and competitive analysis including SEO, web development, content, advertising, and data-led conversion optimization.",
   alternates: { canonical: "/services" },
   openGraph: {
     title: "Services | Apereel",

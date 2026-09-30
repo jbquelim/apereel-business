@@ -12,7 +12,7 @@ import { LBM_OVERLAYS } from "@/components/lbm-overlays";
 // panel's traced light overlay plays its sequence and holds. Neighbors
 // stay visible. Enhancement is additive — without JS, under 1100px, on short
 // viewports or with reduced motion, the section is a static composition
-// (Development lit) followed by stacked, readable service sections.
+// (Development, panel 2, lit) followed by stacked, readable service sections.
 
 const CFG = {
   scrollViewports: 4.5,
@@ -37,26 +37,39 @@ const CHAPTERS = [
     icon: icon("M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM15.5 15.5 20 20"),
     title: "Find out why customers choose.",
     description:
-      "Understand customer needs, competing offers and the gaps your business can address.",
-    points: ["Customer demand", "Competitive landscape", "Commercial opportunity"],
+      "Understand customer needs, competing offers and how people search, so every page, post and campaign answers real demand.",
+    points: ["Customer demand", "Competitive landscape", "Search intent & SEO"],
     href: "/services/research-competitive-analysis",
     linkLabel: "research & competitive analysis",
   },
   {
-    id: "seo",
+    id: "development",
     num: "02",
-    nav: "SEO",
-    icon: icon("M3 5h4M3 10h3M3 15h4M14 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10ZM17.5 13.5 21 17"),
-    title: "Connect intent to the right page.",
+    nav: "Development",
+    icon: icon("M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"),
+    title: "Turn insight into working improvements.",
     description:
-      "Make your business easier to discover through useful pages that answer relevant searches.",
-    points: ["Search intent", "Useful pages", "Clear structure"],
-    href: "/services/seo",
-    linkLabel: "SEO",
+      "Build, test and release the pages and experiences your customers actually need, in days rather than months.",
+    points: ["Build", "Test", "Ship"],
+    href: "/services/web-development",
+    linkLabel: "web development",
+  },
+  {
+    id: "content",
+    num: "03",
+    nav: "Content",
+    icon: icon("M4 5h16v11H9l-5 4V5ZM8 9.5h8M8 12.5h5"),
+    title: "Grow your presence. Build your following.",
+    description:
+      "Create posts and short videos that showcase your products and expertise on the platforms your customers already use, so more people discover your business and stay connected.",
+    points: ["Content that connects", "Consistent visibility", "A growing following"],
+    href: "/pricing#content",
+    linkLabel: "content",
+    linkText: "Explore content packages",
   },
   {
     id: "advertising",
-    num: "03",
+    num: "04",
     nav: "Advertising",
     icon: icon("M4 10v4h3l7 4V6l-7 4H4ZM17.5 9.5a3.5 3.5 0 0 1 0 5M7 14l1 5h2.5"),
     title: "Reach people with a reason to buy.",
@@ -67,26 +80,14 @@ const CHAPTERS = [
     linkLabel: "advertising",
   },
   {
-    id: "development",
-    num: "04",
-    nav: "Development",
-    icon: icon("M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"),
-    title: "Turn ideas into working improvements.",
-    description:
-      "Build, test and release digital experiences that solve practical business problems.",
-    points: ["Build", "Test", "Ship"],
-    href: "/services/web-development",
-    linkLabel: "web development",
-  },
-  {
     id: "conversion",
     num: "05",
     nav: "Conversion",
     icon: icon("M5 20v-4M10 20v-8M15 20v-11M20 20V5M3 20h18"),
-    title: "Make the next step easier.",
+    title: "Let the data decide the next change.",
     description:
-      "Improve the paths customers take from discovery to purchase, removing unnecessary friction.",
-    points: ["Discover", "Compare", "Choose"],
+      "Analyse how customers move from first visit to purchase, find where they drop off, make the adjustments that lift results, then measure again.",
+    points: ["Analyse", "Adjust", "Measure again"],
     href: "/services/conversion-optimization",
     linkLabel: "conversion optimization",
   },
@@ -97,11 +98,15 @@ const CHAPTERS = [
 // perspective and transforms. They add light only — the baked-in objects in
 // the PNGs never move.
 
-// Rendered panels: 1086×1448 with transparent exterior (glass ≈ 7.5–92.5% x,
-// 4.5–95% y). Stored as WebP with lossless alpha in /public.
-const PANEL_W = 1086;
-const PANEL_H = 1448;
-const panelSrc = (id: string) => `/images/services-glass/${id}.webp`;
+// Card art: 1473×1046 with transparent exterior (glass 7.5–92.5% x, 5–95% y)
+// holding the services-tour scene at native size, less its empty left 420px. Built by
+// assets-src/services-tour/make-cards.py; stored as WebP with alpha.
+const PANEL_W = 1473;
+const PANEL_H = 1046;
+const panelSrc = (id: string) => `/images/services-cards/${id}.webp`;
+
+// Old inbound links to the chapter before it was renamed
+const HASH_ALIASES: Record<string, string> = { social: "content" };
 
 const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 const ease = (t: number) => t * t * (3 - 2 * t);
@@ -272,13 +277,20 @@ export function LivingBusinessMachine() {
       select(i);
       plates.forEach((_, j) => setSequence(j, j < i ? 1 : j > i ? 0 : sequence));
       plates.forEach((p, j) => {
-        const w = Math.max(0, 1 - Math.abs(j - focus));
-        const key = `${w.toFixed(3)}|${(w * emphasis).toFixed(3)}`;
+        // carousel: signed distance from the focused card, wrapped around the
+        // ring of five so the ends sit beside each other (−2.5 ≤ d < 2.5). A card
+        // only changes sides at |d| = 2.5, where it is fully faded out.
+        const n = plates.length;
+        const d = ((((j - focus + n / 2) % n) + n) % n) - n / 2;
+        const w = Math.max(0, 1 - Math.abs(d));
+        const key = `${d.toFixed(3)}|${(w * emphasis).toFixed(3)}`;
         if (key === lastW[j]) return;
         lastW[j] = key;
+        p.style.setProperty("--d", d.toFixed(3));
+        p.style.setProperty("--a", Math.abs(d).toFixed(3));
         p.style.setProperty("--w", w.toFixed(3));
         p.style.setProperty("--glow", (w * emphasis).toFixed(3));
-        p.style.zIndex = String(10 - Math.round(Math.abs(j - focus) * 2));
+        p.style.zIndex = String(10 - Math.round(Math.abs(d) * 2));
       });
     }
 
@@ -297,6 +309,8 @@ export function LivingBusinessMachine() {
       root.classList.remove("enhanced", "measuring");
       area.style.height = "";
       plates.forEach((p, j) => {
+        p.style.removeProperty("--d");
+        p.style.removeProperty("--a");
         p.style.removeProperty("--w");
         p.style.removeProperty("--glow");
         p.style.zIndex = "";
@@ -357,7 +371,8 @@ export function LivingBusinessMachine() {
     // state on a few delayed ticks, cancelled by any user input.
     function applyHash() {
       if (!enabled) return;
-      const idx = CHAPTERS.findIndex((c) => `#${c.id}` === location.hash);
+      const hash = location.hash.slice(1);
+      const idx = CHAPTERS.findIndex((c) => c.id === (HASH_ALIASES[hash] ?? hash));
       if (idx >= 0) {
         scrollTo({ top: chapterTop(idx), behavior: "instant" });
         paint();
@@ -368,6 +383,8 @@ export function LivingBusinessMachine() {
     addEventListener("wheel", cancelHash, { passive: true, once: true });
     addEventListener("touchstart", cancelHash, { passive: true, once: true });
     addEventListener("keydown", cancelHash, { once: true });
+    // In-page jumps (a #social link, back/forward between chapters) don't remount
+    addEventListener("hashchange", applyHash);
 
     // Header height or copy wrapping can change without a window resize.
     const ro = new ResizeObserver(schedule);
@@ -394,6 +411,7 @@ export function LivingBusinessMachine() {
       removeEventListener("wheel", cancelHash);
       removeEventListener("touchstart", cancelHash);
       removeEventListener("keydown", cancelHash);
+      removeEventListener("hashchange", applyHash);
       removeEventListener("scroll", request);
       removeEventListener("resize", schedule);
       removeEventListener("pageshow", schedule);
@@ -443,7 +461,7 @@ export function LivingBusinessMachine() {
                         alt=""
                         width={PANEL_W}
                         height={PANEL_H}
-                        sizes="(min-width: 768px) 22vw, 1px"
+                        sizes="(min-width: 768px) 39vw, 1px"
                         loading="eager"
                         fetchPriority={c.id === "development" ? "high" : "auto"}
                         onError={markFailed}
@@ -461,7 +479,7 @@ export function LivingBusinessMachine() {
               </div>
             </div>
             <p className="lbm-scene-caption">
-              Insight <span>→</span> Visibility <span>→</span> Demand <span>→</span> Experience <span>→</span> Action
+              Insight <span>→</span> Experience <span>→</span> Presence <span>→</span> Demand <span>→</span> Action
             </p>
           </div>
 
@@ -480,13 +498,17 @@ export function LivingBusinessMachine() {
             <div className="lbm-copy-stack">
               {CHAPTERS.map((c) => (
                 <article key={c.id} id={c.id} className="lbm-copy">
+                  {HASH_ALIASES.social === c.id && (
+                    // out of flow so it never takes a grid cell
+                    <span id="social" aria-hidden="true" style={{ position: "absolute" }} />
+                  )}
                   <div className="lbm-copy-asset" aria-hidden="true">
                     <Image
                       src={panelSrc(c.id)}
                       alt=""
                       width={PANEL_W}
                       height={PANEL_H}
-                      sizes="(max-width: 767px) 70vw, 1px"
+                      sizes="(max-width: 767px) 92vw, 1px"
                       onError={markFailed}
                     />
                     <div
@@ -504,7 +526,7 @@ export function LivingBusinessMachine() {
                     <h2 className="lbm-copy-title">{c.title}</h2>
                     <p className="mt-2 max-w-xl text-base leading-relaxed text-muted">{c.description}</p>
                     <Link className="lbm-copy-link" href={c.href}>
-                      More about {c.linkLabel}
+                      {c.linkText ?? `More about ${c.linkLabel}`}
                       <span aria-hidden="true"> →</span>
                     </Link>
                   </div>
