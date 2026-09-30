@@ -1,5 +1,5 @@
 import { checkPage, pageSpeed, samplePages, type PageCheck, type PageSpeedResult } from "./page-checks";
-import { fetchCompetitorSet } from "./marketdb";
+import { fetchAuditResult, fetchCompetitorSet } from "./marketdb";
 import { historyForMany, type HistoryFacts } from "./market-history";
 import { dataForSeoConfigured, rankedKeywords, rankingGaps, searchVolumes, type Rankings } from "./dataforseo";
 
@@ -80,15 +80,34 @@ export type GrowthPlan = {
 };
 
 async function runAudit(url: string, base: string): Promise<Audit> {
-  const res = await fetch(`${base}/api/audit`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-ingest-secret": process.env.CRON_SECRET ?? "" },
-    body: JSON.stringify({ url }),
-    signal: AbortSignal.timeout(240_000),
-  });
-  const json = (await res.json()) as { ok: boolean; data?: Audit; error?: string };
-  if (!json.ok || !json.data) throw new Error(`Audit failed: ${json.error ?? res.status}`);
-  return json.data;
+  // One retry: a platform error page (non-JSON 5xx) is usually transient.
+  // Only when it failed fast, so a retry still fits the stage's time limit.
+  let lastError = "";
+  const started = Date.now();
+  for (let attempt = 0; attempt < 2 && (attempt === 0 || Date.now() - started < 60_000); attempt++) {
+    const res = await fetch(`${base}/api/audit`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-ingest-secret": process.env.CRON_SECRET ?? "" },
+      body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(240_000),
+    }).catch((err: unknown) => err instanceof Error ? err : new Error(String(err)));
+    if (res instanceof Error) {
+      lastError = res.message;
+      continue;
+    }
+    const text = await res.text();
+    let json: { ok?: boolean; data?: Audit; error?: string } | null = null;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      lastError = `audit returned ${res.status}: ${text.slice(0, 80)}`;
+      continue;
+    }
+    if (json?.ok && json.data) return json.data;
+    lastError = json?.error ?? String(res.status);
+    if (res.status < 500) break;
+  }
+  throw new Error(`Audit failed: ${lastError}`);
 }
 
 export async function collectEvidence(url: string, domain: string, base: string): Promise<GrowthReport> {
@@ -105,7 +124,7 @@ export async function collectEvidence(url: string, domain: string, base: string)
   const saved = await fetchCompetitorSet(domain);
   const earlySpeed = saved ? speedOf(saved) : null;
 
-  const audit = await runAudit(url, base);
+  const audit = (await fetchAuditResult<Audit>(domain)) ?? (await runAudit(url, base));
   const auditCompetitors = audit.industry?.competitors ?? [];
   const sameSet =
     saved && saved.slice(0, 3).map((c) => c.domain).join() === auditCompetitors.slice(0, 3).map((c) => c.domain).join();

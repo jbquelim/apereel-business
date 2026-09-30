@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 import {
   recordAuditSnapshot,
+  saveAuditResult,
   fetchSegmentBenchmark,
   fetchCompetitorSet,
   saveCompetitorSet,
@@ -46,7 +47,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const googleTrends = require("google-trends-api");
 
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS = 10;
@@ -2159,5 +2160,6 @@ Respond with ONLY a JSON array:
     }).catch((err) => console.error("Audit notification email failed:", err));
   }
 
+  await saveAuditResult(domain, result);
   return NextResponse.json({ ok: true, data: result });
 }

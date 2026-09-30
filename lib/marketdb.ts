@@ -284,3 +284,37 @@ export async function recordTechSnapshots(
     console.error("recordTechSnapshots failed:", err);
   }
 }
+
+// The latest full audit result per domain. A paid analysis builds on the
+// free audit the customer just saw instead of re-running it (slow, and a
+// firewall can make a second run fail).
+const AUDIT_REUSE_DAYS = 7;
+
+export async function saveAuditResult(domain: string, result: unknown): Promise<void> {
+  const sql = getSql();
+  if (!sql) return;
+  try {
+    await sql`
+      INSERT INTO audit_results (domain, result, created_at)
+      VALUES (${bareDomain(domain)}, ${JSON.stringify(result)}::jsonb, now())
+      ON CONFLICT (domain) DO UPDATE SET result = EXCLUDED.result, created_at = now()
+    `;
+  } catch (err) {
+    console.error("saveAuditResult failed:", err);
+  }
+}
+
+export async function fetchAuditResult<T>(domain: string): Promise<T | null> {
+  const sql = getSql();
+  if (!sql) return null;
+  try {
+    const rows = (await sql`
+      SELECT result FROM audit_results
+      WHERE domain = ${bareDomain(domain)} AND created_at > now() - make_interval(days => ${AUDIT_REUSE_DAYS})
+    `) as { result: T }[];
+    return rows[0]?.result ?? null;
+  } catch (err) {
+    console.error("fetchAuditResult failed:", err);
+    return null;
+  }
+}

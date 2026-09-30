@@ -165,6 +165,13 @@ await sql`
   )
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_growth_orders_status ON growth_orders (status, created_at)`;
+await sql`
+  CREATE TABLE IF NOT EXISTS audit_results (
+    domain TEXT PRIMARY KEY,
+    result JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS generation_error TEXT`;
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'growth'`;
 
