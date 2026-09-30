@@ -37,7 +37,7 @@ export function ProposalPanel({
 
   function chooseTier(id: BuildProposal["tier"]) {
     const t = web.tiers.find((x) => x.id === id)!;
-    set({ tier: id, tierLabel: t.label ?? id, tierName: t.name, timeline: t.timeline ?? p.timeline, price: Math.max(p.price, t.price ?? 0) });
+    set({ tier: id, tierLabel: t.label ?? id, tierName: t.name, timeline: t.timeline ?? p.timeline, price: t.price ?? p.price });
   }
 
   async function act(action: "save" | "send" | "redraft") {
@@ -116,14 +116,14 @@ export function ProposalPanel({
                   className={`rounded-xl border p-3 text-left text-[14px] ${p.tier === t.id ? "border-electric bg-electric/10 text-ink" : "border-white/15 text-muted"}`}
                 >
                   <span className="font-medium">{t.label}</span> · {t.name}
-                  <span className="block font-mono text-[12px]">from ${t.price?.toLocaleString("en-US") ?? "?"} · {t.timeline}</span>
+                  <span className="block font-mono text-[12px]">${t.price?.toLocaleString("en-US") ?? "?"}</span>
                 </button>
               ))}
             </div>
           </div>
           <label className="block">
             <span className={label}>Price (USD, before credit)</span>
-            <input type="number" min={0} step={250} className={`${field} mt-2`} value={p.price} onChange={(e) => set({ price: Number(e.target.value) })} />
+            <input type="number" min={0} step={50} className={`${field} mt-2`} value={p.price} onChange={(e) => set({ price: Number(e.target.value) })} />
           </label>
           <label className="block">
             <span className={label}>Analysis credit (USD)</span>

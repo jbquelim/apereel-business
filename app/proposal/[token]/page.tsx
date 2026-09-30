@@ -30,7 +30,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ token
 
         <section className="mt-12 rounded-3xl border border-electric/40 bg-electric/5 p-6 sm:p-10">
           <p className="font-mono text-[11px] tracking-[0.2em] text-electric uppercase">
-            {p.tierLabel} · {p.timeline}
+            {[p.tierLabel, p.timeline].filter(Boolean).join(" · ")}
           </p>
           <h2 className="font-display mt-3 text-3xl">{p.tierName}</h2>
           {p.reasons.length > 0 && (
@@ -76,7 +76,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ token
             <p className="flex justify-between border-t border-white/10 pt-3 text-xl text-ink"><span>Total</span><span>{usd(due)}</span></p>
           </div>
           <p className="mt-3 text-[13px] text-muted">
-            USD, before any applicable tax. Half to start, half at launch. Timeline starts when we begin.
+            USD, before any applicable tax. Payment details follow when you accept.
           </p>
           <AcceptButton token={token} accepted={row.status === "accepted"} />
         </section>

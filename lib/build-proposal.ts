@@ -44,8 +44,6 @@ const FIX_ACTIONS: Record<string, (n: number, of: number) => ProposalItem> = {
 
 const n$ = (n: number) => n.toLocaleString("en-US");
 const pages = (n: number) => `${n$(n)} page${n === 1 ? "" : "s"}`;
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
-const round = (n: number) => Math.round(n / 250) * 250;
 
 export function draftProposal(r: GrowthReport, paidCents: number, services: ServiceTiers[] = SERVICE_TIERS): BuildProposal {
   const web = tiersForService("web-development", services) ?? tiersForService("web-development")!;
@@ -106,16 +104,8 @@ export function draftProposal(r: GrowthReport, paidCents: number, services: Serv
     items.splice(3, 0, { title: `Redirect map for every page${products ? ` (${products.toLocaleString("en-US")} products)` : ""}${platform ? `, including a move off ${platform} if it's holding you back` : ""}`, detail: "Built from our crawl, so rankings and links carry over to the new site." });
   }
 
-  // Price inside the tier's range, scaled by what's actually there to do.
-  const high = findings.filter((f) => f.severity === "high").length;
-  const medium = findings.filter((f) => f.severity === "medium").length;
-  const base = tier.price ?? 0;
-  const price =
-    tierId === "fix"
-      ? round(clamp(base + high * 300 + medium * 150 + (products > 1000 ? 500 : 0), base, 4000))
-      : tierId === "build"
-        ? round(clamp(base + (products > 500 ? 2000 : 0) + (products > 2000 ? 2000 : 0) + high * 250, base, 14000))
-        : round(base + (products > 2000 ? 5000 : 0) + (b2b ? 5000 : 0));
+  // Fixed tier prices: the build is done between AI and the customer.
+  const price = tier.price ?? 0;
 
   const reasons =
     tierId === "grow" ? rebuild : tierId === "build" ? refresh : ["A premium template covers what your site needs; the problems we measured are fixed as part of the build."];

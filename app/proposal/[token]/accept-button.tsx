@@ -15,7 +15,7 @@ export function AcceptButton({ token, accepted }: { token: string; accepted: boo
   if (state === "done") {
     return (
       <p role="status" className="mt-8 rounded-2xl border border-electric/40 bg-electric/5 p-5 text-[15px] leading-relaxed text-ink">
-        Accepted. John will email you within one business day to confirm the start date and send the first invoice.
+        Accepted. We&apos;ll email you within one business day to get your site started.
       </p>
     );
   }
