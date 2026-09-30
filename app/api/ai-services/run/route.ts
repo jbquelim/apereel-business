@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { getClient } from "@/lib/clients";
 import { runService } from "@/lib/ai-services";
+import { kickMediaWorker } from "@/lib/media";
 
 // Internal: runs one client's service in its own function (up to 5 minutes).
 // Called by the discover cron for monthly clients. CRON_SECRET-gated.
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
   after(async () => {
     try {
       console.log(`AI service for ${client.domain}: ${await runService(client)}`);
+      await kickMediaWorker((process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, ""));
     } catch (err) {
       console.error(`AI service failed for ${client.domain}:`, err instanceof Error ? err.message : err);
     }

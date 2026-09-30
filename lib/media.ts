@@ -123,11 +123,25 @@ async function keep(url: string, job: MediaJob): Promise<string> {
   }
 }
 
+/** Renders still to submit or collect (0 without a provider: nothing to wait for). */
+export async function pendingMediaJobs(): Promise<number> {
+  if (!mediaProvider()) return 0;
+  return ((await sql()`SELECT count(*)::int AS n FROM media_jobs WHERE status IN ('queued', 'running', 'waiting_provider')`) as { n: number }[])[0].n;
+}
+
+/** Starts the render rounds (fire and forget). */
+export async function kickMediaWorker(base: string) {
+  if (!mediaProvider()) return;
+  await fetch(`${base}/api/media/poll`, { method: "POST", headers: { "x-internal-secret": process.env.CRON_SECRET ?? "" }, signal: AbortSignal.timeout(5_000) }).catch(() => null);
+}
+
 /** Submits queued jobs and collects finished ones, within a time budget. */
 export async function processMediaJobs(budgetMs: number): Promise<{ submitted: number; finished: number }> {
   if (!mediaProvider()) return { submitted: 0, finished: 0 };
   const started = Date.now();
   await sql()`UPDATE media_jobs SET status = 'queued', provider = 'higgsfield' WHERE status = 'waiting_provider'`;
+  // A render that never finishes shouldn't keep the rounds going forever.
+  await sql()`UPDATE media_jobs SET status = 'failed', error = 'Timed out at Higgsfield', updated_at = now() WHERE status = 'running' AND submitted_at < now() - interval '2 hours'`;
   let finished = 0;
   let submitted = 0;
 

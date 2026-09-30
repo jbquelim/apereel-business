@@ -13,7 +13,7 @@
     },
     {
       "path": "/api/media/poll",
-      "schedule": "*/5 * * * *"
+      "schedule": "30 4 * * *"
     }
   ]
 }
