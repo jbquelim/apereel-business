@@ -87,19 +87,23 @@ export function draftProposal(r: GrowthReport, paidCents: number, services: Serv
   const items: ProposalItem[] = [...fixItems, ...lowItems];
   items.push({ title: "A second crawl at launch", detail: "Every page re-checked, with a before and after report." });
 
-  if (tierId !== "fix") {
-    items.unshift(
-      tierId === "build"
-        ? { title: "New design on your current platform", detail: `Homepage, category and product pages redesigned around ${r.audit.translateAdvantage?.strength ? "your advantage: " + r.audit.translateAdvantage.strength.replace(/\.$/, "") : "why customers choose you"}.` }
-        : { title: `Custom build${platform ? ` (moving off ${platform} if it's holding you back)` : ""}`, detail: "Design and development around how your buyers choose and order." },
-    );
-    if (compare && compare.competitors.length) {
-      items.splice(1, 0, { title: "Product pages that match or beat your competitors'", detail: `Reviews, photos, spec tables and description depth set against ${compare.competitors.map((c) => c.name).join(", ")}.` });
-    }
+  const advantage = r.audit.translateAdvantage?.strength
+    ? `your advantage: ${r.audit.translateAdvantage.strength.replace(/\.$/, "")}`
+    : "why customers choose you";
+  // Every tier is a new design; the tier sets how bespoke it is.
+  items.unshift(
+    tierId === "fix"
+      ? { title: "A premium template from our library, set up in your brand", detail: "Homepage, category, product, about and contact pages, in your colours, fonts and photography." }
+      : tierId === "build"
+        ? { title: "A custom design around your advantage", detail: `Homepage and page layouts designed around ${advantage}, with scroll animation and interactive sections.` }
+        : { title: "A fully bespoke flagship design", detail: `Cinematic motion, 3D or film, built around ${advantage}.` },
+  );
+  if (tierId !== "fix" && compare && compare.competitors.length) {
+    items.splice(1, 0, { title: "Product pages that match or beat your competitors'", detail: `Reviews, photos, spec tables and description depth set against ${compare.competitors.map((c) => c.name).join(", ")}.` });
   }
   if (tierId === "grow") {
     if (b2b) items.splice(2, 0, { title: "Business buyer features", detail: "Quote requests, downloadable spec sheets and search by part number." });
-    items.splice(3, 0, { title: `Redirect map for every page${products ? ` (${products.toLocaleString("en-US")} products)` : ""}`, detail: "Built from our crawl, so rankings and links carry over to the new site." });
+    items.splice(3, 0, { title: `Redirect map for every page${products ? ` (${products.toLocaleString("en-US")} products)` : ""}${platform ? `, including a move off ${platform} if it's holding you back` : ""}`, detail: "Built from our crawl, so rankings and links carry over to the new site." });
   }
 
   // Price inside the tier's range, scaled by what's actually there to do.
@@ -108,13 +112,13 @@ export function draftProposal(r: GrowthReport, paidCents: number, services: Serv
   const base = tier.price ?? 0;
   const price =
     tierId === "fix"
-      ? round(clamp(base + high * 300 + medium * 150 + (products > 1000 ? 500 : 0), base, 3000))
+      ? round(clamp(base + high * 300 + medium * 150 + (products > 1000 ? 500 : 0), base, 4000))
       : tierId === "build"
-        ? round(clamp(base + (products > 500 ? 2000 : 0) + (products > 2000 ? 2000 : 0) + high * 250, base, 12000))
+        ? round(clamp(base + (products > 500 ? 2000 : 0) + (products > 2000 ? 2000 : 0) + high * 250, base, 14000))
         : round(base + (products > 2000 ? 5000 : 0) + (b2b ? 5000 : 0));
 
   const reasons =
-    tierId === "grow" ? rebuild : tierId === "build" ? refresh : ["Your site's foundation is sound; the problems we measured can be fixed where they are."];
+    tierId === "grow" ? rebuild : tierId === "build" ? refresh : ["A premium template covers what your site needs; the problems we measured are fixed as part of the build."];
 
   return {
     tier: tierId,

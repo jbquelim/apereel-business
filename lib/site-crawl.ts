@@ -35,6 +35,8 @@ export type PageFacts = {
   words: number;
   specTable: boolean;
   productLinks: number;
+  /** The page's main image (og:image), kept for content and ad creation. */
+  image: string | null;
 };
 
 export type CrawlFinding = {
@@ -219,6 +221,16 @@ export function readFacts(url: string, kind: PageKind, html: string, status: num
     words: (decode(text).match(/[A-Za-zÀ-ÿ0-9][\wÀ-ÿ'-]*/g) ?? []).length,
     specTable: /<table[\s>]|<dl[\s>]|woocommerce-product-attributes|product-specs|specifications/i.test(main),
     productLinks,
+    image: (() => {
+      const raw =
+        html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]*content=["']([^"']+)["']/i)?.[1] ??
+        html.match(/<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:image["']/i)?.[1];
+      try {
+        return raw ? new URL(decode(raw), url).toString().slice(0, 1000) : null;
+      } catch {
+        return null;
+      }
+    })(),
   };
 }
 

@@ -202,6 +202,7 @@ await sql`
     images INT, images_missing_alt INT, words INT, spec_table BOOLEAN, product_links INT
   )
 `;
+await sql`ALTER TABLE page_snapshots ADD COLUMN IF NOT EXISTS image TEXT`;
 await sql`CREATE INDEX IF NOT EXISTS idx_page_snapshots_domain ON page_snapshots (domain, crawled_at)`;
 await sql`CREATE INDEX IF NOT EXISTS idx_page_snapshots_url ON page_snapshots (url, crawled_at)`;
 await sql`

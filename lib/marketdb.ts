@@ -348,6 +348,7 @@ type PageSnapshot = {
   words: number;
   specTable: boolean;
   productLinks: number;
+  image?: string | null;
 };
 
 /**
@@ -385,6 +386,7 @@ export async function recordPageSnapshots(domain: string, role: "client" | "comp
     words: p.words,
     spec_table: p.specTable,
     product_links: p.productLinks,
+    image: p.image ?? null,
   }));
   try {
     // One statement per 100 rows: jsonb_to_recordset keeps it a single round trip.
@@ -392,16 +394,16 @@ export async function recordPageSnapshots(domain: string, role: "client" | "comp
       await sql`
         INSERT INTO page_snapshots (domain, role, url, kind, status, blocked, ms, bytes, title, meta_description,
           h1_count, canonical, noindex, schema_types, has_product_schema, has_price, has_availability, price,
-          currency, rating_value, review_count, review_widget, images, images_missing_alt, words, spec_table, product_links)
+          currency, rating_value, review_count, review_widget, images, images_missing_alt, words, spec_table, product_links, image)
         SELECT domain, role, url, kind, status, blocked, ms, bytes, title, meta_description,
           h1_count, canonical, noindex, schema_types, has_product_schema, has_price, has_availability, price,
-          currency, rating_value, review_count, review_widget, images, images_missing_alt, words, spec_table, product_links
+          currency, rating_value, review_count, review_widget, images, images_missing_alt, words, spec_table, product_links, image
         FROM jsonb_to_recordset(${JSON.stringify(rows.slice(i, i + 100))}::jsonb) AS r(
           domain text, role text, url text, kind text, status int, blocked boolean, ms int, bytes int, title text,
           meta_description text, h1_count int, canonical text, noindex boolean, schema_types text[],
           has_product_schema boolean, has_price boolean, has_availability boolean, price numeric, currency text,
           rating_value numeric, review_count int, review_widget boolean, images int, images_missing_alt int,
-          words int, spec_table boolean, product_links int)
+          words int, spec_table boolean, product_links int, image text)
       `;
     }
   } catch (err) {
