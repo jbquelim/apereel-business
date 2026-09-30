@@ -3,6 +3,9 @@ import { getClientByToken } from "@/lib/clients";
 import { reviseItem, setItemStatus } from "@/lib/content-engine";
 import { getSiteForClient, reviseSite, setPublished, undoSite } from "@/lib/site-builder";
 import { connectDomain } from "@/lib/vercel-domains";
+import { portalUrl } from "@/lib/billing";
+import { ensureAccount, onboardingUrl } from "@/lib/connect";
+import { setProductAction } from "@/lib/site-builder";
 
 // The client's studio actions: ask for a change (uses one request from the
 // monthly allowance) or mark an item approved. The token is the only key.
@@ -12,7 +15,36 @@ export const maxDuration = 300;
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const client = await getClientByToken((await params).token);
   if (!client) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-  const b = (await request.json().catch(() => ({}))) as { action?: string; itemId?: number; instruction?: string; domain?: string };
+  const b = (await request.json().catch(() => ({}))) as { action?: string; itemId?: number; instruction?: string; domain?: string; mode?: string };
+
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
+  const studio = `${base}/studio/${client.token}`;
+  if (b.action === "billing") {
+    if (!client.stripe_customer_id) return NextResponse.json({ ok: false, error: "No billing account yet." }, { status: 409 });
+    try {
+      return NextResponse.json({ ok: true, url: await portalUrl(client.stripe_customer_id, studio) });
+    } catch (err) {
+      console.error("Billing portal failed:", err instanceof Error ? err.message : err);
+      return NextResponse.json({ ok: false, error: "Billing couldn't open. Please email john@apereel.com." }, { status: 502 });
+    }
+  }
+  if (b.action === "payments-connect" || b.action === "payments-mode") {
+    const site = client.service === "web-development" ? await getSiteForClient(client.id) : null;
+    if (!site) return NextResponse.json({ ok: false, error: "Your site hasn't been built yet." }, { status: 409 });
+    if (b.action === "payments-mode") {
+      const mode = (b as { mode?: string }).mode;
+      if (mode !== "checkout" && mode !== "link" && mode !== "enquire") return NextResponse.json({ ok: false, error: "Unknown option" }, { status: 400 });
+      const r = await setProductAction(client, mode);
+      return NextResponse.json(r, { status: r.ok ? 200 : 409 });
+    }
+    try {
+      const account = await ensureAccount(site, { name: site.doc.brand.name, email: client.email });
+      return NextResponse.json({ ok: true, url: await onboardingUrl(account, `${studio}?payments=return`) });
+    } catch (err) {
+      console.error("Stripe onboarding failed:", err instanceof Error ? err.message : err);
+      return NextResponse.json({ ok: false, error: "Stripe onboarding couldn't open. Please try again." }, { status: 502 });
+    }
+  }
 
   // Website actions.
   if (b.action?.startsWith("site-")) {

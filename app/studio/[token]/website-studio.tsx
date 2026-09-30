@@ -20,6 +20,8 @@ export function WebsiteStudio({
   products,
   left,
   leads,
+  paymentsStatus,
+  productAction,
 }: {
   token: string;
   slug: string;
@@ -30,6 +32,8 @@ export function WebsiteStudio({
   products: number;
   left: number;
   leads: Lead[];
+  paymentsStatus: string | null;
+  productAction: string;
 }) {
   const router = useRouter();
   const [page, setPage] = useState("");
@@ -45,7 +49,7 @@ export function WebsiteStudio({
     setBusy(action);
     setMsg(null);
     const res = await fetch(`/api/studio/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) }).catch(() => null);
-    const json = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string; domain?: DomainInfo } | null;
+    const json = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string; domain?: DomainInfo; url?: string } | null;
     setBusy(null);
     if (!json?.ok) {
       setMsg({ ok: false, text: json?.error ?? "That didn't work. Please try again." });
@@ -136,6 +140,44 @@ export function WebsiteStudio({
           <button type="button" onClick={() => act(published ? "site-unpublish" : "site-publish")} disabled={!!busy} className="press-scale h-10 w-full rounded-full bg-white/10 text-[13px] text-ink">
             {published ? "Unpublish" : "Publish on my domain"}
           </button>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-white/10 p-5">
+          <p className="font-mono text-[11px] tracking-[0.2em] text-electric uppercase">Payments on your site</p>
+          {paymentsStatus === "active" ? (
+            <>
+              <p className="text-[13px] text-muted">Stripe is connected. Buyers pay you directly; money goes to your bank.</p>
+              {([
+                ["checkout", "Buy now with Stripe on my site"],
+                ["link", "Send buyers to my current store"],
+                ["enquire", "Enquiry form only"],
+              ] as const).map(([mode, label]) => (
+                <label key={mode} className="flex items-center gap-2 text-[13px] text-ink">
+                  <input type="radio" name="mode" checked={productAction === mode} onChange={() => act("payments-mode", { mode })} />
+                  {label}
+                </label>
+              ))}
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] leading-relaxed text-muted">
+                {paymentsStatus === "onboarding"
+                  ? "Stripe needs a few more details before you can take payments."
+                  : "Sell straight from your site. Connect a Stripe account (free to set up; Stripe's card fees apply) and buyers pay you directly."}
+              </p>
+              <button
+                type="button"
+                disabled={!!busy}
+                onClick={async () => {
+                  const json = (await act("payments-connect")) as { url?: string } | null;
+                  if (json?.url) window.location.assign(json.url);
+                }}
+                className="press-scale h-10 w-full rounded-full bg-electric text-[13px] font-semibold text-navy disabled:opacity-50"
+              >
+                {paymentsStatus === "onboarding" ? "Finish Stripe setup" : "Take payments with Stripe"}
+              </button>
+            </>
+          )}
         </div>
 
         <div>

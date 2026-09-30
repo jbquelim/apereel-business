@@ -38,6 +38,8 @@ export type SiteRow = {
   published: boolean;
   hosting_until: string | null;
   updated_at: string;
+  stripe_account_id: string | null;
+  payments_status: string | null;
 };
 
 // Tier limits: products on the site, categories, featured products with written descriptions.
@@ -268,6 +270,7 @@ const SECTION_TYPES = new Set(["hero", "features", "productGrid", "categoryGrid"
 
 /** A change to the site in plain words; uses one request from the allowance. */
 export async function reviseSite(client: Client, instruction: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (client.status !== "active") return { ok: false, error: "Your plan has ended, so changes are paused." };
   const left = (await allowance(client)).left;
   if (left <= 0) return { ok: false, error: `You've used all ${tierFor(client)?.requests ?? 0} change requests this month.` };
   const site = await getSiteForClient(client.id);
@@ -301,7 +304,8 @@ ${RULES}`,
     tokens: { ...site.doc.tokens, ...(updated.tokens ?? {}), palette: { ...site.doc.tokens.palette, ...(updated.tokens?.palette ?? {}) } },
     pages: updated.pages,
     categories: Array.isArray(updated.categories) ? updated.categories : site.doc.categories,
-    productAction: updated.productAction === "enquire" || updated.productAction === "link" ? updated.productAction : site.doc.productAction,
+    // How buyers pay is set from the studio (Stripe), not by a text request.
+    productAction: site.doc.productAction,
     footerNote: typeof updated.footerNote === "string" ? updated.footerNote : site.doc.footerNote,
     products: products.map((p) => (updated.productDescriptions?.[p.slug] ? { ...p, description: cut(updated.productDescriptions[p.slug], 800) } : p)),
     redirects,
@@ -332,4 +336,14 @@ export async function undoSite(client: Client): Promise<boolean> {
 export async function setPublished(client: Client, published: boolean): Promise<boolean> {
   const rows = await sql()`UPDATE sites SET published = ${published}, updated_at = now() WHERE client_id = ${client.id} RETURNING id`;
   return rows.length > 0;
+}
+
+/** Switches how buyers act on products: Stripe checkout (only when payments are live), store link or enquiry. */
+export async function setProductAction(client: Client, action: SiteDoc["productAction"]): Promise<{ ok: boolean; error?: string }> {
+  const site = await getSiteForClient(client.id);
+  if (!site) return { ok: false, error: "Your site hasn't been built yet." };
+  if (action === "checkout" && site.payments_status !== "active") return { ok: false, error: "Finish connecting Stripe first." };
+  const doc = { ...site.doc, productAction: action };
+  await sql()`UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, updated_at = now() WHERE id = ${site.id}`;
+  return { ok: true };
 }

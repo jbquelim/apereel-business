@@ -48,6 +48,7 @@ export default async function ClientsPage() {
                     <td className="py-3 pr-4">
                       <p className="text-ink">{c.domain}</p>
                       <p className="text-[12px] text-muted">{c.name ?? ""} {c.email}</p>
+                      {c.status !== "active" && <p className="font-mono text-[11px] text-signal">{c.status === "requested" ? "Requested, not paid" : c.status}</p>}
                     </td>
                     <td className="py-3 pr-4 text-ink/85">
                       {SERVICE_NAME[c.service]} · {t?.label ?? c.tier}
@@ -58,7 +59,7 @@ export default async function ClientsPage() {
                     <td className="py-3 pr-4 font-mono text-ink/85">${c.cost.toFixed(2)}</td>
                     <td className="py-3 text-right">
                       <a href={`/studio/${c.token}`} className="text-electric underline underline-offset-4">Studio</a>
-                      <GenerateButton id={c.id} label={c.service === "web-development" ? "Build the site" : "Generate this month"} />
+                      <GenerateButton id={c.id} label={c.status === "requested" ? "Activate (no charge) and run" : c.service === "web-development" ? "Build the site" : "Generate this month"} />
                     </td>
                   </tr>
                 );

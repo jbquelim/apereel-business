@@ -175,7 +175,7 @@ ${(o.jsonLd ?? []).map((j) => `<script type="application/ld+json">${JSON.stringi
 <header class="site"><div class="wrap"><a class="brand" href="${t.base || "/"}">${esc(doc.brand.name)}</a><nav class="main" aria-label="Main">${navHtml}</nav></div></header>
 <main>${o.body}</main>
 <footer class="site"><div class="wrap"><div><div class="brand">${esc(doc.brand.name)}</div><p>${esc(doc.brand.tagline)}</p>${doc.brand.email ? `<p><a href="mailto:${esc(doc.brand.email)}">${esc(doc.brand.email)}</a></p>` : ""}</div><div>${esc(doc.footerNote ?? "")}<p>© ${new Date().getFullYear()} ${esc(doc.brand.name)}</p></div></div></footer>
-${doc.tokens.motion !== "none" ? MOTION_JS : ""}<script>if(/[?&]sent=1/.test(location.search))document.body.insertAdjacentHTML("afterbegin",'<div class="notice" role="status" style="background:var(--accent);color:var(--accent-text)">Thanks, your message was sent. We&#39;ll be in touch soon.</div>')</script></body></html>`;
+${doc.tokens.motion !== "none" ? MOTION_JS : ""}<script>if(/[?&]paid=1/.test(location.search))document.body.insertAdjacentHTML("afterbegin",'<div class="notice" role="status" style="background:var(--accent);color:var(--accent-text)">Thank you for your order. A receipt is on its way to your email.</div>')</script><script>if(/[?&]sent=1/.test(location.search))document.body.insertAdjacentHTML("afterbegin",'<div class="notice" role="status" style="background:var(--accent);color:var(--accent-text)">Thanks, your message was sent. We&#39;ll be in touch soon.</div>')</script></body></html>`;
 }
 
 function pageDoc(page: SitePage, t: RenderTarget): string {
@@ -214,8 +214,11 @@ function productPage(t: RenderTarget, p: SiteProduct): string {
   const cat = doc.categories.find((c) => c.slug === p.category);
   const url = `${t.origin}/products/${p.slug}`;
   const related = doc.products.filter((x) => x.slug !== p.slug && x.category && x.category === p.category).slice(0, 4);
-  const action =
-    doc.productAction === "link"
+  const canBuy = doc.productAction === "checkout" && p.price != null && p.price > 0;
+  const enquire = doc.productAction === "enquire" || (doc.productAction === "checkout" && !canBuy);
+  const action = canBuy
+    ? `<form method="post" action="${t.apiOrigin}/api/site-checkout/${esc(t.siteId)}"><input type="hidden" name="product" value="${esc(p.slug)}"><input type="hidden" name="url" value="${esc(url)}"><button class="btn" type="submit">Buy now</button></form>`
+    : doc.productAction === "link"
       ? `<a class="btn" href="${esc(p.sourceUrl)}">Buy now</a>`
       : `<a class="btn" href="#enquire">Ask about this product</a>`;
   const product: Record<string, unknown> = {
@@ -235,7 +238,7 @@ function productPage(t: RenderTarget, p: SiteProduct): string {
     current: "/products",
     body: `<section><div class="wrap"><nav class="crumbs" aria-label="Breadcrumb"><a href="${t.base || "/"}">Home</a> / <a href="${t.base}/products">Products</a>${cat ? ` / <a href="${t.base}/collections/${esc(cat.slug)}">${esc(cat.name)}</a>` : ""}</nav>
 <div class="pdp"><div class="ph">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" fetchpriority="high">` : ""}</div><div><h1 style="font-size:clamp(1.8rem,3.5vw,2.7rem)">${esc(p.title)}</h1>${p.price != null ? `<div class="price">${esc(money(p))}</div>` : ""}<div class="muted">${para(p.description)}</div><div class="actions" style="margin-top:26px">${action}</div></div></div>
-${doc.productAction === "enquire" ? `<div id="enquire" style="margin-top:72px"><h2>Ask about ${esc(p.title)}</h2><div style="margin-top:22px">${leadForm(t, `product:${p.slug}`, "Send enquiry", true)}</div></div>` : ""}
+${enquire ? `<div id="enquire" style="margin-top:72px"><h2>Ask about ${esc(p.title)}</h2><div style="margin-top:22px">${leadForm(t, `product:${p.slug}`, "Send enquiry", true)}</div></div>` : ""}
 ${related.length ? `<div style="margin-top:80px"><h2>More ${cat ? esc(cat.name) : "products"}</h2><div class="grid g4" style="margin-top:26px">${related.map((r) => productCard(r, t)).join("")}</div></div>` : ""}</div></section>`,
     jsonLd: [
       product,

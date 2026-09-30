@@ -7,6 +7,8 @@ import { jobsForItems } from "@/lib/media";
 import { getSiteForClient } from "@/lib/site-builder";
 import { StudioItems } from "./studio-items";
 import { WebsiteStudio } from "./website-studio";
+import { BillingButton } from "./billing-button";
+import { refreshPaymentsStatus } from "@/lib/connect";
 
 // A client's studio: their content, ads or website, made by AI from their
 // own products and what we know of their market. Every item takes changes
@@ -27,6 +29,10 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
   let body: React.ReactNode;
   if (client.service === "web-development") {
     const site = await getSiteForClient(client.id);
+    // Back from Stripe onboarding (or still pending): re-check the account.
+    if (site?.stripe_account_id && site.payments_status !== "active") {
+      site.payments_status = await refreshPaymentsStatus(site.id, site.stripe_account_id);
+    }
     const leads = site && process.env.DATABASE_URL
       ? ((await neon(process.env.DATABASE_URL)`
           SELECT name, email, phone, message, page, created_at FROM site_leads WHERE site_id = ${site.id} ORDER BY id DESC LIMIT 50
@@ -41,6 +47,8 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
         domainStatus={site.domain_status}
         pages={site.doc.pages.map((p) => ({ slug: p.slug, label: p.navLabel ?? "Home" }))}
         products={site.doc.products.length}
+        paymentsStatus={site.payments_status}
+        productAction={site.doc.productAction}
         left={left.left}
         leads={leads}
       />
@@ -75,9 +83,14 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
           Made by AI from your own products and what we know of your market. Ask for any change in plain
           words; each change uses one request.
         </p>
-        <p className="mt-6 inline-flex rounded-full border border-electric/40 bg-electric/5 px-4 py-2 font-mono text-[13px] text-ink">
-          {left.left} of {left.limit} change requests left{tier?.cadence === "monthly" ? " this month" : ""}
-        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <p className="inline-flex rounded-full border border-electric/40 bg-electric/5 px-4 py-2 font-mono text-[13px] text-ink">
+            {client.status === "active"
+              ? `${left.left} of ${left.limit} change requests left${tier?.cadence === "monthly" ? " this month" : ""}`
+              : "Your plan has ended; your work stays here"}
+          </p>
+          {client.stripe_customer_id && <BillingButton token={token} />}
+        </div>
         {body}
       </section>
     </main>

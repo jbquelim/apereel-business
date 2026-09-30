@@ -264,6 +264,11 @@ await sql`
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )
 `;
+await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT`;
+await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT`;
+await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_checkout_session TEXT UNIQUE`;
+await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS stripe_account_id TEXT`;
+await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS payments_status TEXT`;
 await sql`
   CREATE TABLE IF NOT EXISTS site_leads (
     id BIGSERIAL PRIMARY KEY,

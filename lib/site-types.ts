@@ -49,8 +49,11 @@ export type SiteDoc = {
   pages: SitePage[];
   products: SiteProduct[];
   categories: { slug: string; name: string; description: string }[];
-  /** How a buyer acts on a product: buy on the current store, or send an enquiry. */
-  productAction: "link" | "enquire";
+  /**
+   * How a buyer acts on a product: pay here with Stripe (the business's own
+   * account), buy on their current store, or send an enquiry.
+   */
+  productAction: "checkout" | "link" | "enquire";
   /** Old addresses (from our crawl of their current site) → new ones. */
   redirects: Record<string, string>;
   footerNote?: string;

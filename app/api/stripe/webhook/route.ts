@@ -3,6 +3,8 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { markFailed, markPaid } from "@/lib/orders";
 import { triggerStage } from "@/lib/growth-trigger";
+import { createPaidClient, endSubscription, setSubscription, type AiService } from "@/lib/clients";
+import { startHosting, SERVICE_NAME } from "@/lib/billing";
 
 function siteBase(request: Request) {
   return (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
@@ -34,6 +36,10 @@ export async function POST(request: Request) {
     case "checkout.session.async_payment_succeeded": {
       const session = event.data.object;
       if (session.payment_status === "unpaid") break;
+      if (session.metadata?.kind === "service") {
+        await servicePaid(session, siteBase(request), event.livemode);
+        break;
+      }
       const orderId = session.client_reference_id ?? session.metadata?.order_id;
       if (!orderId) break;
       const order = await markPaid({
@@ -53,6 +59,16 @@ export async function POST(request: Request) {
           }
         });
       }
+      break;
+    }
+    case "customer.subscription.deleted": {
+      const c = await endSubscription(event.data.object.id);
+      if (c) await notifyJohn(`${SERVICE_NAME[c.service]} ended: ${c.domain}`, `${c.email}'s ${c.service === "web-development" ? "hosting" : "subscription"} ended.${c.service === "web-development" ? " Their site has been taken offline." : ""}`);
+      break;
+    }
+    case "invoice.payment_failed": {
+      const inv = event.data.object;
+      await notifyJohn(`Payment failed: ${inv.customer_email ?? "a client"}`, `Invoice ${inv.id} for ${(inv.amount_due / 100).toFixed(2)} ${inv.currency.toUpperCase()} failed. Stripe retries automatically.`);
       break;
     }
     case "checkout.session.async_payment_failed": {
@@ -100,4 +116,72 @@ async function notifyNewOrder(order: {
   } catch (err) {
     console.error("Order notification failed:", err instanceof Error ? err.message : err);
   }
+}
+
+/** A paid service: the client, hosting for websites, the first run, and the studio link. */
+async function servicePaid(session: Stripe.Checkout.Session, base: string, livemode: boolean) {
+  const m = session.metadata ?? {};
+  const client = await createPaidClient({
+    domain: m.domain ?? "",
+    name: m.name || null,
+    email: session.customer_details?.email ?? session.customer_email ?? "",
+    service: m.service as AiService,
+    tier: m.tier as "fix" | "build" | "grow",
+    checkoutSession: session.id,
+    customer: typeof session.customer === "string" ? session.customer : session.customer?.id ?? null,
+    subscription: typeof session.subscription === "string" ? session.subscription : session.subscription?.id ?? null,
+  });
+  if (!client) return; // already handled (Stripe retries)
+  after(async () => {
+    if (client.service === "web-development") {
+      try {
+        const sub = await startHosting(session, client.id);
+        if (sub) await setSubscription(client.id, sub);
+      } catch (err) {
+        console.error("Hosting subscription failed:", err instanceof Error ? err.message : err);
+        await notifyJohn(`Hosting not set up: ${client.domain}`, `Create the $10/month hosting subscription by hand. ${err instanceof Error ? err.message : ""}`);
+      }
+    }
+    await fetch(`${base}/api/ai-services/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-internal-secret": process.env.CRON_SECRET ?? "" },
+      body: JSON.stringify({ clientId: client.id }),
+      signal: AbortSignal.timeout(20_000),
+    }).catch((err) => console.error("First run did not start:", err instanceof Error ? err.message : err));
+    const studio = `${base}/studio/${client.token}`;
+    if (process.env.RESEND_API_KEY && client.email) {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "John Lim at Apereel <noreply@apereel.com>",
+          reply_to: "john@apereel.com",
+          to: [client.email],
+          subject: `${livemode ? "" : "[TEST] "}Your Apereel ${SERVICE_NAME[client.service]} studio`,
+          text: [
+            client.name ? `Hi ${client.name.split(/\s+/)[0]},` : "Hi,",
+            "",
+            `Thank you. We're building your ${SERVICE_NAME[client.service].toLowerCase()} for ${client.domain} now from your own products; the first batch is ready in a few minutes.`,
+            "",
+            `Your studio (keep this link private): ${studio}`,
+            "",
+            "Ask for any change there in plain words.",
+            "",
+            "John Lim",
+            "Founder, Apereel",
+          ].join("\n"),
+        }),
+      }).catch(() => null);
+    }
+    await notifyJohn(`New ${SERVICE_NAME[client.service]} client: ${client.domain}${livemode ? "" : " [TEST]"}`, `${client.email}, tier ${client.tier}. Studio: ${studio}`);
+  });
+}
+
+async function notifyJohn(subject: string, text: string) {
+  if (!process.env.RESEND_API_KEY) return;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: "Apereel <noreply@apereel.com>", to: [process.env.CONTACT_TO_EMAIL || "john@apereel.com"], subject, text }),
+  }).catch(() => null);
 }

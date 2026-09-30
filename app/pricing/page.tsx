@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 type Card = { id: string; label: string; price: string; name: string; summary: string; scope: string[]; note?: string };
 
-function Cards({ cards, featured, cta }: { cards: Card[]; featured: string; cta: { href: string; label: (c: Card) => string } }) {
+function Cards({ cards, featured, cta }: { cards: Card[]; featured: string; cta: { href: (c: Card) => string; label: (c: Card) => string } }) {
   return (
     <div className="grid gap-5 lg:grid-cols-3">
       {cards.map((c) => (
@@ -39,7 +39,7 @@ function Cards({ cards, featured, cta }: { cards: Card[]; featured: string; cta:
           </ul>
           {c.note && <p className="mt-5 font-mono text-[12px] text-muted">{c.note}</p>}
           <Link
-            href={cta.href}
+            href={cta.href(c)}
             className={`press-scale mt-6 inline-flex h-11 items-center justify-center rounded-full px-5 text-[12px] font-semibold tracking-[0.08em] uppercase transition-colors ${c.id === featured ? "bg-electric text-navy hover:bg-electric-deep" : "border border-white/25 text-ink hover:border-electric"}`}
           >
             {cta.label(c)}
@@ -132,7 +132,7 @@ export default async function PricingPage() {
         title="Know what to fix, measured, not guessed."
         intro="Start with the free scan. Then go deeper: every page of your site opened and checked, and your product pages set against your competitors'."
       >
-        <Cards cards={analysis} featured="growth" cta={{ href: "/#audit", label: () => "Start with the free scan" }} />
+        <Cards cards={analysis} featured="growth" cta={{ href: () => "/#audit", label: () => "Start with the free scan" }} />
       </Service>
 
       <Service
@@ -141,7 +141,7 @@ export default async function PricingPage() {
         title="A better site, built by AI from your own business."
         intro="Every tier starts from our library of templates for your industry and our crawl of your site: your products, photos and prices come in, and every fix from your analysis is built in. You ask for changes in plain words and the AI makes them. The tiers differ in design and in how many changes you can ask for. Your analysis fee comes off the price."
       >
-        <Cards cards={web.tiers.map(fromTier)} featured="build" cta={{ href: "/contact", label: (c) => `Get ${c.label}` }} />
+        <Cards cards={web.tiers.map(fromTier)} featured="build" cta={{ href: (c) => `/start?service=web-development&tier=${c.id}`, label: (c) => `Get ${c.label}` }} />
       </Service>
 
       <Service
@@ -150,7 +150,7 @@ export default async function PricingPage() {
         title="Ads for Google, Meta and TikTok, priced by creative."
         intro="Made by AI from your real products, prices and advantages, and from what your competitors say. The tiers step up from static ads to motion to cinematic film. You upload them to your own ad accounts, and ad spend is paid directly to the platforms."
       >
-        <Cards cards={ads.tiers.map(fromTier)} featured="build" cta={{ href: "/contact", label: (c) => `Get ${c.label}` }} />
+        <Cards cards={ads.tiers.map(fromTier)} featured="build" cta={{ href: (c) => `/start?service=advertising&tier=${c.id}`, label: (c) => `Get ${c.label}` }} />
       </Service>
 
       <Service
@@ -159,12 +159,13 @@ export default async function PricingPage() {
         title="Content made from your catalog, every month."
         intro="Our crawler reads your products and your competitors' every month, and AI turns them into posts, videos and buying guides: consistent, on-brand and aimed at what your buyers search for. Ask for changes in plain words, within your monthly allowance."
       >
-        <Cards cards={content.tiers.map(fromTier)} featured="build" cta={{ href: "/contact", label: (c) => `Get ${c.label}` }} />
+        <Cards cards={content.tiers.map(fromTier)} featured="build" cta={{ href: (c) => `/start?service=premium-creative&tier=${c.id}`, label: (c) => `Get ${c.label}` }} />
       </Service>
 
       <section className="border-t border-white/10 py-12">
         <p className="mx-auto w-full max-w-[1200px] px-6 text-[13px] leading-relaxed text-muted sm:px-8">
-          USD, before any applicable tax. Monthly services run month to month; cancel anytime. An AI change
+          USD, plus tax where it applies. Monthly services run month to month; cancel anytime. Websites include
+          12 months of hosting, then $10 a month plus tax. An AI change
           request is one thing you ask for, such as &ldquo;make the headline shorter&rdquo; or &ldquo;use the
           blue version&rdquo;. Buy any service on its own.
         </p>

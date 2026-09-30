@@ -9,6 +9,8 @@ import { SERVICE_TIERS, type TierId } from "./service-tiers";
 export type AiService = "premium-creative" | "advertising" | "web-development";
 
 export type Client = {
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
   id: string;
   domain: string;
   name: string | null;
@@ -56,7 +58,8 @@ export async function getClient(id: string): Promise<Client | null> {
 
 export async function getClientByToken(token: string): Promise<Client | null> {
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return null;
-  return ((await sql()`SELECT * FROM clients WHERE token = ${token} AND status = 'active'`) as Client[])[0] ?? null;
+  // Cancelled clients can still open their studio to see past work.
+  return ((await sql()`SELECT * FROM clients WHERE token = ${token} AND status IN ('active', 'cancelled')`) as Client[])[0] ?? null;
 }
 
 /** Change requests used and allowed: per calendar month for monthly tiers, in total for one-time ones. */
@@ -71,4 +74,39 @@ export async function allowance(c: Client): Promise<{ used: number; limit: numbe
   const limit = tier?.requests ?? 0;
   const used = rows[0]?.used ?? 0;
   return { used, limit, left: Math.max(0, limit - used) };
+}
+
+/** A client created from a paid Checkout; returns null when that session was already handled. */
+export async function createPaidClient(c: {
+  domain: string;
+  name: string | null;
+  email: string;
+  service: AiService;
+  tier: TierId;
+  checkoutSession: string;
+  customer: string | null;
+  subscription: string | null;
+}): Promise<Client | null> {
+  const rows = (await sql()`
+    INSERT INTO clients (id, domain, name, email, service, tier, token, stripe_checkout_session, stripe_customer_id, stripe_subscription_id)
+    VALUES (${randomUUID()}, ${c.domain}, ${c.name}, ${c.email}, ${c.service}, ${c.tier}, ${randomBytes(24).toString("base64url")},
+            ${c.checkoutSession}, ${c.customer}, ${c.subscription})
+    ON CONFLICT (stripe_checkout_session) DO NOTHING
+    RETURNING *
+  `) as Client[];
+  return rows[0] ?? null;
+}
+
+export async function setSubscription(clientId: string, subscription: string) {
+  await sql()`UPDATE clients SET stripe_subscription_id = ${subscription} WHERE id = ${clientId}`;
+}
+
+/** A subscription ended: monthly services stop; a website's hosting ends and it's taken offline. */
+export async function endSubscription(subscription: string): Promise<Client | null> {
+  const rows = (await sql()`
+    UPDATE clients SET status = 'cancelled' WHERE stripe_subscription_id = ${subscription} AND status <> 'cancelled' RETURNING *
+  `) as Client[];
+  const c = rows[0] ?? null;
+  if (c?.service === "web-development") await sql()`UPDATE sites SET published = false WHERE client_id = ${c.id}`;
+  return c;
 }

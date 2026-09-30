@@ -12,6 +12,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!sameOrigin(request) || !(await isAdmin())) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
   const client = await getClient((await params).id);
   if (!client) return NextResponse.json({ ok: false, error: "Client not found" }, { status: 404 });
+  // A request (sign-up before live payments): activating it starts the service without charging.
+  if (client.status === "requested" && process.env.DATABASE_URL) {
+    const { neon } = await import("@neondatabase/serverless");
+    await neon(process.env.DATABASE_URL)`UPDATE clients SET status = 'active' WHERE id = ${client.id}`;
+    client.status = "active";
+  }
+  if (client.status !== "active") return NextResponse.json({ ok: false, error: "This client's plan has ended." }, { status: 409 });
   after(async () => {
     try {
       console.log(`AI service for ${client.domain}: ${await runService(client)}`);

@@ -292,6 +292,7 @@ export async function listContent(clientId: string): Promise<ContentItem[]> {
  * from their monthly allowance; the previous version is kept in history.
  */
 export async function reviseItem(client: Client, itemId: number, instruction: string): Promise<{ ok: true; item: ContentItem } | { ok: false; error: string }> {
+  if (client.status !== "active") return { ok: false, error: "Your plan has ended, so changes are paused." };
   const left = (await allowance(client)).left;
   if (left <= 0) return { ok: false, error: `You've used all ${tierFor(client)?.requests ?? 0} change requests this month.` };
   const item = ((await sql()`
