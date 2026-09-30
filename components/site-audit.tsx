@@ -1315,39 +1315,19 @@ function AuditResults({
         </div>
       )}
 
-      {growthPlanEnabled() ? <GrowthPlanOffer lead={lead} /> : (
-        <div className="rounded-2xl border border-electric/20 bg-electric/5 p-6 sm:p-8">
-          <p className="font-display text-xl text-ink">
-            Want a deeper analysis?
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            This is a surface-level scan. A full Apereel audit covers keyword
-            gaps, competitor positioning, conversion bottlenecks, and a
-            prioritized action plan. Tell us about your business and we&apos;ll
-            show you what&apos;s limiting your growth.
-          </p>
-          <a
-            href="#contact"
-            className="press-scale mt-4 inline-flex h-10 items-center rounded-full bg-electric px-5 text-[12px] font-semibold tracking-[0.08em] text-navy uppercase transition-colors duration-200 hover:bg-electric-deep"
-          >
-            Get a Full Audit
-          </a>
-        </div>
-      )}
+      <GrowthPlanOffer lead={lead} />
     </div>
   );
 }
 
-// The paid Growth Plan offer. Hidden until NEXT_PUBLIC_GROWTH_PLAN=on (live
-// Stripe keys); "?growthplan=preview" shows it for testing in the meantime.
-function growthPlanEnabled() {
-  if (process.env.NEXT_PUBLIC_GROWTH_PLAN === "on") return true;
-  return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("growthplan") === "preview";
-}
+// Live checkout only once NEXT_PUBLIC_GROWTH_PLAN=on; before that a click is
+// saved as a request that John runs from /admin (the server decides).
+const CHECKOUT_LIVE = process.env.NEXT_PUBLIC_GROWTH_PLAN === "on";
 
 function GrowthPlanOffer({ lead }: { lead: { url: string; email: string; name: string } }) {
   const [busy, setBusy] = useState<AnalysisTierId | null>(null);
   const [message, setMessage] = useState("");
+  const [requested, setRequested] = useState<AnalysisTierId | null>(null);
 
   async function start(tier: AnalysisTierId) {
     setBusy(tier);
@@ -1358,7 +1338,12 @@ function GrowthPlanOffer({ lead }: { lead: { url: string; email: string; name: s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...lead, tier }),
       });
-      const json = (await res.json()) as { ok: boolean; url?: string; error?: string };
+      const json = (await res.json()) as { ok: boolean; url?: string; requested?: boolean; error?: string };
+      if (json.ok && json.requested) {
+        setBusy(null);
+        setRequested(tier);
+        return;
+      }
       if (!json.ok || !json.url) throw new Error(json.error || "Checkout failed");
       window.location.assign(json.url);
     } catch (err) {
@@ -1397,21 +1382,29 @@ function GrowthPlanOffer({ lead }: { lead: { url: string; email: string; name: s
             <button
               type="button"
               onClick={() => start(t.id)}
-              disabled={busy !== null}
+              disabled={busy !== null || requested !== null}
               className={`press-scale mt-4 inline-flex h-11 items-center justify-center rounded-full px-5 text-[12px] font-semibold tracking-[0.06em] uppercase transition-colors duration-200 disabled:opacity-60 ${t.id === "growth" ? "bg-electric text-navy hover:bg-electric-deep" : "border border-white/25 text-ink hover:border-electric"}`}
             >
-              {busy === t.id ? "Opening checkout\u2026" : `Get the ${t.name}`}
+              {busy === t.id
+                ? CHECKOUT_LIVE ? "Opening checkout\u2026" : "Sending\u2026"
+                : requested === t.id ? "Requested" : `Get the ${t.name}`}
             </button>
           </div>
         ))}
       </div>
+      {requested && (
+        <p role="status" className="mt-5 rounded-xl border border-electric/30 bg-navy-mid p-4 text-[14px] leading-relaxed text-ink">
+          Thanks. Your request for the {ANALYSIS_TIERS.find((t) => t.id === requested)!.name} for {lead.url.replace(/^https?:\/\//, "")} is in.
+          John will email you at {lead.email} within one business day.
+        </p>
+      )}
       {message && (
         <p role="alert" className="mt-3 text-[13px] text-signal">
           {message}
         </p>
       )}
       <p className="mt-5 text-[13px] text-muted">
-        Secure payment by Stripe. Prefer to talk first?{" "}
+        {CHECKOUT_LIVE ? "Secure payment by Stripe. " : ""}Prefer to talk first?{" "}
         <a href="#contact" className="text-electric underline underline-offset-4">
           Tell us about your business
         </a>

@@ -3,7 +3,7 @@ import { neon } from "@neondatabase/serverless";
 // Growth Plan orders. Every state change is conditional on the current
 // status, so replayed or duplicated Stripe events can't double-fulfil.
 
-export type OrderStatus = "pending" | "paid" | "generating" | "needs_review" | "sent" | "failed";
+export type OrderStatus = "requested" | "pending" | "paid" | "generating" | "needs_review" | "sent" | "failed";
 
 function sql() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
@@ -19,11 +19,22 @@ export async function createOrder(o: {
   amountCents: number;
   currency: string;
   tier: string;
+  /** "requested": no payment taken (before live checkout); John runs it from admin. */
+  status?: "pending" | "requested";
 }): Promise<void> {
   await sql()`
-    INSERT INTO growth_orders (id, domain, url, email, name, amount_cents, currency, tier)
-    VALUES (${o.id}, ${o.domain}, ${o.url}, ${o.email}, ${o.name}, ${o.amountCents}, ${o.currency}, ${o.tier})
+    INSERT INTO growth_orders (id, domain, url, email, name, amount_cents, currency, tier, status)
+    VALUES (${o.id}, ${o.domain}, ${o.url}, ${o.email}, ${o.name}, ${o.amountCents}, ${o.currency}, ${o.tier}, ${o.status ?? "pending"})
   `;
+}
+
+/** John runs a request without payment: it joins the pipeline as if paid. */
+export async function startRequest(id: string): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE growth_orders SET status = 'paid', paid_at = now()
+    WHERE id = ${id} AND status = 'requested' RETURNING id
+  `;
+  return rows.length > 0;
 }
 
 export async function attachSession(id: string, sessionId: string): Promise<void> {

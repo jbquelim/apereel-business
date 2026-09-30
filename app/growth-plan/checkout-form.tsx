@@ -10,7 +10,7 @@ export function GrowthPlanCheckoutForm({ site, initialTier = "growth" }: { site:
   const [url, setUrl] = useState(site);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [state, setState] = useState<"idle" | "loading" | "error">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "error" | "requested">("idle");
   const [message, setMessage] = useState("");
 
   async function submit(e: React.FormEvent) {
@@ -23,7 +23,12 @@ export function GrowthPlanCheckoutForm({ site, initialTier = "growth" }: { site:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url, email, name, tier }),
       });
-      const json = (await res.json()) as { ok: boolean; url?: string; error?: string };
+      const json = (await res.json()) as { ok: boolean; url?: string; requested?: boolean; error?: string };
+      // Before live checkout, the order is saved as a request John runs.
+      if (json.ok && json.requested) {
+        setState("requested");
+        return;
+      }
       if (!json.ok || !json.url) throw new Error(json.error || "Checkout failed");
       window.location.assign(json.url);
     } catch (err) {
@@ -34,6 +39,15 @@ export function GrowthPlanCheckoutForm({ site, initialTier = "growth" }: { site:
 
   const field =
     "h-12 w-full rounded-full border border-white/15 bg-navy-mid px-5 text-ink placeholder:text-muted/60 focus:border-electric focus:outline-none";
+  if (state === "requested") {
+    return (
+      <p role="status" className="rounded-2xl border border-electric/30 bg-navy-mid p-5 text-[15px] leading-relaxed text-ink">
+        Thanks. Your request for the {ANALYSIS_TIERS.find((t) => t.id === tier)!.name} is in. John will email you at{" "}
+        {email} within one business day.
+      </p>
+    );
+  }
+
   return (
     <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
       <fieldset className="grid gap-2 sm:col-span-2 sm:grid-cols-3">

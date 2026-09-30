@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin, sameOrigin } from "@/lib/admin-auth";
-import { getOrderDetail, updatePlan } from "@/lib/orders";
+import { getOrderDetail, startRequest, updatePlan } from "@/lib/orders";
 import { deliverReport } from "@/lib/delivery";
 import { triggerStage } from "@/lib/growth-trigger";
 import type { GrowthPlan } from "@/lib/growth-report";
@@ -53,6 +53,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return ok
       ? NextResponse.json({ ok: true })
       : NextResponse.json({ ok: false, error: "Only reports awaiting review can be edited." }, { status: 409 });
+  }
+
+  if (body.action === "run") {
+    if (!(await startRequest(id))) {
+      return NextResponse.json({ ok: false, error: "Only unpaid requests can be run this way." }, { status: 409 });
+    }
+    try {
+      await triggerStage(base, id, "collect");
+      return NextResponse.json({ ok: true });
+    } catch (err) {
+      // The discover cron restarts orders left in 'paid'.
+      return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : "Could not start" }, { status: 502 });
+    }
   }
 
   if (body.action === "regenerate") {

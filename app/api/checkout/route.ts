@@ -3,10 +3,15 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { CHECKOUT_CURRENCY, getStripe } from "@/lib/stripe";
 import { tierById } from "@/lib/analysis-tiers";
 import { attachSession, createOrder } from "@/lib/orders";
+import { isAdmin } from "@/lib/admin-auth";
 
-// Starts a Growth Plan purchase: records a pending order, then hands the
-// visitor to Stripe's hosted Checkout. Nothing is fulfilled here — the signed
-// webhook (app/api/stripe/webhook) is the only place an order becomes paid.
+// Starts a paid analysis: records a pending order, then hands the visitor to
+// Stripe's hosted Checkout. Nothing is fulfilled here — the signed webhook
+// (app/api/stripe/webhook) is the only place an order becomes paid.
+//
+// Until live payments are switched on (NEXT_PUBLIC_GROWTH_PLAN=on) visitors
+// can't pay: their click is saved as a request for John to run from /admin.
+// Signed-in admins still get the Stripe sandbox checkout, for testing.
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS = 10;
@@ -68,6 +73,28 @@ export async function POST(request: Request) {
 
   const tier = tierById(typeof body.tier === "string" ? body.tier : "growth");
   const orderId = randomUUID();
+
+  if (process.env.NEXT_PUBLIC_GROWTH_PLAN !== "on" && !(await isAdmin())) {
+    try {
+      await createOrder({
+        id: orderId,
+        domain: site.domain,
+        url: site.url,
+        email,
+        name: name || null,
+        amountCents: tier.priceCents,
+        currency: CHECKOUT_CURRENCY,
+        tier: tier.id,
+        status: "requested",
+      });
+      await notifyRequest({ id: orderId, domain: site.domain, email, name, tier: tier.name });
+      return NextResponse.json({ ok: true, requested: true });
+    } catch (err) {
+      console.error("Analysis request failed:", err instanceof Error ? err.message : err);
+      return NextResponse.json({ ok: false, error: "We couldn't save your request. Please try again in a moment." }, { status: 500 });
+    }
+  }
+
   try {
     await createOrder({
       id: orderId,
@@ -114,5 +141,31 @@ export async function POST(request: Request) {
       { ok: false, error: "We couldn't start the checkout. Please try again in a moment." },
       { status: 500 },
     );
+  }
+}
+
+async function notifyRequest(r: { id: string; domain: string; email: string; name: string; tier: string }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.apereel.com").replace(/\/$/, "");
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Apereel <noreply@apereel.com>",
+        to: [process.env.CONTACT_TO_EMAIL || "john@apereel.com"],
+        reply_to: r.email,
+        subject: `${r.tier} requested: ${r.domain}`,
+        text: [
+          `${r.name || "Someone"} <${r.email}> asked for the ${r.tier} for ${r.domain}.`,
+          `No payment was taken (checkout isn't live yet).`,
+          ``,
+          `Run it from admin: ${base}/admin/orders/${r.id}`,
+        ].join("\n"),
+      }),
+    });
+  } catch (err) {
+    console.error("Request notification failed:", err instanceof Error ? err.message : err);
   }
 }

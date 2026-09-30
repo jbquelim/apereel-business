@@ -44,7 +44,7 @@ export function ReviewPanel({
     setPriorities((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   };
 
-  async function act(action: "save" | "regenerate" | "send") {
+  async function act(action: "save" | "regenerate" | "send" | "run") {
     setBusy(action);
     setMessage(null);
     const body =
@@ -78,7 +78,9 @@ export function ReviewPanel({
       text:
         action === "save"
           ? "Saved. The preview now shows your edits."
-          : action === "regenerate"
+          : action === "run"
+            ? "Started. This takes about 3 to 5 minutes; you'll get an email when it's ready."
+            : action === "regenerate"
             ? "Regenerating. This takes about 3 minutes; you'll get an email when it's ready."
             : json.emailed
               ? "Sent. The customer has been emailed their private link."
@@ -165,12 +167,21 @@ export function ReviewPanel({
         </>
       ) : (
         <p className="text-[14px] text-muted">
-          {status === "sent"
+          {status === "requested"
+            ? "Requested, not paid (checkout isn't live yet). Run it to generate the report; the customer isn't charged."
+            : status === "sent"
             ? "This report has been sent and can no longer be edited."
             : status === "generating"
               ? "The report is being generated. Refresh in a few minutes."
               : "There's no report to edit yet."}
         </p>
+      )}
+
+      {status === "requested" && (
+        <button type="button" onClick={() => act("run")} disabled={!!busy}
+          className="press-scale h-11 rounded-full bg-electric px-5 text-[13px] font-semibold text-navy disabled:opacity-50">
+          {busy === "run" ? "Starting…" : "Run it now (no charge)"}
+        </button>
       )}
 
       {["needs_review", "generation_failed", "paid"].includes(status) && (

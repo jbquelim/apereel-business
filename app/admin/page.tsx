@@ -8,6 +8,7 @@ import { formatUsd, tierById } from "@/lib/analysis-tiers";
 export const metadata: Metadata = { title: "Growth Plan orders", robots: { index: false, follow: false } };
 
 const STATUS_LABEL: Record<string, string> = {
+  requested: "Requested, not paid",
   paid: "Paid, waiting to generate",
   generating: "Generating",
   needs_review: "Needs your review",
@@ -42,7 +43,7 @@ export default async function AdminPage() {
                   <th className="py-2 pr-4 font-normal">Website</th>
                   <th className="py-2 pr-4 font-normal">Customer</th>
                   <th className="py-2 pr-4 font-normal">Status</th>
-                  <th className="py-2 pr-4 font-normal">Paid</th>
+                  <th className="py-2 pr-4 font-normal">Paid / requested</th>
                   <th className="py-2 font-normal" />
                 </tr>
               </thead>
@@ -57,10 +58,10 @@ export default async function AdminPage() {
                       )}
                     </td>
                     <td className="py-3 pr-4 text-ink/80">{o.name ? `${o.name} · ` : ""}{o.email}</td>
-                    <td className={`py-3 pr-4 ${o.status === "needs_review" ? "text-electric" : o.status.includes("failed") ? "text-signal" : "text-ink/80"}`}>
+                    <td className={`py-3 pr-4 ${o.status === "needs_review" || o.status === "requested" ? "text-electric" : o.status.includes("failed") ? "text-signal" : "text-ink/80"}`}>
                       {STATUS_LABEL[o.status] ?? o.status}
                     </td>
-                    <td className="py-3 pr-4 text-muted">{fmt(o.paid_at)}</td>
+                    <td className="py-3 pr-4 text-muted">{fmt(o.paid_at ?? o.created_at)}</td>
                     <td className="py-3 text-right">
                       <Link href={`/admin/orders/${o.id}`} className="text-electric underline underline-offset-4">
                         Open
