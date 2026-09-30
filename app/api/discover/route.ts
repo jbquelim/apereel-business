@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { triggerStage } from "@/lib/growth-trigger";
 import { refreshTrackedStores } from "@/lib/tracked-refresh";
+import { clientsDueThisMonth } from "@/lib/ai-services";
+import { processMediaJobs } from "@/lib/media";
 
 // Snowball discovery: drain the crawl queue by running the audit pipeline in
 // ingest mode (classification + inventory + competitor discovery only) on
@@ -64,6 +66,18 @@ export async function GET(request: Request) {
       console.error("Growth Plan restart failed:", o.id, err instanceof Error ? err.message : err),
     );
   }
+
+  // AI services: start this month's content and ads for clients who don't
+  // have them yet (each in its own function), and render queued video.
+  for (const c of await clientsDueThisMonth(5).catch(() => [])) {
+    await fetch(`${base}/api/ai-services/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-internal-secret": process.env.CRON_SECRET ?? "" },
+      body: JSON.stringify({ clientId: c.id }),
+      signal: AbortSignal.timeout(20_000),
+    }).catch((err) => console.error("AI service start failed:", c.domain, err instanceof Error ? err.message : err));
+  }
+  await processMediaJobs(20_000).catch((err) => console.error("Media jobs failed:", err instanceof Error ? err.message : err));
 
   // Cheap, AI-free refresh of tracked stores (competitors of audited
   // businesses) so price and catalog history accrues on a steady cadence.

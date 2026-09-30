@@ -228,6 +228,50 @@ await sql`
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )
 `;
+// Video and animation jobs wait here until a media provider is connected.
+await sql`
+  CREATE TABLE IF NOT EXISTS media_jobs (
+    id BIGSERIAL PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    item_id BIGINT,
+    site_id TEXT,
+    kind TEXT NOT NULL,
+    brief JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'waiting_provider',
+    provider TEXT,
+    output_url TEXT,
+    cost_usd NUMERIC(10,4),
+    error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+await sql`CREATE INDEX IF NOT EXISTS idx_media_jobs_status ON media_jobs (status, created_at)`;
+// Customer websites: the whole site as one JSON document, rendered to HTML.
+await sql`
+  CREATE TABLE IF NOT EXISTS sites (
+    id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL UNIQUE,
+    slug TEXT UNIQUE NOT NULL,
+    custom_domain TEXT UNIQUE,
+    domain_status TEXT,
+    template_id TEXT,
+    doc JSONB NOT NULL,
+    history JSONB NOT NULL DEFAULT '[]'::jsonb,
+    published BOOLEAN NOT NULL DEFAULT false,
+    hosting_until DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+await sql`
+  CREATE TABLE IF NOT EXISTS site_leads (
+    id BIGSERIAL PRIMARY KEY,
+    site_id TEXT NOT NULL,
+    name TEXT, email TEXT, phone TEXT, message TEXT, page TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
 await sql`
   CREATE TABLE IF NOT EXISTS proposals (
     order_id TEXT PRIMARY KEY,

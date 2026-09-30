@@ -48,7 +48,7 @@ export function NewClientForm() {
   );
 }
 
-export function GenerateButton({ id }: { id: string }) {
+export function GenerateButton({ id, label }: { id: string; label: string }) {
   const [state, setState] = useState<"idle" | "busy" | "started" | "error">("idle");
   const [msg, setMsg] = useState("");
   async function go() {
@@ -61,7 +61,7 @@ export function GenerateButton({ id }: { id: string }) {
   return (
     <span className="ml-4 inline-block">
       <button type="button" onClick={go} disabled={state === "busy" || state === "started"} className="text-electric underline underline-offset-4 disabled:text-muted disabled:no-underline">
-        {state === "busy" ? "Starting…" : state === "started" ? "Generating (a few minutes)" : "Generate this month"}
+        {state === "busy" ? "Starting…" : state === "started" ? "Running (a few minutes)" : label}
       </button>
       {state === "error" && <span className="block text-[12px] text-signal">{msg || "Failed"}</span>}
     </span>

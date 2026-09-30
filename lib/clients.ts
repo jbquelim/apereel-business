@@ -59,13 +59,16 @@ export async function getClientByToken(token: string): Promise<Client | null> {
   return ((await sql()`SELECT * FROM clients WHERE token = ${token} AND status = 'active'`) as Client[])[0] ?? null;
 }
 
-/** Change requests used and allowed this calendar month. */
+/** Change requests used and allowed: per calendar month for monthly tiers, in total for one-time ones. */
 export async function allowance(c: Client): Promise<{ used: number; limit: number; left: number }> {
+  const tier = tierFor(c);
+  const since = tier?.cadence === "monthly" ? "month" : "all";
   const rows = (await sql()`
     SELECT count(*)::int AS used FROM ai_requests
-    WHERE client_id = ${c.id} AND counts_toward_allowance AND ok AND created_at >= date_trunc('month', now())
+    WHERE client_id = ${c.id} AND counts_toward_allowance AND ok
+      AND (${since} = 'all' OR created_at >= date_trunc('month', now()))
   `) as { used: number }[];
-  const limit = tierFor(c)?.requests ?? 0;
+  const limit = tier?.requests ?? 0;
   const used = rows[0]?.used ?? 0;
   return { used, limit, left: Math.max(0, limit - used) };
 }

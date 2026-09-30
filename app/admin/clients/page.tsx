@@ -58,7 +58,7 @@ export default async function ClientsPage() {
                     <td className="py-3 pr-4 font-mono text-ink/85">${c.cost.toFixed(2)}</td>
                     <td className="py-3 text-right">
                       <a href={`/studio/${c.token}`} className="text-electric underline underline-offset-4">Studio</a>
-                      {c.service === "premium-creative" && <GenerateButton id={c.id} />}
+                      <GenerateButton id={c.id} label={c.service === "web-development" ? "Build the site" : "Generate this month"} />
                     </td>
                   </tr>
                 );

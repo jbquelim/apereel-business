@@ -2,32 +2,191 @@
 
 import { useState } from "react";
 import type { ContentItem, GuideData, NewsletterData, PostData } from "@/lib/content-engine";
+import type { CarouselAd, StaticAd } from "@/lib/ads-engine";
+import type { MediaBrief } from "@/lib/media";
 
-// Content cards with copy, approve and "ask for a change". Markdown bodies
-// are shown as plain text with line breaks; they paste cleanly anywhere.
+// Content and ad cards: rendered creatives with downloads, copy for each
+// platform, approve, and "ask for a change". Videos show their script and
+// shot list until rendered, then the video itself.
 
-const KIND_TITLE: Record<string, string> = { post: "Social posts", guide: "Buying guides", newsletter: "Newsletters" };
+type Media = Record<string, { status: string; url: string | null }>;
+type VideoData = MediaBrief & { productTitle?: string; caption?: string };
+
+const SECTIONS: { kinds: string[]; title: string; cols: string }[] = [
+  { kinds: ["ad"], title: "Static ads", cols: "sm:grid-cols-2 lg:grid-cols-3" },
+  { kinds: ["carousel"], title: "Carousel ads", cols: "lg:grid-cols-2" },
+  { kinds: ["animated-ad", "video-ad"], title: "Animated and video ads", cols: "sm:grid-cols-2 lg:grid-cols-3" },
+  { kinds: ["post"], title: "Social posts", cols: "sm:grid-cols-2 lg:grid-cols-3" },
+  { kinds: ["video"], title: "Short videos", cols: "sm:grid-cols-2 lg:grid-cols-3" },
+  { kinds: ["guide"], title: "Buying guides", cols: "lg:grid-cols-2" },
+  { kinds: ["newsletter"], title: "Newsletters", cols: "lg:grid-cols-2" },
+];
+
+const tag = (h: string) => `#${h.replace(/^#/, "")}`;
 
 function textOf(item: ContentItem): string {
-  if (item.kind === "post") {
-    const p = item.data as PostData;
-    return `${p.hook}\n\n${p.caption}\n\n${p.cta}\n\n${p.hashtags.map((h) => `#${h.replace(/^#/, "")}`).join(" ")}`;
+  const d = item.data as unknown as Record<string, unknown>;
+  switch (item.kind as string) {
+    case "post": {
+      const p = d as unknown as PostData;
+      return `${p.hook}\n\n${p.caption}\n\n${p.cta}\n\n${p.hashtags.map(tag).join(" ")}`;
+    }
+    case "guide":
+      return `# ${(d as unknown as GuideData).title}\n\n${(d as unknown as GuideData).body}`;
+    case "newsletter": {
+      const n = d as unknown as NewsletterData;
+      return `Subject: ${n.subject}\nPreview: ${n.preview}\n\n${n.body}`;
+    }
+    case "ad": {
+      const a = d as unknown as StaticAd;
+      return [
+        "GOOGLE",
+        ...a.google.headlines.map((h, i) => `Headline ${i + 1}: ${h}`),
+        ...a.google.descriptions.map((x, i) => `Description ${i + 1}: ${x}`),
+        "",
+        "META",
+        `Primary text: ${a.meta.primaryText}`,
+        `Headline: ${a.meta.headline}`,
+        "",
+        "TIKTOK",
+        a.tiktok.text,
+      ].join("\n");
+    }
+    case "carousel": {
+      const c = d as unknown as CarouselAd;
+      return [`Primary text: ${c.meta.primaryText}`, `Headline: ${c.meta.headline}`, "", ...c.frames.map((f, i) => `Card ${i + 1}: ${f.headline} — ${f.sub}`)].join("\n");
+    }
+    default: {
+      const v = d as unknown as VideoData;
+      return [v.caption ?? "", "", ...(v.shots ?? []).map((s) => `${s.seconds}s: ${s.visual}${s.onScreenText ? ` [${s.onScreenText}]` : ""}`), v.voiceover ? `\nVoiceover: ${v.voiceover}` : ""].join("\n");
+    }
   }
-  if (item.kind === "guide") {
-    const g = item.data as GuideData;
-    return `# ${g.title}\n\n${g.body}`;
-  }
-  const n = item.data as NewsletterData;
-  return `Subject: ${n.subject}\nPreview: ${n.preview}\n\n${n.body}`;
 }
 
-function Card({ token, initial, canRevise, onUsed }: { token: string; initial: ContentItem; canRevise: boolean; onUsed: () => void }) {
+function Downloads({ token, id, frames }: { token: string; id: number; frames?: number }) {
+  const href = (size: string, frame?: number) => `/api/creative/${id}?t=${token}&size=${size}${frame != null ? `&frame=${frame}` : ""}`;
+  return (
+    <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[12px]">
+      {frames
+        ? Array.from({ length: frames }, (_, i) => (
+            <a key={i} href={href("square", i)} download className="text-electric underline underline-offset-4">Card {i + 1}</a>
+          ))
+        : (["square", "story", "landscape"] as const).map((s) => (
+            <a key={s} href={href(s)} download className="text-electric underline underline-offset-4">
+              {s === "square" ? "Feed 1:1" : s === "story" ? "Story 9:16" : "Display 1.91:1"}
+            </a>
+          ))}
+    </p>
+  );
+}
+
+function Body({ item, token, media }: { item: ContentItem; token: string; media?: { status: string; url: string | null } }) {
+  const d = item.data as unknown as Record<string, unknown>;
+  const kind = item.kind as string;
+  if (kind === "post") {
+    const p = d as unknown as PostData;
+    return (
+      <>
+        <p className="mt-2 text-[16px] font-medium text-ink">{p.hook}</p>
+        <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-ink/85">{p.caption}</p>
+        <p className="mt-2 text-[14px] text-electric">{p.cta}</p>
+        <p className="mt-2 text-[13px] text-muted">{p.hashtags.map(tag).join(" ")}</p>
+      </>
+    );
+  }
+  if (kind === "ad") {
+    const a = d as unknown as StaticAd;
+    return (
+      <>
+        <p className="mt-2 text-[16px] font-medium text-ink">{a.angle}</p>
+        <Downloads token={token} id={item.id} />
+        <div className="mt-4 space-y-3 text-[13px] leading-relaxed">
+          <div>
+            <p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">Google</p>
+            <p className="text-ink/85">{a.google.headlines.join(" · ")}</p>
+            <p className="text-muted">{a.google.descriptions.join(" ")}</p>
+          </div>
+          <div>
+            <p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">Meta</p>
+            <p className="text-ink/85">{a.meta.primaryText}</p>
+            <p className="text-muted">{a.meta.headline}</p>
+          </div>
+          <div>
+            <p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">TikTok</p>
+            <p className="text-ink/85">{a.tiktok.text}</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+  if (kind === "carousel") {
+    const c = d as unknown as CarouselAd;
+    return (
+      <>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+          {c.frames.map((_, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={`/api/creative/${item.id}?t=${token}&size=square&frame=${i}`} alt={`Card ${i + 1}`} className="h-40 w-40 shrink-0 rounded-lg bg-white object-cover" loading="lazy" />
+          ))}
+        </div>
+        <Downloads token={token} id={item.id} frames={c.frames.length} />
+        <p className="mt-3 text-[14px] text-ink/85">{c.meta.primaryText}</p>
+        <p className="text-[13px] text-muted">{c.meta.headline}</p>
+      </>
+    );
+  }
+  if (kind === "guide" || kind === "newsletter") {
+    const title = kind === "guide" ? (d as unknown as GuideData).title : (d as unknown as NewsletterData).subject;
+    const sub = kind === "guide" ? `For searches like “${(d as unknown as GuideData).targetSearch}”` : (d as unknown as NewsletterData).preview;
+    const body = kind === "guide" ? (d as unknown as GuideData).body : (d as unknown as NewsletterData).body;
+    return (
+      <>
+        <p className="mt-2 text-[17px] font-medium text-ink">{title}</p>
+        <p className="mt-1 text-[13px] text-muted">{sub}</p>
+        <details className="mt-3">
+          <summary className="cursor-pointer text-[13px] text-electric">Read it</summary>
+          <p className="mt-3 max-h-96 overflow-y-auto whitespace-pre-line text-[14px] leading-relaxed text-ink/85">{body}</p>
+        </details>
+      </>
+    );
+  }
+  // Videos: the finished file, or the brief while it renders.
+  const v = d as unknown as VideoData;
+  return (
+    <>
+      {media?.url ? (
+        <video src={media.url} controls playsInline className="mt-3 w-full rounded-lg bg-black" />
+      ) : (
+        <p className="mt-2 inline-flex rounded-full border border-white/15 px-3 py-1 font-mono text-[11px] text-muted">
+          {media?.status === "failed" ? "Rendering failed; we'll retry" : "Script ready · video rendering soon"}
+        </p>
+      )}
+      <p className="mt-3 text-[15px] font-medium text-ink">{v.title}</p>
+      {v.caption && <p className="mt-1 text-[14px] text-ink/85">{v.caption}</p>}
+      <details className="mt-3">
+        <summary className="cursor-pointer text-[13px] text-electric">Shot list</summary>
+        <ol className="mt-2 space-y-1 text-[13px] text-ink/80">
+          {(v.shots ?? []).map((s, i) => (
+            <li key={i}>
+              <span className="font-mono text-muted">{s.seconds}s</span> {s.visual}
+              {s.onScreenText && <span className="text-electric"> “{s.onScreenText}”</span>}
+            </li>
+          ))}
+        </ol>
+        {v.voiceover && <p className="mt-2 text-[13px] text-muted">Voiceover: {v.voiceover}</p>}
+      </details>
+    </>
+  );
+}
+
+function Card({ token, initial, canRevise, onUsed, media }: { token: string; initial: ContentItem; canRevise: boolean; onUsed: () => void; media?: { status: string; url: string | null } }) {
   const [item, setItem] = useState(initial);
   const [open, setOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [version, setVersion] = useState(0);
 
   async function post(body: object) {
     const res = await fetch(`/api/studio/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
@@ -41,6 +200,7 @@ function Card({ token, initial, canRevise, onUsed }: { token: string; initial: C
     setBusy(false);
     if (!json?.ok || !json.item) return setMsg(json?.error ?? "That didn't work. Please try again.");
     setItem(json.item);
+    setVersion((v) => v + 1);
     setInstruction("");
     setOpen(false);
     onUsed();
@@ -56,46 +216,22 @@ function Card({ token, initial, canRevise, onUsed }: { token: string; initial: C
     setTimeout(() => setCopied(false), 1500);
   }
 
-  const post_ = item.kind === "post" ? (item.data as PostData) : null;
+  const kind = item.kind as string;
+  const hero = kind === "ad" ? `/api/creative/${item.id}?t=${token}&size=square&v=${version}` : kind === "post" || kind === "video" || kind.endsWith("-ad") ? item.image : null;
   return (
     <article className={`flex flex-col overflow-hidden rounded-2xl border bg-navy-mid ${item.status === "approved" ? "border-electric/50" : "border-white/10"}`}>
-      {item.image && (
+      {hero && !(media?.url) && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.image} alt={post_?.productTitle ?? ""} className="aspect-square w-full bg-white object-contain" loading="lazy" />
+        <img src={hero} alt="" className="aspect-square w-full bg-white object-contain" loading="lazy" />
       )}
       <div className="flex flex-1 flex-col p-5">
         <p className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">
-          {item.platform ?? item.kind}
+          {item.platform ?? kind}
           {item.status === "approved" && <span className="ml-2 text-electric">· Approved</span>}
         </p>
-        {post_ ? (
-          <>
-            <p className="mt-2 text-[16px] font-medium text-ink">{post_.hook}</p>
-            <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-ink/85">{post_.caption}</p>
-            <p className="mt-2 text-[14px] text-electric">{post_.cta}</p>
-            <p className="mt-2 text-[13px] text-muted">{post_.hashtags.map((h) => `#${h.replace(/^#/, "")}`).join(" ")}</p>
-          </>
-        ) : item.kind === "guide" ? (
-          <>
-            <p className="mt-2 text-[17px] font-medium text-ink">{(item.data as GuideData).title}</p>
-            <p className="mt-1 text-[13px] text-muted">For searches like &ldquo;{(item.data as GuideData).targetSearch}&rdquo;</p>
-            <details className="mt-3">
-              <summary className="cursor-pointer text-[13px] text-electric">Read the guide</summary>
-              <p className="mt-3 max-h-96 overflow-y-auto whitespace-pre-line text-[14px] leading-relaxed text-ink/85">{(item.data as GuideData).body}</p>
-            </details>
-          </>
-        ) : (
-          <>
-            <p className="mt-2 text-[17px] font-medium text-ink">{(item.data as NewsletterData).subject}</p>
-            <p className="mt-1 text-[13px] text-muted">{(item.data as NewsletterData).preview}</p>
-            <details className="mt-3">
-              <summary className="cursor-pointer text-[13px] text-electric">Read the newsletter</summary>
-              <p className="mt-3 max-h-96 overflow-y-auto whitespace-pre-line text-[14px] leading-relaxed text-ink/85">{(item.data as NewsletterData).body}</p>
-            </details>
-          </>
-        )}
+        <Body item={item} token={token} media={media} />
         <div className="mt-auto flex flex-wrap gap-x-4 gap-y-2 pt-5 text-[13px]">
-          <button type="button" onClick={copy} className="text-electric underline underline-offset-4">{copied ? "Copied" : "Copy"}</button>
+          <button type="button" onClick={copy} className="text-electric underline underline-offset-4">{copied ? "Copied" : "Copy text"}</button>
           <button type="button" onClick={toggleApprove} className="text-electric underline underline-offset-4">
             {item.status === "approved" ? "Unapprove" : "Approve"}
           </button>
@@ -109,7 +245,7 @@ function Card({ token, initial, canRevise, onUsed }: { token: string; initial: C
               rows={3}
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
-              placeholder="e.g. Make it shorter and mention it's in stock"
+              placeholder="e.g. Shorter headline, and mention free local pickup"
               className="w-full rounded-xl border border-white/15 bg-navy px-3 py-2 text-[14px] text-ink focus:border-electric focus:outline-none"
             />
             <button type="submit" disabled={busy || instruction.trim().length < 3} className="press-scale h-10 rounded-full bg-electric px-4 text-[12px] font-semibold text-navy disabled:opacity-50">
@@ -123,21 +259,21 @@ function Card({ token, initial, canRevise, onUsed }: { token: string; initial: C
   );
 }
 
-export function StudioItems({ token, items, left }: { token: string; items: ContentItem[]; left: number }) {
+export function StudioItems({ token, items, left, media }: { token: string; items: ContentItem[]; left: number; media: Media }) {
   const [remaining, setRemaining] = useState(left);
   return (
     <div className="mt-12 space-y-14">
-      {(["post", "guide", "newsletter"] as const).map((kind) => {
-        const list = items.filter((i) => i.kind === kind);
+      {SECTIONS.map(({ kinds, title, cols }) => {
+        const list = items.filter((i) => kinds.includes(i.kind as string));
         if (list.length === 0) return null;
         return (
-          <section key={kind}>
+          <section key={title}>
             <h2 className="font-display text-2xl text-ink">
-              {KIND_TITLE[kind]} <span className="font-mono text-[14px] text-muted">{list.length}</span>
+              {title} <span className="font-mono text-[14px] text-muted">{list.length}</span>
             </h2>
-            <div className={`mt-6 grid gap-5 ${kind === "post" ? "sm:grid-cols-2 lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+            <div className={`mt-6 grid gap-5 ${cols}`}>
               {list.map((i) => (
-                <Card key={i.id} token={token} initial={i} canRevise={remaining > 0} onUsed={() => setRemaining((n) => Math.max(0, n - 1))} />
+                <Card key={i.id} token={token} initial={i} canRevise={remaining > 0} media={media[i.id]} onUsed={() => setRemaining((n) => Math.max(0, n - 1))} />
               ))}
             </div>
           </section>

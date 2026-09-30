@@ -3,6 +3,7 @@ import { callClaude, parseJson } from "./ai";
 import { allowance, tierFor, type Client } from "./clients";
 import { fetchAuditResult } from "./marketdb";
 import { crawlSite } from "./site-crawl";
+import { queueMediaJob, type MediaBrief, type MediaKind } from "./media";
 
 // The content service, automated: the client's own products (from our crawl,
 // saved in page_snapshots) plus what we know of their market (the saved
@@ -16,11 +17,12 @@ export type PostData = { platform: string; hook: string; caption: string; hashta
 export type GuideData = { title: string; targetSearch: string; summary: string; body: string };
 export type NewsletterData = { subject: string; preview: string; body: string };
 
-// What each content tier produces per month (videos come with the video pipeline).
-const VOLUME: Record<string, { posts: number; guides: number; newsletters: number }> = {
-  fix: { posts: 12, guides: 0, newsletters: 0 },
-  build: { posts: 20, guides: 2, newsletters: 0 },
-  grow: { posts: 30, guides: 4, newsletters: 2 },
+// What each content tier produces per month. Videos are briefed now and
+// rendered by the media queue (lib/media) once a provider is connected.
+const VOLUME: Record<string, { posts: number; guides: number; newsletters: number; videos: number }> = {
+  fix: { posts: 12, guides: 0, newsletters: 0, videos: 0 },
+  build: { posts: 20, guides: 2, newsletters: 0, videos: 4 },
+  grow: { posts: 30, guides: 4, newsletters: 2, videos: 8 },
 };
 
 function sql() {
@@ -50,7 +52,7 @@ export async function loadCatalog(domain: string): Promise<Product[]> {
 }
 
 /** Products worth featuring: with a photo, spread across the catalog. */
-function pickProducts(all: Product[], n: number): Product[] {
+export function pickProducts(all: Product[], n: number): Product[] {
   const pool = all.filter((p) => p.image);
   const list = pool.length >= n ? pool : all;
   if (list.length <= n) return list;
@@ -58,14 +60,14 @@ function pickProducts(all: Product[], n: number): Product[] {
   return Array.from({ length: n }, (_, i) => list[Math.floor(i * step)]);
 }
 
-type AuditLike = {
+export type AuditLike = {
   headline?: string;
   translateAdvantage?: { strength?: string };
   industry?: { subIndustry?: string; offering?: string; businessModel?: string | null; competitors?: { name: string; strength: string }[] } | null;
   demand?: { rows: { query: string; coverage: string | null }[] };
 };
 
-function marketBrief(domain: string, audit: AuditLike | null): string {
+export function marketBrief(domain: string, audit: AuditLike | null): string {
   const a = audit;
   return [
     `BUSINESS: ${domain}${a?.industry?.subIndustry ? ` (${a.industry.subIndustry})` : ""}`,
@@ -79,7 +81,7 @@ function marketBrief(domain: string, audit: AuditLike | null): string {
     .join("\n");
 }
 
-const RULES = `Rules:
+export const RULES = `Rules:
 - Use only facts given here: product names, prices and the business's advantage. Never invent discounts, awards, reviews, statistics, shipping or guarantees.
 - Plain, confident language for real buyers; no hype words ("revolutionary", "game-changing", "unparalleled").
 - Never name competitors in customer-facing copy.
@@ -147,24 +149,83 @@ ${RULES}`,
   return parseJson<NewsletterData>(text);
 }
 
-async function save(clientId: string, batch: string, kind: string, data: object, product?: Product | null, platform?: string | null) {
-  await sql()`
+export async function saveItem(clientId: string, batch: string, kind: string, data: object, product?: Product | null, platform?: string | null): Promise<number> {
+  const rows = (await sql()`
     INSERT INTO content_items (client_id, batch, kind, platform, product_url, image, data)
     VALUES (${clientId}, ${batch}, ${kind}, ${platform ?? null}, ${product?.url ?? null}, ${product?.image ?? null}, ${JSON.stringify(data)}::jsonb)
-  `;
+    RETURNING id
+  `) as { id: number }[];
+  return rows[0].id;
+}
+const save = saveItem;
+
+/** Products with fresh photos: re-reads the site when we have none yet. */
+export async function catalogWithPhotos(domain: string): Promise<Product[]> {
+  let catalog = await loadCatalog(domain);
+  if (catalog.filter((p) => p.image).length < 5) {
+    await crawlSite(domain, 100_000);
+    catalog = await loadCatalog(domain);
+  }
+  if (catalog.length === 0) throw new Error(`No products could be read from ${domain}`);
+  return catalog;
+}
+
+const cut = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+
+/**
+ * Video briefs (script, shots, on-screen text and a generation prompt), one
+ * per product, built from the product's real photo. Saved as items and
+ * queued for rendering.
+ */
+export async function writeVideoBriefs(
+  client: Client,
+  brief: string,
+  products: Product[],
+  opts: { batch: string; itemKind: string; mediaKind: MediaKind; style: string; duration: number; aspect: MediaBrief["aspect"] },
+): Promise<number> {
+  if (products.length === 0) return 0;
+  const text = await callClaude({
+    clientId: client.id,
+    purpose: `${opts.itemKind}:briefs`,
+    maxTokens: 6000,
+    prompt: `Write ${products.length} short video brief(s) for the business below, one per product. Style: ${opts.style}. Each video is about ${opts.duration} seconds, ${opts.aspect}, made from the product's real photo.
+
+${brief}
+
+PRODUCTS:
+${products.map((p, i) => `${i + 1}. ${p.title}${p.price != null ? ` (${p.currency ?? "$"}${p.price})` : ""}`).join("\n")}
+
+Return ONLY a JSON array, one object per product in order:
+[{ "title": "internal title", "productTitle": "exactly as given", "shots": [{ "seconds": 3, "visual": "what the camera shows", "onScreenText": "max 6 words, optional" }], "voiceover": "optional, max 25 words", "caption": "post caption, 1-2 sentences", "prompt": "one detailed prompt for an image-to-video model animating the product photo: camera move, light, mood; no text in the video" }]
+
+${RULES}
+- Shots add up to about ${opts.duration} seconds. Motion only; never ask the model to render words.`,
+  });
+  const briefs = parseJson<(MediaBrief & { productTitle: string; caption?: string })[]>(text) ?? [];
+  let n = 0;
+  for (const [i, b] of briefs.slice(0, products.length).entries()) {
+    const product = products.find((p) => p.title === b.productTitle) ?? products[i];
+    const media: MediaBrief = {
+      title: cut(b.title, 120),
+      duration: opts.duration,
+      aspect: opts.aspect,
+      images: product?.image ? [product.image] : [],
+      shots: Array.isArray(b.shots) ? b.shots.slice(0, 8).map((s) => ({ seconds: Number(s.seconds) || 2, visual: cut(s.visual, 300), onScreenText: cut(s.onScreenText, 60) || undefined })) : [],
+      voiceover: cut(b.voiceover, 300) || undefined,
+      prompt: cut(b.prompt, 1500),
+    };
+    const itemId = await saveItem(client.id, opts.batch, opts.itemKind, { ...media, productTitle: product?.title ?? b.productTitle, caption: cut(b.caption, 400) }, product ?? null, opts.aspect === "9:16" ? "reels / tiktok" : null);
+    await queueMediaJob({ clientId: client.id, itemId, kind: opts.mediaKind, brief: media });
+    n++;
+  }
+  return n;
 }
 
 /** Generates this month's content for a client. Crawls first when we have no recent product data. */
-export async function generateMonth(client: Client): Promise<{ batch: string; posts: number; guides: number; newsletters: number }> {
+export async function generateMonth(client: Client): Promise<{ batch: string; posts: number; guides: number; newsletters: number; videos: number }> {
   const volume = VOLUME[client.tier] ?? VOLUME.fix;
   const batch = new Date().toISOString().slice(0, 7);
-  let catalog = await loadCatalog(client.domain);
-  // No recent crawl, or one from before photos were kept: read the site again.
-  if (catalog.filter((p) => p.image).length < 5) {
-    await crawlSite(client.domain, 100_000);
-    catalog = await loadCatalog(client.domain);
-  }
-  if (catalog.length === 0) throw new Error(`No products could be read from ${client.domain}`);
+  const catalog = await catalogWithPhotos(client.domain);
 
   const audit = await fetchAuditResult<AuditLike>(client.domain);
   const brief = marketBrief(client.domain, audit);
@@ -195,13 +256,21 @@ export async function generateMonth(client: Client): Promise<{ batch: string; po
       newsletters++;
     }
   }
-  return { batch, posts: posts.length, guides, newsletters };
+  const videos = await writeVideoBriefs(client, brief, pickProducts(catalog.filter((p) => p.image), volume.videos), {
+    batch,
+    itemKind: "video",
+    mediaKind: "short-video",
+    style: "short vertical social video that shows the product off in a few quick moves",
+    duration: 8,
+    aspect: "9:16",
+  });
+  return { batch, posts: posts.length, guides, newsletters, videos };
 }
 
 export type ContentItem = {
   id: number;
   batch: string;
-  kind: "post" | "guide" | "newsletter";
+  kind: "post" | "guide" | "newsletter" | "video" | "ad" | "carousel" | "animated-ad" | "video-ad";
   platform: string | null;
   product_url: string | null;
   image: string | null;
