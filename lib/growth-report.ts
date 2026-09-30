@@ -3,10 +3,11 @@ import { fetchAuditResult, fetchCompetitorSet } from "./marketdb";
 import { historyForMany, type HistoryFacts } from "./market-history";
 import { dataForSeoConfigured, rankedKeywords, rankingGaps, searchVolumes, type Rankings } from "./dataforseo";
 
-// The paid Growth Plan report. Two stages so each fits one function run:
-//   collect — the full free audit (internal call) plus paid-only evidence:
-//             page-type audits and PageSpeed for the client's pages and the
-//             competitors' homepages. Everything here is measured, not guessed.
+// The paid Growth Plan report, built in stages so each fits one function run:
+//   collect — the customer's free audit (reused, or re-run) plus page-type
+//             audits and PageSpeed for the client's pages and competitors'.
+//   crawl   — every page from the sitemap (lib/site-crawl) and the client's
+//             product pages side by side with competitors'. Measured, not guessed.
 //   plan    — Claude turns that evidence into priorities and a 30/60/90-day
 //             roadmap, citing only numbers present in the evidence.
 
@@ -56,6 +57,10 @@ export type GrowthReport = {
     competitors: Rankings[];
     gaps: { keyword: string; volume: number | null; competitors: { name: string; position: number | null }[] }[];
   };
+  /** Every-page crawl of the client's site (paid tiers). */
+  crawl?: import("./site-crawl").SiteCrawl;
+  /** Client product pages against competitors' product pages. */
+  productCompare?: import("./site-crawl").CompetitorCompare;
   /** Monthly search volume per buyer search, when DataForSEO is configured. */
   demandVolumes?: Record<string, number>;
   plan?: GrowthPlan;
@@ -227,6 +232,23 @@ function evidenceBlock(r: GrowthReport): string {
   for (const h of r.history ?? []) {
     lines.push(`TRACKED CHANGES ${h.name === "You" ? "(the client)" : h.name} since ${h.since}: ${h.facts.join(" ")}`);
   }
+  if (r.crawl) {
+    const c = r.crawl;
+    lines.push(
+      `SITE CRAWL (every page read by us): sitemap lists ${c.sitemapProducts} product pages and ${c.sitemapCategories} category pages; we read ${c.crawled.product} product pages, ${c.crawled.category} category pages and the homepage${c.blocked ? `; ${c.blocked} requests were refused by the site's firewall` : ""}. Counts below are out of the pages we read, so say "X of the Y product pages we checked", never extrapolate to the whole catalog.`,
+    );
+    if (c.mostlyBlocked) lines.push(`SITE CRAWL MOSTLY BLOCKED: the site's firewall refused most requests; treat crawl counts as partial and list the rest under notMeasured.`);
+    for (const f of c.findings) {
+      lines.push(`CRAWL FINDING [${f.severity}] ${f.label}: ${f.count} of ${f.of}. Examples: ${f.urls.slice(0, 3).join(", ")}`);
+    }
+  }
+  if (r.productCompare) {
+    const fmt = (p: import("./site-crawl").ProductPageProfile) =>
+      `${p.name} (${p.pages} product pages read): price in Google product data ${p.priceInSchemaPct ?? "n/a"}%, ratings/reviews shown ${p.ratingsPct ?? "n/a"}%, spec table ${p.specTablePct ?? "n/a"}%, avg ${p.avgImages ?? "n/a"} images, avg ${p.avgWords ?? "n/a"} words, server response ${p.avgResponseMs ?? "n/a"} ms`;
+    lines.push(`PRODUCT PAGES SIDE BY SIDE — ${fmt(r.productCompare.client)}`);
+    for (const c of r.productCompare.competitors) lines.push(`PRODUCT PAGES SIDE BY SIDE — ${fmt(c)}`);
+    if (r.productCompare.unreadable?.length) lines.push(`PRODUCT PAGES NOT READABLE for: ${r.productCompare.unreadable.join(", ")} (make no claims about their product pages)`);
+  }
   for (const c of r.competitorSpeed) {
     lines.push(`COMPETITOR HOMEPAGE SPEED ${c.name}: ${c.speed ? `mobile performance ${c.speed.performance ?? "n/a"}, LCP ${c.speed.lcp ?? "n/a"}` : "not measured"}`);
   }
@@ -253,6 +275,7 @@ Write the plan as JSON:
 
 Rules:
 - 5 to 8 priorities, ordered by impact on revenue relative to effort; quick high-impact fixes first
+- CRAWL FINDINGS and PRODUCT PAGES SIDE BY SIDE are the strongest evidence in this report (we read those pages ourselves): base the top priorities on them where they apply, quoting the counts as "X of the Y pages we checked" and naming competitors from the side-by-side
 - Every priority's "evidence" must quote facts and numbers that appear in the evidence above. Never invent numbers, rankings, traffic, conversion rates or revenue figures
 - Prefer specific, verifiable fixes (e.g. "add Product structured data with price and availability to product pages") over generic advice
 - Missing or unmeasured data is a limitation of our crawler, never a claim about the client's site; a tool "not seen" on a homepage may still be in use

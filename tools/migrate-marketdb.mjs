@@ -166,6 +166,32 @@ await sql`
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_growth_orders_status ON growth_orders (status, created_at)`;
 await sql`
+  CREATE TABLE IF NOT EXISTS audit_runs (
+    id BIGSERIAL PRIMARY KEY,
+    domain TEXT NOT NULL,
+    result JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
+await sql`CREATE INDEX IF NOT EXISTS idx_audit_runs_domain ON audit_runs (domain, created_at)`;
+await sql`
+  CREATE TABLE IF NOT EXISTS page_snapshots (
+    id BIGSERIAL PRIMARY KEY,
+    domain TEXT NOT NULL,
+    role TEXT NOT NULL,
+    url TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    crawled_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    status INT, blocked BOOLEAN, ms INT, bytes INT,
+    title TEXT, meta_description TEXT, h1_count INT, canonical TEXT, noindex BOOLEAN,
+    schema_types TEXT[], has_product_schema BOOLEAN, has_price BOOLEAN, has_availability BOOLEAN,
+    price NUMERIC, currency TEXT, rating_value NUMERIC, review_count INT, review_widget BOOLEAN,
+    images INT, images_missing_alt INT, words INT, spec_table BOOLEAN, product_links INT
+  )
+`;
+await sql`CREATE INDEX IF NOT EXISTS idx_page_snapshots_domain ON page_snapshots (domain, crawled_at)`;
+await sql`CREATE INDEX IF NOT EXISTS idx_page_snapshots_url ON page_snapshots (url, crawled_at)`;
+await sql`
   CREATE TABLE IF NOT EXISTS audit_results (
     domain TEXT PRIMARY KEY,
     result JSONB NOT NULL,

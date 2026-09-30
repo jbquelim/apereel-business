@@ -825,12 +825,18 @@ function TechStackSection({ stack }: { stack: TechStack }) {
   );
 }
 
+/** The free audit's results, for embedding in paid reports (no offer). */
+export function FreeAuditResults({ data }: { data: unknown }) {
+  return <AuditResults data={data as AuditData} />;
+}
+
 function AuditResults({
   data,
   lead,
 }: {
   data: AuditData;
-  lead: { url: string; email: string; name: string };
+  /** Absent when embedded in a paid report: no offer shown. */
+  lead?: { url: string; email: string; name: string };
 }) {
   const hasScores = Object.values(data.scores).some((s) => s !== null);
   const hasVitals = Object.values(data.vitals).some((v) => v !== null);
@@ -1315,7 +1321,7 @@ function AuditResults({
         </div>
       )}
 
-      <GrowthPlanOffer lead={lead} />
+      {lead && <GrowthPlanOffer lead={lead} />}
     </div>
   );
 }

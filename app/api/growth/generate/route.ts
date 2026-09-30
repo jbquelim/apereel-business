@@ -6,11 +6,13 @@ import { collectShowcase } from "@/lib/showcase";
 import { writePreviewAssets } from "@/lib/preview-assets";
 import { deliverReport } from "@/lib/delivery";
 import { tierById } from "@/lib/analysis-tiers";
+import { compareProductPages, crawlSite } from "@/lib/site-crawl";
 
 // Internal: builds a paid order's Growth Plan in two runs so each fits the
 // function time limit. Called by the Stripe webhook after payment, and by
 // John to regenerate. Returns 202 at once; the work runs after the response.
 //   stage "collect": paid | generation_failed | needs_review(regenerate) → evidence saved
+//   stage "crawl":   every page + competitor product pages → saved
 //   stage "plan":    evidence → plan written → needs_review, John emailed
 
 export const maxDuration = 300;
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
   if (!authorized(request)) return NextResponse.json({ ok: false }, { status: 401 });
   const { orderId, stage = "collect", regenerate = false } = (await request.json().catch(() => ({}))) as {
     orderId?: string;
-    stage?: "collect" | "plan" | "assets";
+    stage?: "collect" | "crawl" | "plan" | "assets";
     regenerate?: boolean;
   };
   if (!orderId) return NextResponse.json({ ok: false, error: "orderId required" }, { status: 400 });
@@ -45,13 +47,38 @@ export async function POST(request: Request) {
         if (!order) throw new Error("Order vanished");
         const report = await collectEvidence(order.url, order.domain, base);
         await saveReport(orderId, report, "generating");
-        await triggerStage(base, orderId, "plan");
+        await triggerStage(base, orderId, "crawl");
       } catch (err) {
         await failGeneration(orderId, err instanceof Error ? err.message : String(err));
         await notifyJohn(orderId, "failed", err instanceof Error ? err.message : String(err));
       }
     });
     return NextResponse.json({ ok: true, stage: "collect" }, { status: 202 });
+  }
+
+  if (stage === "crawl") {
+    after(async () => {
+      try {
+        const order = await getOrder(orderId);
+        if (!order || order.status !== "generating" || !order.report) throw new Error("No collected evidence to crawl from");
+        const report = order.report as GrowthReport;
+        // Crawl and competitor pages share one run: ~150s for the client's
+        // pages, then ~70s for competitors (their sitemaps load meanwhile).
+        const { crawl, pages } = await crawlSite(order.domain, 150_000);
+        const competitors = (report.audit.industry?.competitors ?? []).map((c) => ({ name: c.name, domain: c.domain }));
+        const productCompare = await compareProductPages(
+          { name: "You", domain: order.domain, pages },
+          competitors,
+          70_000,
+        ).catch(() => undefined);
+        await saveReport(orderId, { ...report, crawl, productCompare }, "generating");
+        await triggerStage(base, orderId, "plan");
+      } catch (err) {
+        await failGeneration(orderId, err instanceof Error ? err.message : String(err));
+        await notifyJohn(orderId, "failed", err instanceof Error ? err.message : String(err));
+      }
+    });
+    return NextResponse.json({ ok: true, stage: "crawl" }, { status: 202 });
   }
 
   if (stage === "assets") {

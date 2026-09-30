@@ -3,6 +3,8 @@ import { priceLabel, recommendTiers, type ServiceTiers } from "@/lib/service-tie
 import { BuyerDemandSection } from "@/components/buyer-demand-section";
 import { PreviewSection } from "@/components/preview-section";
 import { tierById } from "@/lib/analysis-tiers";
+import { CrawlSection, ProductCompareSection } from "@/components/crawl-sections";
+import { FreeAuditResults } from "@/components/site-audit";
 
 // The Growth Plan as the customer reads it. Also rendered in John's review
 // page, so what he approves is exactly what is sent.
@@ -48,7 +50,6 @@ export function GrowthReportView({
 }) {
   const analysis = tierById(tier);
   const plan = report.plan;
-  const tech = report.audit.techStack;
   const when = date ? new Date(date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
 
   return (
@@ -142,6 +143,18 @@ export function GrowthReportView({
         <p className="mt-10 text-muted">The plan hasn&apos;t been written yet.</p>
       )}
 
+      {report.crawl && (
+        <Section eyebrow="Every page checked" title="What we found across your site">
+          <CrawlSection crawl={report.crawl} />
+        </Section>
+      )}
+
+      {report.productCompare && report.productCompare.competitors.length > 0 && (
+        <Section eyebrow="Side by side" title="Your product pages against your competitors'">
+          <ProductCompareSection compare={report.productCompare} />
+        </Section>
+      )}
+
       {report.history && report.history.length > 0 && (
         <Section eyebrow="Tracked over time" title="What we've seen change">
           <p className="max-w-2xl text-[14px] leading-relaxed text-muted">
@@ -166,7 +179,8 @@ export function GrowthReportView({
         </Section>
       )}
 
-      {report.audit.demand && report.audit.demand.rows.length > 0 && (
+      {/* Without volumes this repeats the included scan, so show it only with them. */}
+      {report.demandVolumes && report.audit.demand && report.audit.demand.rows.length > 0 && (
         <Section eyebrow="Demand" title="What your buyers search for">
           <BuyerDemandSection demand={report.audit.demand} volumes={report.demandVolumes} />
         </Section>
@@ -274,23 +288,14 @@ export function GrowthReportView({
           </div>
         )}
 
-        {tech && (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-navy-mid p-6">
-            <p className="text-[15px] font-medium text-ink">Marketing tools seen on each homepage</p>
-            <ul className="mt-4 space-y-2 text-[14px]">
-              {[{ ...tech.client, name: "You" }, ...tech.competitors].map((s) => (
-                <li key={s.domain} className="border-b border-white/5 pb-2 text-ink/85">
-                  <span className={s.name === "You" ? "text-electric" : "text-ink"}>{s.name}:</span>{" "}
-                  {s.technologies.map((t) => t.name).join(", ") || "none seen"}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-[12px] text-muted">
-              Some tools load later through a tag manager, so &ldquo;none seen&rdquo; doesn&apos;t mean
-              a tool isn&apos;t used.
-            </p>
-          </div>
-        )}
+      </Section>
+
+      <Section eyebrow="Included" title="Your market scan, in full">
+        <p className="max-w-2xl text-[14px] leading-relaxed text-muted">
+          Everything from the free scan, kept here so this report stands on its own: competitors,
+          their catalogs, buyer searches, marketing tools and site performance.
+        </p>
+        <FreeAuditResults data={report.audit} />
       </Section>
 
       {plan && plan.notMeasured.length > 0 && (

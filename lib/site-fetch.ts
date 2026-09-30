@@ -27,7 +27,7 @@ export async function fetchTextDirect(url: string, timeoutMs = 8000): Promise<st
 }
 
 function extractLocs(xml: string): string[] {
-  return [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((m) => m[1]);
+  return [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((m) => m[1].replace(/&amp;/g, "&"));
 }
 
 // Language-variant duplicates (/fr/product/x mirrors /product/x) inflate counts.
@@ -45,7 +45,7 @@ export async function fetchSitemapCatalog(domain: string): Promise<SitemapCatalo
     : [];
   const roots = declared.length > 0
     ? declared.slice(0, 6)
-    : [`https://${domain}/sitemap.xml`, `https://${domain}/sitemap_index.xml`];
+    : [`https://${domain}/sitemap.xml`, `https://${domain}/sitemap_index.xml`, `https://${domain}/xmlsitemap.php`];
 
   const rootXmls: string[] = [];
   for (const root of roots) {
@@ -67,6 +67,10 @@ export async function fetchSitemapCatalog(domain: string): Promise<SitemapCatalo
   }
 
   let categoryUrls: string[] = [];
+  // URLs from a sitemap that is itself named for products (BigCommerce's
+  // xmlsitemap.php?type=products, WooCommerce product-sitemap.xml) are
+  // products whatever their path looks like.
+  const fromProductMaps: string[] = [];
   if (childMaps.length > 0) {
     // WooCommerce splits products across product-sitemap.xml, -sitemap2 …;
     // tags and attribute (pa_) maps are not products.
@@ -83,10 +87,11 @@ export async function fetchSitemapCatalog(domain: string): Promise<SitemapCatalo
       categoryMap ? fetchTextDirect(categoryMap, 10000) : Promise.resolve(null),
     ]);
     urls.push(...(childXmls.filter(Boolean) as string[]).flatMap(extractLocs));
+    if (productMaps.length > 0) fromProductMaps.push(...(childXmls.filter(Boolean) as string[]).flatMap(extractLocs));
     categoryUrls = categoryXml ? extractLocs(categoryXml).filter((u) => !LANG_PREFIX_RE.test(safePath(u))) : [];
   }
 
-  const productUrls = [...new Set(urls)].filter((u) => {
+  let productUrls = [...new Set(urls)].filter((u) => {
     try {
       const path = new URL(u).pathname;
       return PRODUCT_PATH_RE.test(path) && !LANG_PREFIX_RE.test(path);
@@ -94,6 +99,9 @@ export async function fetchSitemapCatalog(domain: string): Promise<SitemapCatalo
       return false;
     }
   });
+  if (productUrls.length === 0 && fromProductMaps.length > 0) {
+    productUrls = [...new Set(fromProductMaps)].filter((u) => !LANG_PREFIX_RE.test(safePath(u)) && safePath(u).length > 1);
+  }
   return { productUrls, categoryPages: categoryUrls.length, categoryUrls };
 }
 

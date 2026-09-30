@@ -294,11 +294,14 @@ export async function saveAuditResult(domain: string, result: unknown): Promise<
   const sql = getSql();
   if (!sql) return;
   try {
+    const json = JSON.stringify(result);
     await sql`
       INSERT INTO audit_results (domain, result, created_at)
-      VALUES (${bareDomain(domain)}, ${JSON.stringify(result)}::jsonb, now())
+      VALUES (${bareDomain(domain)}, ${json}::jsonb, now())
       ON CONFLICT (domain) DO UPDATE SET result = EXCLUDED.result, created_at = now()
     `;
+    // Every run is also kept, so a business's audits form a history.
+    await sql`INSERT INTO audit_runs (domain, result) VALUES (${bareDomain(domain)}, ${json}::jsonb)`;
   } catch (err) {
     console.error("saveAuditResult failed:", err);
   }
@@ -316,5 +319,92 @@ export async function fetchAuditResult<T>(domain: string): Promise<T | null> {
   } catch (err) {
     console.error("fetchAuditResult failed:", err);
     return null;
+  }
+}
+
+type PageSnapshot = {
+  url: string;
+  kind: string;
+  status: number | null;
+  blocked: boolean;
+  ms: number | null;
+  bytes: number | null;
+  title: string | null;
+  metaDescription: string | null;
+  h1Count: number;
+  canonical: string | null;
+  noindex: boolean;
+  schemaTypes: string[];
+  hasProductSchema: boolean;
+  hasPrice: boolean;
+  hasAvailability: boolean;
+  price: number | null;
+  currency: string | null;
+  ratingValue: number | null;
+  reviewCount: number | null;
+  reviewWidget: boolean;
+  images: number;
+  imagesMissingAlt: number;
+  words: number;
+  specTable: boolean;
+  productLinks: number;
+};
+
+/**
+ * Appends one row per page read (client crawls and competitor product pages).
+ * Page-level facts over time, across every business we analyse.
+ */
+export async function recordPageSnapshots(domain: string, role: "client" | "competitor", pages: PageSnapshot[]): Promise<void> {
+  const sql = getSql();
+  if (!sql || pages.length === 0) return;
+  const rows = pages.map((p) => ({
+    domain: bareDomain(domain),
+    role,
+    url: p.url.slice(0, 1000),
+    kind: p.kind,
+    status: p.status,
+    blocked: p.blocked,
+    ms: p.ms,
+    bytes: p.bytes,
+    title: p.title?.slice(0, 500) ?? null,
+    meta_description: p.metaDescription?.slice(0, 1000) ?? null,
+    h1_count: p.h1Count,
+    canonical: p.canonical?.slice(0, 1000) ?? null,
+    noindex: p.noindex,
+    schema_types: p.schemaTypes.slice(0, 30),
+    has_product_schema: p.hasProductSchema,
+    has_price: p.hasPrice,
+    has_availability: p.hasAvailability,
+    price: p.price,
+    currency: p.currency,
+    rating_value: p.ratingValue,
+    review_count: p.reviewCount,
+    review_widget: p.reviewWidget,
+    images: p.images,
+    images_missing_alt: p.imagesMissingAlt,
+    words: p.words,
+    spec_table: p.specTable,
+    product_links: p.productLinks,
+  }));
+  try {
+    // One statement per 100 rows: jsonb_to_recordset keeps it a single round trip.
+    for (let i = 0; i < rows.length; i += 100) {
+      await sql`
+        INSERT INTO page_snapshots (domain, role, url, kind, status, blocked, ms, bytes, title, meta_description,
+          h1_count, canonical, noindex, schema_types, has_product_schema, has_price, has_availability, price,
+          currency, rating_value, review_count, review_widget, images, images_missing_alt, words, spec_table, product_links)
+        SELECT domain, role, url, kind, status, blocked, ms, bytes, title, meta_description,
+          h1_count, canonical, noindex, schema_types, has_product_schema, has_price, has_availability, price,
+          currency, rating_value, review_count, review_widget, images, images_missing_alt, words, spec_table, product_links
+        FROM jsonb_to_recordset(${JSON.stringify(rows.slice(i, i + 100))}::jsonb) AS r(
+          domain text, role text, url text, kind text, status int, blocked boolean, ms int, bytes int, title text,
+          meta_description text, h1_count int, canonical text, noindex boolean, schema_types text[],
+          has_product_schema boolean, has_price boolean, has_availability boolean, price numeric, currency text,
+          rating_value numeric, review_count int, review_widget boolean, images int, images_missing_alt int,
+          words int, spec_table boolean, product_links int)
+      `;
+    }
+  } catch (err) {
+    console.error("recordPageSnapshots failed:", err);
   }
 }
