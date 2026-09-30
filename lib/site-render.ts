@@ -89,7 +89,7 @@ ${t.motion === "cinematic" ? `.hero.full .bg img{animation:kb 22s ease-out both}
 const MOTION_JS = `<script>(function(){var o=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){x.target.classList.add("in");o.unobserve(x.target)}})},{rootMargin:"0px 0px -8% 0px"});document.querySelectorAll("[data-reveal]").forEach(function(el,i){el.style.transitionDelay=(i%4)*70+"ms";o.observe(el)})})();</script>`;
 
 function productCard(p: SiteProduct, t: RenderTarget) {
-  return `<a class="product" data-reveal href="${t.base}/products/${esc(p.slug)}"><div class="ph">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" loading="lazy">` : ""}</div><div class="info"><div class="name">${esc(p.title)}</div>${p.price != null ? `<div class="price">${esc(money(p))}</div>` : ""}</div></a>`;
+  return `<a class="product" data-reveal href="${t.base}/products/${esc(p.slug)}"><div class="ph">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" loading="lazy" onerror="this.remove()">` : ""}</div><div class="info"><div class="name">${esc(p.title)}</div>${p.price != null ? `<div class="price">${esc(money(p))}</div>` : ""}</div></a>`;
 }
 
 function leadForm(t: RenderTarget, page: string, label: string, quote: boolean) {
@@ -109,7 +109,7 @@ function section(s: Section, t: RenderTarget, first: boolean): string {
       const media = s.video
         ? `<video src="${esc(s.video)}" autoplay muted loop playsinline${s.image ? ` poster="${esc(s.image)}"` : ""}></video>`
         : s.image
-          ? `<img src="${esc(s.image)}" alt="${esc(s.heading)}" fetchpriority="high">`
+          ? `<img src="${esc(s.image)}" alt="${esc(s.heading)}" fetchpriority="high" onerror="this.remove()">`
           : "";
       const text = `${s.eyebrow ? `<p class="eyebrow">${esc(s.eyebrow)}</p>` : ""}<${H}>${esc(s.heading)}</${H}>${s.subheading ? `<p class="lead">${esc(s.subheading)}</p>` : ""}${s.ctaLabel ? `<div class="actions"><a class="btn" href="${esc(link(s.ctaHref ?? "/products", t))}">${esc(s.ctaLabel)}</a></div>` : ""}`;
       if (style === "full" && media) return `<section class="hero full"><div class="bg">${media}</div><div class="wrap">${text}</div></section>`;
@@ -132,12 +132,12 @@ function section(s: Section, t: RenderTarget, first: boolean): string {
         .slice(0, 9)
         .map((c) => {
           const img = doc.products.find((p) => p.category === c.slug && p.image)?.image;
-          return `<a class="product" data-reveal href="${t.base}/collections/${esc(c.slug)}"><div class="ph">${img ? `<img src="${esc(img)}" alt="${esc(c.name)}" loading="lazy">` : ""}</div><div class="info"><div class="name">${esc(c.name)}</div><div class="price">${esc(c.description)}</div></div></a>`;
+          return `<a class="product" data-reveal href="${t.base}/collections/${esc(c.slug)}"><div class="ph">${img ? `<img src="${esc(img)}" alt="${esc(c.name)}" loading="lazy" onerror="this.remove()">` : ""}</div><div class="info"><div class="name">${esc(c.name)}</div><div class="price">${esc(c.description)}</div></div></a>`;
         })
         .join("")}</div></div></section>`;
     }
     case "story":
-      return `<section><div class="wrap story"><div data-reveal><${H}>${esc(s.heading)}</${H}><div class="muted" style="margin-top:18px">${para(s.body)}</div></div>${s.image ? `<div class="media" data-reveal><img src="${esc(s.image)}" alt="${esc(s.heading)}" loading="lazy"></div>` : "<div></div>"}</div></section>`;
+      return `<section><div class="wrap story"><div data-reveal><${H}>${esc(s.heading)}</${H}><div class="muted" style="margin-top:18px">${para(s.body)}</div></div>${s.image ? `<div class="media" data-reveal><img src="${esc(s.image)}" alt="${esc(s.heading)}" loading="lazy" onerror="this.remove()"></div>` : "<div></div>"}</div></section>`;
     case "faq":
       return `<section><div class="wrap" style="max-width:860px"><${H} data-reveal>${esc(s.heading)}</${H}><div style="margin-top:26px">${s.items.map((i) => `<details data-reveal><summary>${esc(i.q)}</summary><p>${esc(i.a)}</p></details>`).join("")}</div></div></section>`;
     case "cta":
@@ -237,7 +237,7 @@ function productPage(t: RenderTarget, p: SiteProduct): string {
     description: p.description.slice(0, 155),
     current: "/products",
     body: `<section><div class="wrap"><nav class="crumbs" aria-label="Breadcrumb"><a href="${t.base || "/"}">Home</a> / <a href="${t.base}/products">Products</a>${cat ? ` / <a href="${t.base}/collections/${esc(cat.slug)}">${esc(cat.name)}</a>` : ""}</nav>
-<div class="pdp"><div class="ph">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" fetchpriority="high">` : ""}</div><div><h1 style="font-size:clamp(1.8rem,3.5vw,2.7rem)">${esc(p.title)}</h1>${p.price != null ? `<div class="price">${esc(money(p))}</div>` : ""}<div class="muted">${para(p.description)}</div><div class="actions" style="margin-top:26px">${action}</div></div></div>
+<div class="pdp"><div class="ph">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" fetchpriority="high" onerror="this.remove()">` : ""}</div><div><h1 style="font-size:clamp(1.8rem,3.5vw,2.7rem)">${esc(p.title)}</h1>${p.price != null ? `<div class="price">${esc(money(p))}</div>` : ""}<div class="muted">${para(p.description)}</div><div class="actions" style="margin-top:26px">${action}</div></div></div>
 ${enquire ? `<div id="enquire" style="margin-top:72px"><h2>Ask about ${esc(p.title)}</h2><div style="margin-top:22px">${leadForm(t, `product:${p.slug}`, "Send enquiry", true)}</div></div>` : ""}
 ${related.length ? `<div style="margin-top:80px"><h2>More ${cat ? esc(cat.name) : "products"}</h2><div class="grid g4" style="margin-top:26px">${related.map((r) => productCard(r, t)).join("")}</div></div>` : ""}</div></section>`,
     jsonLd: [

@@ -4,6 +4,7 @@ import { allowance, tierFor, type Client } from "./clients";
 import { fetchAuditResult } from "./marketdb";
 import { crawlSite } from "./site-crawl";
 import { queueMediaJob, type MediaBrief, type MediaKind } from "./media";
+import { storeImages, storedUrls } from "./image-store";
 
 // The content service, automated: the client's own products (from our crawl,
 // saved in page_snapshots) plus what we know of their market (the saved
@@ -167,7 +168,11 @@ export async function catalogWithPhotos(domain: string): Promise<Product[]> {
     catalog = await loadCatalog(domain);
   }
   if (catalog.length === 0) throw new Error(`No products could be read from ${domain}`);
-  return catalog;
+  // Our own copies of the photos we're likely to use (see lib/image-store).
+  const photos = catalog.filter((p) => p.image).slice(0, 80).map((p) => p.image!);
+  await storeImages(photos, 60_000).catch((err) => console.error("storeImages failed:", err instanceof Error ? err.message : err));
+  const copies = await storedUrls(photos).catch(() => new Map<string, string>());
+  return catalog.map((p) => (p.image && copies.has(p.image) ? { ...p, image: copies.get(p.image)! } : p));
 }
 
 const cut = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");

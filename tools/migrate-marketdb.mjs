@@ -269,6 +269,16 @@ await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_subscription_id TE
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_checkout_session TEXT UNIQUE`;
 await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS stripe_account_id TEXT`;
 await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS payments_status TEXT`;
+// Product photos copied to our own storage (Vercel Blob): client sites'
+// servers often block hotlinking, and old sites go away after a move.
+await sql`
+  CREATE TABLE IF NOT EXISTS image_cache (
+    source_url TEXT PRIMARY KEY,
+    stored_url TEXT,
+    status TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`;
 await sql`
   CREATE TABLE IF NOT EXISTS site_leads (
     id BIGSERIAL PRIMARY KEY,
