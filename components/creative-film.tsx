@@ -10,7 +10,12 @@ import { useEffect, useRef, type ReactNode } from "react";
 // (copy entrances/holds/exits, progress, chapter state) is rendered from the
 // media time the video has actually presented, so text stays with the image
 // even when a seek lags. Seeks are coalesced (one in flight; the newest
-// target is serviced on completion).
+// target is serviced on completion), and the seek target eases toward the
+// scroll position so a fast flick glides instead of jumping.
+//
+// Seeking a streamed file stalls on every range that hasn't downloaded yet,
+// so the whole scrub film is fetched into memory as soon as the section is
+// near; it streams only until that copy is ready.
 //
 // Text positions were chosen per shot to sit in negative space — never over
 // the tool, hands or cutting action. Each overlay element carries a window in
@@ -31,6 +36,8 @@ const CFG = {
   maxCrop: 0.34,
   enterPx: 32,
   exitPx: 16,
+  // share of the remaining distance the film covers per frame (~60fps)
+  follow: 0.2,
 };
 
 const FPS = 24;
@@ -115,7 +122,7 @@ export function CreativeFilm() {
     const root: HTMLElement = rootRef.current;
     const journey = root.querySelector<HTMLElement>(".cf-journey")!;
     const stage = root.querySelector<HTMLElement>(".cf-stage")!;
-    const video = root.querySelector<HTMLVideoElement>(".cf-scrub")! as VideoWithRVFC;
+    let video = root.querySelector<HTMLVideoElement>(".cf-scrub")! as VideoWithRVFC;
     const segs = [...root.querySelectorAll<HTMLElement>(".cf-seg-fill")];
     const jumps = [...root.querySelectorAll<HTMLButtonElement>(".cf-seg")];
     const dialog = root.querySelector<HTMLDialogElement>(".cf-dialog")!;
@@ -144,7 +151,10 @@ export function CreativeFilm() {
     let ready = false;
     let seeking = false;
     let playableEnd = Math.min(30, FILM_DURATION - 1 / FPS);
-    let target = 0;
+    let target = 0; // film time for the current scroll position
+    let eased = 0; // film time being sought, easing toward target
+    let blobUrl = "";
+    let fetching: AbortController | null = null;
     let presented = -1;
     let shownChapter = -1;
     let start = 0;
@@ -192,9 +202,9 @@ export function CreativeFilm() {
     // ── seek coalescing ──
     function drive() {
       if (!enabled || !ready || seeking) return;
-      if (Math.abs(video.currentTime - target) < 0.5 / FPS) return;
+      if (Math.abs(video.currentTime - eased) < 0.5 / FPS) return;
       seeking = true;
-      video.currentTime = target;
+      video.currentTime = eased;
     }
     function onSeeked() {
       seeking = false;
@@ -212,6 +222,8 @@ export function CreativeFilm() {
       if (!Number.isFinite(video.duration) || video.duration <= 0) return;
       playableEnd = Math.min(30, video.duration - 1 / FPS);
       ready = true;
+      seeking = false;
+      presented = -1;
       update();
     }
     function onError() {
@@ -226,8 +238,12 @@ export function CreativeFilm() {
       frame = 0;
       if (!enabled) return;
       target = toTime(clamp((scrollY - start) / CFG.travel));
+      const gap = target - eased;
+      eased = Math.abs(gap) < 0.5 / FPS ? target : eased + gap * CFG.follow;
       if (!ready) render(0); // poster is the opening frame until the video can seek
       drive();
+      // keep easing after scrolling stops
+      if (eased !== target && near) frame = requestAnimationFrame(update);
     }
     function request() {
       if (enabled && near && !frame) frame = requestAnimationFrame(update);
@@ -235,8 +251,58 @@ export function CreativeFilm() {
     function loadScrub() {
       if (!enabled || !near || video.getAttribute("src")) return;
       video.preload = "auto";
-      video.src = SCRUB_SRC;
+      video.src = blobUrl || SCRUB_SRC;
       video.load();
+      if (!blobUrl && !fetching) fetchWhole();
+    }
+    // A detached twin loads the in-memory film and seeks to the frame on
+    // screen; it replaces the streaming element only once that frame is
+    // decoded, so the swap is invisible.
+    function swapInBlob() {
+      const next = video.cloneNode(false) as VideoWithRVFC;
+      next.preload = "auto";
+      next.src = blobUrl;
+      next.addEventListener(
+        "loadeddata",
+        () => {
+          next.addEventListener(
+            "seeked",
+            () => {
+              if (!video.isConnected || video.getAttribute("src") === null) return;
+              detach(video);
+              if (rvfc && video.cancelVideoFrameCallback) video.cancelVideoFrameCallback(rvfc);
+              rvfc = 0;
+              const old = video;
+              old.replaceWith(next);
+              old.removeAttribute("src");
+              old.load();
+              video = next;
+              attach(video);
+              seeking = false;
+              drive();
+            },
+            { once: true },
+          );
+          next.currentTime = video.currentTime;
+        },
+        { once: true },
+      );
+      next.load();
+    }
+    // Pull the whole film into memory, then swap it in at the same frame so
+    // every later seek is local.
+    function fetchWhole() {
+      fetching = new AbortController();
+      fetch(SCRUB_SRC, { signal: fetching.signal })
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+        .then((blob) => {
+          fetching = null;
+          blobUrl = URL.createObjectURL(blob);
+          if (video.getAttribute("src")) swapInBlob(); // else: used on the next enhance
+        })
+        .catch(() => {
+          fetching = null; // keep streaming
+        });
     }
     function headerOffset() {
       const header = document.querySelector<HTMLElement>("body > header, header.fixed");
@@ -278,6 +344,7 @@ export function CreativeFilm() {
         ready = false;
         seeking = false;
       }
+      eased = target;
     }
     function schedule() {
       if (!measureFrame) measureFrame = requestAnimationFrame(measure);
@@ -328,9 +395,17 @@ export function CreativeFilm() {
     const header = document.querySelector<HTMLElement>("body > header, header.fixed");
     if (header) ro.observe(header);
 
-    video.addEventListener("loadedmetadata", onMetadata);
-    video.addEventListener("seeked", onSeeked);
-    video.addEventListener("error", onError);
+    function attach(v: HTMLVideoElement) {
+      v.addEventListener("loadedmetadata", onMetadata);
+      v.addEventListener("seeked", onSeeked);
+      v.addEventListener("error", onError);
+    }
+    function detach(v: HTMLVideoElement) {
+      v.removeEventListener("loadedmetadata", onMetadata);
+      v.removeEventListener("seeked", onSeeked);
+      v.removeEventListener("error", onError);
+    }
+    attach(video);
     addEventListener("scroll", request, { passive: true });
     addEventListener("resize", schedule);
     addEventListener("pageshow", schedule);
@@ -341,9 +416,7 @@ export function CreativeFilm() {
     return () => {
       io.disconnect();
       ro.disconnect();
-      video.removeEventListener("loadedmetadata", onMetadata);
-      video.removeEventListener("seeked", onSeeked);
-      video.removeEventListener("error", onError);
+      detach(video);
       removeEventListener("scroll", request);
       removeEventListener("resize", schedule);
       removeEventListener("pageshow", schedule);
@@ -358,6 +431,8 @@ export function CreativeFilm() {
       if (measureFrame) cancelAnimationFrame(measureFrame);
       video.removeAttribute("src");
       video.load();
+      fetching?.abort();
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
       dialogVideo.pause();
     };
   }, []);
