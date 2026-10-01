@@ -26,6 +26,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
       preview: !onDomain,
     },
     rest,
+    new URL(request.url).searchParams,
   );
   const cache = onDomain ? "public, s-maxage=60, stale-while-revalidate=600" : "private, no-store";
   if (result.kind === "redirect") return new Response(null, { status: 308, headers: { location: result.location } });

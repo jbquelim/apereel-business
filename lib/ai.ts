@@ -20,6 +20,8 @@ export type AiCall = {
   purpose: string;
   /** True when this call is a customer's change request (counts toward their allowance). */
   countsTowardAllowance?: boolean;
+  /** Images for Claude to look at: public URLs, or base64 PNG/JPEG data. */
+  images?: ({ url: string } | { base64: string; mediaType: "image/png" | "image/jpeg" | "image/webp" })[];
 };
 
 async function log(c: AiCall, model: string, usage: { input_tokens?: number; output_tokens?: number } | null, ok: boolean, error?: string) {
@@ -50,7 +52,21 @@ export async function callClaude(c: AiCall): Promise<string> {
       max_tokens: c.maxTokens ?? 4000,
       ...(model === "claude-opus-5-5" ? {} : { thinking: { type: "disabled" } }),
       ...(c.system ? { system: c.system } : {}),
-      messages: [{ role: "user", content: c.prompt }],
+      messages: [
+        {
+          role: "user",
+          content: c.images?.length
+            ? [
+                ...c.images.map((img) =>
+                  "url" in img
+                    ? { type: "image", source: { type: "url", url: img.url } }
+                    : { type: "image", source: { type: "base64", media_type: img.mediaType, data: img.base64 } },
+                ),
+                { type: "text", text: c.prompt },
+              ]
+            : c.prompt,
+        },
+      ],
     }),
     signal: AbortSignal.timeout(180_000),
   }).catch((err: unknown) => err as Error);

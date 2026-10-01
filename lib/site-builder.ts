@@ -2,11 +2,16 @@ import { neon } from "@neondatabase/serverless";
 import { randomBytes, randomUUID } from "node:crypto";
 import { callClaude, parseJson } from "./ai";
 import { allowance, tierFor, type Client } from "./clients";
-import { RULES, catalogWithPhotos, marketBrief, writeVisualBriefs, type Product } from "./content-engine";
+import { RULES, catalogWithPhotos, loadCatalog, marketBrief, writeVisualBriefs, type Product } from "./content-engine";
+import { crawlProductUrls } from "./site-crawl";
 import { fetchAuditResult } from "./marketdb";
 import { queueMediaJob } from "./media";
 import { pickTemplate } from "./site-templates";
-import type { Section, SectionType, SiteDoc, SitePage, SiteProduct, SiteTemplate } from "./site-types";
+import type { Section, SectionType, SiteDoc, SitePage, SiteProduct, SiteTemplate, SiteTokens } from "./site-types";
+import { extractBrand, luminance, type Brand } from "./brand-extract";
+import { upgradeImages } from "./image-upgrade";
+import { imageSize } from "./image-size";
+import { fetchSitemapCatalog } from "./site-fetch";
 
 // The website service, automated: the best template for the business's
 // industry and tier, filled by Claude with copy from what we measured (their
@@ -162,7 +167,49 @@ categoryGrid: { "type":"categoryGrid", "heading":"...", "categories":[] }
 story: { "type":"story", "heading":"...", "body":"2 short paragraphs separated by a blank line" }
 faq: { "type":"faq", "heading":"...", "items":[{ "q":"...", "a":"..." }] } (4-6 items, answers from the evidence only; aim questions at what buyers search)
 cta: { "type":"cta", "heading":"...", "body":"one sentence", "ctaLabel":"...", "ctaHref":"/contact" }
-contact: { "type":"contact", "heading":"...", "body":"one sentence" }`;
+contact: { "type":"contact", "heading":"...", "body":"one sentence" }
+steps: { "type":"steps", "heading":"...", "items":[{ "title":"...", "body":"one sentence" }] } (3 items: how buying or ordering works; never promise times or prices)
+trust: { "type":"trust" } (placeholder: we fill it with verified contact and trade facts)`;
+
+// The home sections each tier may choose from; the AI orders them for the business.
+const HOME_LIBRARY: Record<SiteTemplate["tier"], SectionType[]> = {
+  fix: ["hero", "trust", "features", "productGrid", "story", "faq", "cta"],
+  build: ["hero", "trust", "stats", "categoryGrid", "productGrid", "features", "steps", "story", "faq", "cta"],
+  grow: ["hero", "trust", "stats", "categoryGrid", "productGrid", "features", "steps", "story", "faq", "cta"],
+};
+
+/** Verified facts for the trust strip: only what the business's own site shows. */
+function trustItems(brand: Brand, b2b: boolean): { title: string; body: string; href?: string }[] {
+  const items: { title: string; body: string; href?: string }[] = [];
+  if (brand.phone) items.push({ title: "Call us", body: brand.phone, href: `tel:${brand.phone.replace(/[^\d+]/g, "")}` });
+  if (brand.email) items.push({ title: "Email us", body: brand.email, href: `mailto:${brand.email}` });
+  if (brand.address) items.push({ title: "Find us", body: brand.address });
+  if (b2b) items.push({ title: "Trade accounts", body: "Quotes for businesses and bulk orders", href: "/contact" });
+  return items;
+}
+
+/** The brand colour from the logo when the site's CSS didn't give one (Claude looks at the image). */
+async function accentFromLogo(client: Client, logo: string): Promise<string | null> {
+  try {
+    const text = await callClaude({
+      clientId: client.id,
+      purpose: "site:brand-colour",
+      model: "claude-haiku-4-5",
+      maxTokens: 50,
+      images: [{ url: logo }],
+      prompt: "This is a company logo. Reply with only the hex code of its main brand colour (ignore black, white and grey), or NONE if it has no colour.",
+    });
+    return text.match(/#[0-9a-f]{6}/i)?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** The template's tokens in the business's own colour, with readable text on it. */
+function brandTokens(tokens: SiteTokens, accent: string | null): SiteTokens {
+  if (!accent) return tokens;
+  return { ...tokens, palette: { ...tokens.palette, accent, accentText: luminance(accent) > 0.45 ? "#111111" : "#ffffff" } };
+}
 
 /** What competitors' product pages carry, from the pages we've read (for Custom and Signature). */
 async function competitorBenchmark(domain: string): Promise<string> {
@@ -195,13 +242,23 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   const template = await pickTemplate(industryTexts, tier);
   const b2b = /b2b|wholesale|distribut|manufactur|oem|trade/i.test(`${audit?.industry?.businessModel ?? ""} ${audit?.industry?.offering ?? ""}`);
 
-  const products = toProducts(catalog, limits.products);
+  // Their brand, full-size photos and the true catalog size, read in parallel.
+  const [brand, products, sitemap] = await Promise.all([
+    extractBrand(client.domain).catch(() => null),
+    upgradeImages(toProducts(catalog, limits.products)),
+    fetchSitemapCatalog(client.domain).catch(() => ({ productUrls: [] as string[] })),
+  ]);
+  const catalogTotal = Math.max(sitemap.productUrls.length, catalog.length);
   // Category names from the audit, or else from the category pages our crawl read.
   let categoryNames = (audit?.industry?.inventoryCategories ?? []).map((c) => c.category);
   if (categoryNames.length === 0 && limits.categories > 0) categoryNames = await crawledCategoryNames(client.domain);
   const categories = assignCategories(products, categoryNames, limits.categories);
   const featured = products.filter((p) => p.image).slice(0, limits.featured);
   featured.forEach((p) => (p.featured = true));
+  // Hero candidates with their real pixel sizes: the AI picks the product that
+  // best represents the business, and small photos are never stretched.
+  const candidates = await Promise.all(featured.slice(0, 12).map(async (p) => ({ p, size: p.image ? await imageSize(p.image) : null })));
+  const trust = brand ? trustItems(brand, b2b) : [];
   const gaps = (audit?.demand?.rows ?? []).filter((r) => r.coverage === "none").map((r) => r.query);
   const rich = tier !== "fix";
   const benchmark = rich ? await competitorBenchmark(client.domain).catch(() => "") : "";
@@ -213,21 +270,24 @@ export async function buildSite(client: Client): Promise<SiteRow> {
     prompt: `You are building a website for a real business with Apereel's "${template.name}" template. Write all the copy.
 
 BUSINESS: ${client.domain}${audit?.industry?.subIndustry ? ` (${audit.industry.subIndustry})` : ""}
-${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${audit.translateAdvantage.strength}\n` : ""}CATALOG: ${catalog.length} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
+${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${audit.translateAdvantage.strength}\n` : ""}CATALOG: ${catalogTotal.toLocaleString("en-US")} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
+${trust.length ? `VERIFIED CONTACT AND TRADE FACTS (shown in the trust strip): ${trust.map((i) => `${i.title}: ${i.body}`).join("; ")}\n` : "NO VERIFIED CONTACT FACTS: leave out the trust section.\n"}HERO CANDIDATES (slug, product, photo size): ${candidates.map((c) => `${c.p.slug} | ${c.p.title} | ${c.size ? `${c.size.width}px` : "size unknown"}`).join("; ")}
 ${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}${benchmark ? `${benchmark}\n` : ""}
 FEATURED PRODUCTS (write a description for each):
 ${featured.map((p) => `- ${p.slug}: ${p.title}${p.price != null ? ` (${p.currency ?? "$"}${p.price})` : ""}`).join("\n")}
 
-PAGES AND THEIR SECTIONS, in order:
-${skeleton(template)}
+HOME PAGE: choose 6 to 9 sections from this library and put them in the order that best sells THIS business to ITS buyers: ${HOME_LIBRARY[tier].join(", ")}. Start with hero and end with cta; include productGrid; include categoryGrid only if categories are listed; stats only with numbers given above.
+OTHER PAGES AND THEIR SECTIONS, in order:
+${skeleton(template).split("\n").filter((l) => !l.startsWith("home:")).join("\n")}
 
 ${SECTION_SHAPES}
 
 Return ONLY JSON:
 {
   "brand": { "name": "the business's name as customers know it", "tagline": "max 70 chars" },
+  "heroProduct": "the slug of the hero candidate that best represents the business (its signature product, not a commodity or accessory; prefer larger photos)",
   "pages": {
-    "home": { "metaTitle": "max 60 chars", "metaDescription": "max 155 chars", "sections": [ ...one per section listed for home, in order... ] },
+    "home": { "metaTitle": "max 60 chars", "metaDescription": "max 155 chars", "sections": [ ...the sections you chose, in your order... ] },
     "about": { "navLabel": "About", "metaTitle": "...", "metaDescription": "...", "sections": [...] },
     "contact": { "navLabel": "Contact", "metaTitle": "...", "metaDescription": "...", "sections": [...] }
   },
@@ -242,6 +302,7 @@ ${RULES}
 - Never claim reviews, ratings, awards, certifications, years in business or delivery times unless given above.`,
   });
   const out = parseJson<{
+    heroProduct?: string;
     brand?: { name?: string; tagline?: string };
     pages?: Record<string, { navLabel?: string; metaTitle?: string; metaDescription?: string; sections?: Section[] }>;
     categories?: Record<string, string>;
@@ -252,16 +313,22 @@ ${RULES}
   if (!out?.pages?.home?.sections?.length) throw new Error("The site copy came back incomplete");
 
   const name = cut(out.brand?.name, 60) || client.domain;
-  const heroImage = featured[0]?.image ?? null;
+  const hero = candidates.find((c) => c.p.slug === out.heroProduct) ?? [...candidates].sort((a, b) => (b.size?.width ?? 0) - (a.size?.width ?? 0))[0];
+  const heroImage = hero?.p.image ?? featured[0]?.image ?? null;
+  // A photo under 1400px would blur full-screen: frame it beside the headline instead.
+  const heroWide = (hero?.size?.width ?? 0) >= 1400;
+  const storyImage = featured.find((p) => p.image && p.image !== heroImage)?.image ?? null;
+  const accent = brand?.accent ?? (brand?.logo ? await accentFromLogo(client, brand.logo) : null);
   const pages: SitePage[] = (["home", "about", "contact"] as const).map((key) => {
     const p = out.pages?.[key] ?? {};
     const sections = (p.sections ?? []).filter((s) => s && typeof s === "object" && "type" in s).map((s) => {
       if (s.type === "hero") return { ...s, image: heroImage, ctaHref: s.ctaHref || "/products" };
-      if (s.type === "story") return { ...s, image: featured[1]?.image ?? null };
+      if (s.type === "story") return { ...s, image: storyImage };
+      if (s.type === "trust") return { type: "trust" as const, items: trust };
       if (s.type === "contact") return { ...s, quoteForm: b2b || tier === "grow" };
       if (s.type === "categoryGrid") return { ...s, categories: [] };
       return s;
-    });
+    }).filter((s) => s.type !== "trust" || trust.length >= 2);
     return {
       slug: key === "home" ? "" : key,
       navLabel: key === "home" ? undefined : cut(p.navLabel, 20) || (key === "about" ? "About" : "Contact"),
@@ -282,8 +349,9 @@ ${RULES}
   }
 
   const doc: SiteDoc = {
-    brand: { name, tagline: cut(out.brand?.tagline, 90) },
-    tokens: template.tokens,
+    brand: { name, tagline: cut(out.brand?.tagline, 90), logo: brand?.logo ?? null, email: brand?.email ?? null, phone: brand?.phone ?? null, address: brand?.address ?? null },
+    catalogTotal,
+    tokens: { ...brandTokens(template.tokens, accent), heroStyle: heroWide ? template.tokens.heroStyle : "split" },
     pages,
     products,
     categories,
@@ -350,7 +418,7 @@ ${RULES}
   return row;
 }
 
-const SECTION_TYPES = new Set(["hero", "features", "productGrid", "categoryGrid", "story", "faq", "cta", "contact", "stats"]);
+const SECTION_TYPES = new Set(["hero", "features", "productGrid", "categoryGrid", "story", "faq", "cta", "contact", "stats", "trust", "steps"]);
 
 /** A change to the site in plain words; uses one request from the allowance. */
 export async function reviseSite(client: Client, instruction: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -430,4 +498,43 @@ export async function setProductAction(client: Client, action: SiteDoc["productA
   const doc = { ...site.doc, productAction: action };
   await sql()`UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, updated_at = now() WHERE id = ${site.id}`;
   return { ok: true };
+}
+
+/**
+ * One catalog import step: reads product pages the site doesn't have yet
+ * (from the sitemap) and adds them, up to the tier's limit. Returns how many
+ * are still to import, so the caller can run another step.
+ */
+export async function topUpCatalog(client: Client, budgetMs = 200_000): Promise<{ added: number; remaining: number }> {
+  const site = await getSiteForClient(client.id);
+  if (!site) return { added: 0, remaining: 0 };
+  const room = LIMITS[client.tier].products - site.doc.products.length;
+  if (room <= 0) return { added: 0, remaining: 0 };
+  const [{ productUrls }, recent] = await Promise.all([
+    fetchSitemapCatalog(client.domain),
+    sql()`SELECT DISTINCT url FROM page_snapshots WHERE domain = ${client.domain} AND role = 'client' AND kind = 'product' AND crawled_at > now() - interval '45 days'`.then((r) => r as { url: string }[]),
+  ]);
+  const seen = new Set(recent.map((r) => r.url));
+  const todo = productUrls.filter((u) => !seen.has(u)).slice(0, Math.min(room, 500));
+  if (todo.length) await crawlProductUrls(client.domain, todo, budgetMs);
+
+  const have = new Set(site.doc.products.map((p) => p.sourceUrl));
+  const fresh = (await loadCatalog(client.domain)).filter((p) => !have.has(p.url)).slice(0, room);
+  const used = new Set(site.doc.products.map((p) => p.slug));
+  const added = (await upgradeImages(toProducts(fresh, fresh.length))).map((p) => {
+    let slug = p.slug;
+    while (used.has(slug)) slug = `${p.slug}-${used.size}`;
+    used.add(slug);
+    return { ...p, slug, description: `${p.title} from ${site.doc.brand.name}.` };
+  });
+  if (added.length) {
+    const products = [...site.doc.products, ...added];
+    // New products join the site's existing categories by name.
+    const cats = assignCategories(products, site.doc.categories.map((c) => c.name), site.doc.categories.length);
+    const bySlug = new Map(site.doc.categories.map((c) => [c.slug, c]));
+    const doc: SiteDoc = { ...site.doc, products, categories: cats.map((c) => bySlug.get(c.slug) ?? c) };
+    await sql()`UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, updated_at = now() WHERE id = ${site.id}`;
+  }
+  const remaining = Math.max(0, Math.min(productUrls.filter((u) => !seen.has(u)).length - todo.length, room - added.length));
+  return { added: added.length, remaining: added.length || todo.length ? remaining : 0 };
 }

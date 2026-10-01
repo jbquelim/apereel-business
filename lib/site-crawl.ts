@@ -454,3 +454,10 @@ export async function compareProductPages(
     unreadable: rows.filter((r) => r.pages === 0).map((r) => r.name),
   };
 }
+
+/** Reads specific product pages (a catalog import step) and records them. */
+export async function crawlProductUrls(domain: string, urls: string[], budgetMs: number): Promise<number> {
+  const pages = await crawlList(urls.map((url) => ({ url, kind: "product" as const })), Date.now() + budgetMs);
+  await recordPageSnapshots(domain, "client", pages);
+  return pages.filter((p) => !p.blocked && p.status != null && p.status < 400).length;
+}

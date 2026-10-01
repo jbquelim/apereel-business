@@ -37,7 +37,8 @@ function css(doc: SiteDoc): string {
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 var(--fb)}
 img{max-width:100%;display:block}a{color:inherit}
 .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
-h1,h2,h3{font-family:var(--fh);line-height:1.1;margin:0;font-weight:600;letter-spacing:-.01em${t.headingCase === "upper" ? ";text-transform:uppercase;letter-spacing:.02em" : ""}}
+h1,h2,h3{font-family:var(--fh);line-height:1.1;margin:0;font-weight:600;letter-spacing:-.015em}
+${t.headingCase === "upper" ? ".card h3,.trust b{text-transform:uppercase;letter-spacing:.06em;font-size:.92rem}" : ""}
 h1{font-size:clamp(2.3rem,5.5vw,4.4rem)}h2{font-size:clamp(1.7rem,3.4vw,2.6rem)}h3{font-size:1.15rem}
 .muted{color:var(--muted)}.eyebrow{font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 26px;border-radius:999px;background:var(--accent);color:var(--accent-text);text-decoration:none;font-weight:600;border:0;cursor:pointer;font:600 15px var(--fb)}
@@ -71,6 +72,10 @@ section{padding:clamp(56px,9vw,110px) 0}
 .story{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}.story .media{border-radius:var(--r);overflow:hidden;background:var(--surface)}
 .story .media img{width:100%;aspect-ratio:4/3;object-fit:contain;background:#fff}
 details{border-bottom:1px solid var(--line);padding:18px 0}summary{cursor:pointer;font-weight:600;list-style:none}summary::-webkit-details-marker{display:none}details p{color:var(--muted);margin:10px 0 0}
+.trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.trust div{border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;background:var(--surface)}.trust a{text-decoration:none}.trust b{display:block}.trust span{color:var(--muted);font-size:.93rem}
+.steps{list-style:none;padding:0;margin:34px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px}.steps span{font-family:var(--fh);color:var(--accent);font-size:1.4rem}.steps h3{margin-top:8px}.steps p{color:var(--muted);margin:8px 0 0}
+.search{display:flex;gap:10px;margin:22px 0 10px;max-width:560px}.search input{flex:1;padding:12px 16px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--text);font:inherit}
+.pager{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:40px}.pager a{padding:10px 18px;border:1px solid var(--line);border-radius:999px;text-decoration:none}
 .cta{background:var(--accent);color:var(--accent-text);border-radius:var(--r);padding:clamp(36px,6vw,64px);text-align:center}.cta .btn{background:var(--accent-text);color:var(--accent)}.cta p{opacity:.85}
 form.lead{display:grid;gap:12px;max-width:620px}form.lead input,form.lead textarea{width:100%;padding:14px 16px;border:1px solid var(--line);border-radius:calc(var(--r)/1.5);background:var(--surface);color:var(--text);font:inherit}
 .crumbs{font-size:.88rem;color:var(--muted);margin-bottom:22px}.crumbs a{text-decoration:none}
@@ -144,6 +149,13 @@ function section(s: Section, t: RenderTarget, first: boolean): string {
       return `<section><div class="wrap" style="max-width:860px"><${H} data-reveal>${esc(s.heading)}</${H}><div style="margin-top:26px">${s.items.map((i) => `<details data-reveal><summary>${esc(i.q)}</summary><p>${esc(i.a)}</p></details>`).join("")}</div></div></section>`;
     case "cta":
       return `<section><div class="wrap"><div class="cta" data-reveal><${H}>${esc(s.heading)}</${H}>${s.body ? `<p>${esc(s.body)}</p>` : ""}<div style="margin-top:24px"><a class="btn" href="${esc(link(s.ctaHref, t))}">${esc(s.ctaLabel)}</a></div></div></div></section>`;
+    case "trust":
+      if (!s.items?.length) return "";
+      return `<section style="padding:28px 0"><div class="wrap"><div class="trust">${s.items
+        .map((i) => `<div data-reveal>${i.href ? `<a href="${esc(link(i.href, t))}">` : ""}<b>${esc(i.title)}</b><span>${esc(i.body)}</span>${i.href ? "</a>" : ""}</div>`)
+        .join("")}</div></div></section>`;
+    case "steps":
+      return `<section><div class="wrap"><${H} data-reveal>${esc(s.heading)}</${H}><ol class="steps">${s.items.map((i, n) => `<li data-reveal><span>${String(n + 1).padStart(2, "0")}</span><h3>${esc(i.title)}</h3><p>${esc(i.body)}</p></li>`).join("")}</ol></div></section>`;
     case "contact":
       return `<section><div class="wrap"><${H}>${esc(s.heading)}</${H}>${s.body ? `<p class="lead">${esc(s.body)}</p>` : ""}${
         [doc.brand.email && `<a href="mailto:${esc(doc.brand.email)}">${esc(doc.brand.email)}</a>`, doc.brand.phone && `<a href="tel:${esc(doc.brand.phone)}">${esc(doc.brand.phone)}</a>`, doc.brand.address && esc(doc.brand.address)].filter(Boolean).map((x) => `<p>${x}</p>`).join("")
@@ -156,7 +168,7 @@ function link(href: string, t: RenderTarget) {
   return href.startsWith("/") ? `${t.base}${href === "/" ? "" : href}` || "/" : href;
 }
 
-function shell(t: RenderTarget, o: { path: string; title: string; description: string; body: string; jsonLd?: object[]; current?: string }) {
+function shell(t: RenderTarget, o: { path: string; title: string; description: string; body: string; jsonLd?: object[]; current?: string; noindex?: boolean }) {
   const { doc } = t;
   const fonts = [...new Set([doc.tokens.fontHeading, doc.tokens.fontBody])].map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@400;600;700`).join("&");
   const nav = [
@@ -168,15 +180,19 @@ function shell(t: RenderTarget, o: { path: string; title: string; description: s
   const canonical = `${t.origin}${o.path === "/" ? "/" : o.path}`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(o.title)}</title><meta name="description" content="${esc(o.description)}"><link rel="canonical" href="${esc(canonical)}">
-${t.preview ? '<meta name="robots" content="noindex">' : ""}
+${t.preview || o.noindex ? '<meta name="robots" content="noindex">' : ""}
 <meta property="og:title" content="${esc(o.title)}"><meta property="og:description" content="${esc(o.description)}"><meta property="og:url" content="${esc(canonical)}"><meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?${fonts}&display=swap" rel="stylesheet">
 <style>${css(doc)}</style>
 ${(o.jsonLd ?? []).map((j) => `<script type="application/ld+json">${JSON.stringify(j).replace(/</g, "\\u003c")}</script>`).join("")}
 </head><body>${t.preview ? '<div class="notice">Preview of your new site · built by Apereel</div>' : ""}
-<header class="site"><div class="wrap"><a class="brand" href="${t.base || "/"}">${esc(doc.brand.name)}</a><nav class="main" aria-label="Main">${navHtml}</nav></div></header>
+<header class="site"><div class="wrap"><a class="brand" href="${t.base || "/"}">${doc.brand.logo ? `<img src="${esc(doc.brand.logo)}" alt="${esc(doc.brand.name)}" style="height:40px;width:auto" onerror="this.replaceWith(document.createTextNode(this.alt))">` : esc(doc.brand.name)}</a><nav class="main" aria-label="Main">${navHtml}</nav></div></header>
 <main>${o.body}</main>
-<footer class="site"><div class="wrap"><div><div class="brand">${esc(doc.brand.name)}</div><p>${esc(doc.brand.tagline)}</p>${doc.brand.email ? `<p><a href="mailto:${esc(doc.brand.email)}">${esc(doc.brand.email)}</a></p>` : ""}</div><div>${esc(doc.footerNote ?? "")}<p>© ${new Date().getFullYear()} ${esc(doc.brand.name)}</p></div></div></footer>
+<footer class="site"><div class="wrap"><div><div class="brand">${esc(doc.brand.name)}</div><p>${esc(doc.brand.tagline)}</p>${[
+    doc.brand.email && `<a href="mailto:${esc(doc.brand.email)}">${esc(doc.brand.email)}</a>`,
+    doc.brand.phone && `<a href="tel:${esc(doc.brand.phone)}">${esc(doc.brand.phone)}</a>`,
+    doc.brand.address && esc(doc.brand.address),
+  ].filter(Boolean).map((x) => `<p style="margin:4px 0">${x}</p>`).join("")}</div><div>${esc(doc.footerNote ?? "")}<p>© ${new Date().getFullYear()} ${esc(doc.brand.name)}</p></div></div></footer>
 ${doc.tokens.motion !== "none" ? MOTION_JS : ""}<script>if(/[?&]paid=1/.test(location.search))document.body.insertAdjacentHTML("afterbegin",'<div class="notice" role="status" style="background:var(--accent);color:var(--accent-text)">Thank you for your order. A receipt is on its way to your email.</div>')</script><script>if(/[?&]sent=1/.test(location.search))document.body.insertAdjacentHTML("afterbegin",'<div class="notice" role="status" style="background:var(--accent);color:var(--accent-text)">Thanks, your message was sent. We&#39;ll be in touch soon.</div>')</script></body></html>`;
 }
 
@@ -192,22 +208,39 @@ function pageDoc(page: SitePage, t: RenderTarget): string {
   });
 }
 
-function listing(t: RenderTarget, categorySlug: string | null): string | null {
+const PER_PAGE = 48;
+
+function listing(t: RenderTarget, categorySlug: string | null, query: URLSearchParams): string | null {
   const { doc } = t;
   const cat = categorySlug ? doc.categories.find((c) => c.slug === categorySlug) : null;
   if (categorySlug && !cat) return null;
-  const list = cat ? doc.products.filter((p) => p.category === cat.slug) : doc.products;
+  const q = (query.get("q") ?? "").trim().slice(0, 80);
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  // Search matches every word in the name or address, so part numbers work too.
+  const inScope = cat ? doc.products.filter((p) => p.category === cat.slug) : doc.products;
+  const list = words.length ? inScope.filter((p) => words.every((w) => `${p.title} ${p.slug}`.toLowerCase().includes(w))) : inScope;
+  const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
+  const page = Math.min(pages, Math.max(1, Number(query.get("page")) || 1));
+  const shown = list.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const path = cat ? `/collections/${cat.slug}` : "/products";
+  const href = (n: number) => `${t.base}${path}?${new URLSearchParams({ ...(q ? { q } : {}), page: String(n) })}`;
   const chips = doc.categories.length
     ? `<div class="chips"><a href="${t.base}/products"${!cat ? ' aria-current="page"' : ""}>All</a>${doc.categories.map((c) => `<a href="${t.base}/collections/${esc(c.slug)}"${cat?.slug === c.slug ? ' aria-current="page"' : ""}>${esc(c.name)}</a>`).join("")}</div>`
     : "";
-  const title = cat ? cat.name : "All products";
+  const title = q ? `Results for “${q}”` : cat ? cat.name : "All products";
+  const count = q ? `${list.length} match${list.length === 1 ? "" : "es"}` : `${list.length.toLocaleString("en-US")} products`;
   return shell(t, {
-    path: cat ? `/collections/${cat.slug}` : "/products",
-    title: `${title} | ${doc.brand.name}`,
-    description: cat?.description || `Browse ${list.length} products from ${doc.brand.name}.`,
+    path: page > 1 && !q ? `${path}?page=${page}` : path,
+    title: `${title}${page > 1 ? ` (page ${page})` : ""} | ${doc.brand.name}`,
+    description: cat?.description || `Browse ${inScope.length.toLocaleString("en-US")} products from ${doc.brand.name}.`,
     current: "/products",
-    body: `<section><div class="wrap"><h1 style="font-size:clamp(2rem,4vw,3rem)">${esc(title)}</h1>${cat?.description ? `<p class="lead">${esc(cat.description)}</p>` : ""}<div style="margin-top:28px">${chips}</div><div class="grid g4">${list.map((p) => productCard(p, t)).join("")}</div></div></section>`,
-    jsonLd: [{ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${t.origin}/` }, { "@type": "ListItem", position: 2, name: title, item: `${t.origin}${cat ? `/collections/${cat.slug}` : "/products"}` }] }],
+    noindex: !!q,
+    body: `<section><div class="wrap"><h1 style="font-size:clamp(2rem,4vw,3rem)">${esc(title)}</h1>${cat?.description && !q ? `<p class="lead">${esc(cat.description)}</p>` : ""}
+<form class="search" role="search" method="get" action="${t.base}${path}"><input name="q" value="${esc(q)}" placeholder="Search by name or part number" aria-label="Search products"><button class="btn" type="submit">Search</button></form>
+<p class="muted" style="margin:0 0 18px">${count}</p>${chips}<div class="grid g4">${shown.map((p) => productCard(p, t)).join("")}</div>
+${list.length === 0 ? `<p class="lead">Nothing matches that yet. <a href="${t.base}/contact">Ask us</a>; we may well have it.</p>` : ""}
+${pages > 1 ? `<nav class="pager" aria-label="Pages">${page > 1 ? `<a href="${href(page - 1)}" rel="prev">Previous</a>` : ""}<span class="muted">Page ${page} of ${pages}</span>${page < pages ? `<a href="${href(page + 1)}" rel="next">Next</a>` : ""}</nav>` : ""}</div></section>`,
+    jsonLd: [{ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${t.origin}/` }, { "@type": "ListItem", position: 2, name: cat ? cat.name : "Products", item: `${t.origin}${path}` }] }],
   });
 }
 
@@ -261,7 +294,7 @@ ${related.length ? `<div style="margin-top:80px"><h2>More ${cat ? esc(cat.name) 
   });
 }
 
-export function renderPath(t: RenderTarget, path: string[]): RenderResult {
+export function renderPath(t: RenderTarget, path: string[], query: URLSearchParams = new URLSearchParams()): RenderResult {
   const { doc } = t;
   const joined = `/${path.join("/")}`.replace(/\/+$/, "") || "/";
   if (joined === "/robots.txt") {
@@ -278,9 +311,9 @@ export function renderPath(t: RenderTarget, path: string[]): RenderResult {
   }
   const page = doc.pages.find((p) => (p.slug ? `/${p.slug}` : "/") === joined);
   if (page) return { kind: "html", status: 200, body: pageDoc(page, t) };
-  if (joined === "/products") return { kind: "html", status: 200, body: listing(t, null)! };
+  if (joined === "/products") return { kind: "html", status: 200, body: listing(t, null, query)! };
   if (path[0] === "collections" && path[1]) {
-    const html = listing(t, path[1]);
+    const html = listing(t, path[1], query);
     if (html) return { kind: "html", status: 200, body: html };
   }
   if (path[0] === "products" && path[1]) {

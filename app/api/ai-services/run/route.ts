@@ -10,7 +10,7 @@ import type { MonthStage } from "@/lib/content-engine";
 // carry it, and the last step releases it. CRON_SECRET-gated.
 
 export const maxDuration = 300;
-const STAGES: MonthStage[] = ["posts", "long", "media"];
+const STAGES: MonthStage[] = ["posts", "long", "media", "catalog"];
 
 export async function POST(request: Request) {
   const secret = process.env.CRON_SECRET;

@@ -24,7 +24,10 @@ export type Section =
   | { type: "faq"; heading: string; items: { q: string; a: string }[] }
   | { type: "cta"; heading: string; body?: string; ctaLabel: string; ctaHref: string }
   | { type: "contact"; heading: string; body?: string; quoteForm?: boolean }
-  | { type: "stats"; items: { value: string; label: string }[] };
+  | { type: "stats"; items: { value: string; label: string }[] }
+  /** Facts that build trust (contact, shipping and returns pages, trade accounts), from the business's own site. */
+  | { type: "trust"; items: { title: string; body: string; href?: string }[] }
+  | { type: "steps"; heading: string; items: { title: string; body: string }[] };
 
 export type SectionType = Section["type"];
 
@@ -46,7 +49,9 @@ export type SiteProduct = {
 };
 
 export type SiteDoc = {
-  brand: { name: string; tagline: string; email?: string | null; phone?: string | null; address?: string | null };
+  brand: { name: string; tagline: string; email?: string | null; phone?: string | null; address?: string | null; logo?: string | null };
+  /** Products in the business's whole catalog (the site may show fewer while it's imported). */
+  catalogTotal?: number;
   tokens: SiteTokens;
   pages: SitePage[];
   products: SiteProduct[];

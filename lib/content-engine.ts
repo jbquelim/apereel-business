@@ -263,8 +263,8 @@ ${RULES}
 }
 
 /** Generates this month's content for a client. Crawls first when we have no recent product data. */
-export type MonthStage = "posts" | "long" | "media";
-export const NEXT_STAGE: Record<MonthStage, MonthStage | null> = { posts: "long", long: "media", media: null };
+export type MonthStage = "posts" | "long" | "media" | "catalog";
+export const NEXT_STAGE: Record<MonthStage, MonthStage | null> = { posts: "long", long: "media", media: null, catalog: null };
 
 async function countItems(clientId: string, batch: string): Promise<Record<string, number>> {
   const rows = (await sql()`SELECT kind, count(*)::int AS n FROM content_items WHERE client_id = ${clientId} AND batch = ${batch} GROUP BY kind`) as { kind: string; n: number }[];
