@@ -1,3 +1,4 @@
+import { neon } from "@neondatabase/serverless";
 import { callClaude, parseJson } from "./ai";
 import type { Client } from "./clients";
 import { fetchAuditResult } from "./marketdb";
@@ -114,9 +115,17 @@ ${AD_RULES}`,
   }));
 }
 
+async function countBatch(clientId: string, batch: string): Promise<Record<string, number>> {
+  if (!process.env.DATABASE_URL) return {};
+  const rows = (await neon(process.env.DATABASE_URL)`SELECT kind, count(*)::int AS n FROM content_items WHERE client_id = ${clientId} AND batch = ${batch} GROUP BY kind`) as { kind: string; n: number }[];
+  return Object.fromEntries(rows.map((r) => [r.kind, r.n]));
+}
+
 export async function generateAdsMonth(client: Client): Promise<{ batch: string; statics: number; carousels: number; animated: number; videos: number }> {
   const volume = VOLUME[client.tier] ?? VOLUME.fix;
   const batch = new Date().toISOString().slice(0, 7);
+  // Only what this month's batch is missing (a re-run must not pay twice).
+  const have = await countBatch(client.id, batch);
   const catalog = await catalogWithPhotos(client.domain);
   const audit = await fetchAuditResult<AuditLike>(client.domain);
   const brief = marketBrief(client.domain, audit);
@@ -126,8 +135,8 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
   const withPhotos = catalog.filter((p) => p.image);
   const pool = withPhotos.length >= volume.statics ? withPhotos : catalog;
 
-  const featured = pickProducts(pool, volume.statics);
-  const statics = await writeStatics(client, brief, featured, competitors);
+  const featured = pickProducts(pool, volume.statics).slice(have.ad ?? 0);
+  const statics = featured.length ? await writeStatics(client, brief, featured, competitors) : [];
   for (const ad of statics) {
     const product = featured.find((p) => p.title === ad.productTitle) ?? null;
     await saveItem(client.id, batch, "ad", ad, product, "google · meta · tiktok");
@@ -135,7 +144,7 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
 
   // Carousels: consecutive products in the catalog tend to be one range.
   const groups: Product[][] = [];
-  for (let i = 0; i < volume.carousels; i++) {
+  for (let i = have.carousel ?? 0; i < volume.carousels; i++) {
     const start = Math.floor(((i + 0.5) * withPhotos.length) / Math.max(volume.carousels, 1));
     const g = withPhotos.slice(start, start + 4);
     if (g.length >= 2) groups.push(g);
@@ -143,7 +152,7 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
   const carousels = await writeCarousels(client, brief, groups);
   for (const c of carousels) await saveItem(client.id, batch, "carousel", c, null, "meta · tiktok");
 
-  const animated = await writeVideoBriefs(client, brief, pickProducts(withPhotos.slice(1), volume.animated), {
+  const animated = await writeVideoBriefs(client, brief, pickProducts(withPhotos.slice(1), Math.max(0, volume.animated - (have["animated-ad"] ?? 0))), {
     batch,
     itemKind: "animated-ad",
     mediaKind: "animated-ad",
@@ -151,7 +160,7 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
     duration: 6,
     aspect: "1:1",
   });
-  const videos = await writeVideoBriefs(client, brief, pickProducts(withPhotos.slice(2), volume.videos), {
+  const videos = await writeVideoBriefs(client, brief, pickProducts(withPhotos.slice(2), Math.max(0, volume.videos - (have["video-ad"] ?? 0))), {
     batch,
     itemKind: "video-ad",
     mediaKind: "video-ad",

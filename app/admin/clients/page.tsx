@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin-auth";
 import { listClients, tierFor } from "@/lib/clients";
 import { NewClientForm, GenerateButton } from "./client-forms";
+import { MediaNudger } from "@/components/media-nudger";
+import { pendingMediaJobs } from "@/lib/media";
 
 export const metadata: Metadata = { title: "AI service clients", robots: { index: false, follow: false } };
 
@@ -77,6 +79,7 @@ export default async function ClientsPage() {
         </div>
 
         <NewClientForm />
+        <MediaNudger pending={await pendingMediaJobs().catch(() => 0)} />
       </section>
     </main>
   );

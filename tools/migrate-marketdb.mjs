@@ -248,6 +248,8 @@ await sql`
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_media_jobs_status ON media_jobs (status, created_at)`;
 await sql`ALTER TABLE media_jobs ADD COLUMN IF NOT EXISTS provider_request_id TEXT`;
+// Short-lived named locks (e.g. "one render round a minute", "credit email sent").
+await sql`CREATE TABLE IF NOT EXISTS app_locks (name TEXT PRIMARY KEY, until TIMESTAMPTZ NOT NULL)`;
 await sql`ALTER TABLE media_jobs ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ`;
 // Customer websites: the whole site as one JSON document, rendered to HTML.
 await sql`

@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { put } from "@vercel/blob";
+import { imageSize } from "./image-size";
 
 // Video and visuals for every service, rendered with Higgsfield (the same
 // platform as Apereel's Higgsfield studio): Seedance 2.5 for video (content
@@ -135,21 +136,48 @@ export async function kickMediaWorker(base: string) {
   await fetch(`${base}/api/media/poll`, { method: "POST", headers: { "x-internal-secret": process.env.CRON_SECRET ?? "" }, signal: AbortSignal.timeout(5_000) }).catch(() => null);
 }
 
+const CREDIT_RE = /credit|balance|top up/i;
+
+/** True while renders are paused because Higgsfield credit ran out (re-tried every 30 minutes). */
+async function creditPaused(): Promise<boolean> {
+  const rows = (await sql()`
+    SELECT 1 FROM media_jobs WHERE status = 'queued' AND error ILIKE '%credit%' AND updated_at > now() - interval '30 minutes' LIMIT 1
+  `) as unknown[];
+  return rows.length > 0;
+}
+
+/** Takes a named lock for a while; false if someone holds it. */
+export async function takeLock(name: string, seconds: number): Promise<boolean> {
+  const rows = (await sql()`
+    INSERT INTO app_locks (name, until) VALUES (${name}, now() + make_interval(secs => ${seconds}))
+    ON CONFLICT (name) DO UPDATE SET until = EXCLUDED.until WHERE app_locks.until < now()
+    RETURNING name
+  `) as unknown[];
+  return rows.length > 0;
+}
+
+async function notifyOnce(subject: string, text: string) {
+  if (!process.env.RESEND_API_KEY) return;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: "Apereel <noreply@apereel.com>", to: [process.env.CONTACT_TO_EMAIL || "john@apereel.com"], subject, text }),
+  }).catch(() => null);
+}
+
 /** Submits queued jobs and collects finished ones, within a time budget. */
 export async function processMediaJobs(budgetMs: number): Promise<{ submitted: number; finished: number }> {
   if (!mediaProvider()) return { submitted: 0, finished: 0 };
   const started = Date.now();
   await sql()`UPDATE media_jobs SET status = 'queued', provider = 'higgsfield' WHERE status = 'waiting_provider'`;
-  // A render that never finishes shouldn't keep the rounds going forever.
-  await sql()`UPDATE media_jobs SET status = 'failed', error = 'Timed out at Higgsfield', updated_at = now() WHERE status = 'running' AND submitted_at < now() - interval '2 hours'`;
   let finished = 0;
   let submitted = 0;
 
-  // 1. Collect running renders.
+  // 1. Collect running renders (asking Higgsfield, never assuming).
   const running = (await sql()`
-    SELECT id, client_id, item_id, site_id, kind, brief, status, output_url, error, provider_request_id
+    SELECT id, client_id, item_id, site_id, kind, brief, status, output_url, error, provider_request_id, submitted_at
     FROM media_jobs WHERE status = 'running' AND provider_request_id IS NOT NULL ORDER BY submitted_at LIMIT 20
-  `) as MediaJob[];
+  `) as (MediaJob & { submitted_at: string })[];
   for (const job of running) {
     if (Date.now() - started > budgetMs) break;
     try {
@@ -157,20 +185,35 @@ export async function processMediaJobs(budgetMs: number): Promise<{ submitted: n
       const status = String(s.status ?? "").toLowerCase();
       const video = (s.video as { url?: string } | undefined)?.url;
       const image = (s.images as { url?: string }[] | undefined)?.[0]?.url;
+      const reason = typeof s.error === "string" ? s.error : s.error ? JSON.stringify(s.error) : status;
       if (status === "completed" && (video || image)) {
         const url = await keep((video ?? image)!, job);
-        await sql()`UPDATE media_jobs SET status = 'done', output_url = ${url}, updated_at = now() WHERE id = ${job.id}`;
+        await sql()`UPDATE media_jobs SET status = 'done', output_url = ${url}, error = NULL, updated_at = now() WHERE id = ${job.id}`;
         await attach(job, url);
         finished++;
       } else if (["failed", "nsfw", "canceled", "cancelled", "error"].includes(status)) {
-        await sql()`UPDATE media_jobs SET status = 'failed', error = ${`Higgsfield: ${status}`}, updated_at = now() WHERE id = ${job.id}`;
+        if (CREDIT_RE.test(reason)) {
+          // Not the job's fault: back in the queue, paused until credit is topped up.
+          await sql()`UPDATE media_jobs SET status = 'queued', provider_request_id = NULL, error = ${`Waiting for Higgsfield credit: ${reason}`.slice(0, 500)}, updated_at = now() WHERE id = ${job.id}`;
+        } else {
+          await sql()`UPDATE media_jobs SET status = 'failed', error = ${`Higgsfield: ${reason}`.slice(0, 500)}, updated_at = now() WHERE id = ${job.id}`;
+        }
+      } else if (Date.now() - new Date(job.submitted_at).getTime() > 6 * 3_600_000) {
+        await sql()`UPDATE media_jobs SET status = 'failed', error = ${`Higgsfield still "${status}" after 6 hours`}, updated_at = now() WHERE id = ${job.id}`;
       }
     } catch (err) {
       console.error("Media status check failed:", job.id, err instanceof Error ? err.message : err);
     }
   }
 
-  // 2. Submit queued jobs, a few at a time.
+  // 2. Submit queued jobs, a few at a time (not while credit is out).
+  if (await creditPaused()) {
+    // One email per 12 hours while paused.
+    if (await takeLock("higgsfield-credit-email", 12 * 3600)) {
+      await notifyOnce("Higgsfield credit is out", "Video and visual renders are paused. Top up at cloud.higgsfield.ai; they resume by themselves within 30 minutes.");
+    }
+    return { submitted, finished };
+  }
   const inFlight = ((await sql()`SELECT count(*)::int AS n FROM media_jobs WHERE status = 'running'`) as { n: number }[])[0].n;
   const queued = (await sql()`
     SELECT id, client_id, item_id, site_id, kind, brief, status, output_url, error
@@ -178,15 +221,34 @@ export async function processMediaJobs(budgetMs: number): Promise<{ submitted: n
   `) as MediaJob[];
   for (const job of queued) {
     if (Date.now() - started > budgetMs) break;
+    // A photo Higgsfield can't load fails here, before any credit is spent.
+    const readable = (await Promise.all(job.brief.images.slice(0, 1).map((u) => imageSize(u)))).every(Boolean);
+    if (!readable) {
+      await sql()`UPDATE media_jobs SET status = 'failed', error = 'The product photo can''t be read (the site blocks it); needs our photo storage', updated_at = now() WHERE id = ${job.id}`;
+      continue;
+    }
     try {
       const requestId = await submit(job);
-      await sql()`UPDATE media_jobs SET status = 'running', provider_request_id = ${requestId}, submitted_at = now(), updated_at = now() WHERE id = ${job.id}`;
+      await sql()`UPDATE media_jobs SET status = 'running', provider_request_id = ${requestId}, submitted_at = now(), error = NULL, updated_at = now() WHERE id = ${job.id}`;
       submitted++;
     } catch (err) {
-      await sql()`UPDATE media_jobs SET status = 'failed', error = ${err instanceof Error ? err.message.slice(0, 500) : "failed"}, updated_at = now() WHERE id = ${job.id}`;
+      const msg = err instanceof Error ? err.message : "failed";
+      if (CREDIT_RE.test(msg)) {
+        await sql()`UPDATE media_jobs SET error = ${`Waiting for Higgsfield credit: ${msg}`.slice(0, 500)}, updated_at = now() WHERE id = ${job.id}`;
+        break;
+      }
+      await sql()`UPDATE media_jobs SET status = 'failed', error = ${msg.slice(0, 500)}, updated_at = now() WHERE id = ${job.id}`;
     }
   }
   return { submitted, finished };
+}
+
+/** One collection round, at most once a minute across everyone asking (studio and admin pages). */
+export async function nudgeMediaJobs(): Promise<{ ran: boolean; pending: number }> {
+  if (!mediaProvider()) return { ran: false, pending: 0 };
+  if (!(await takeLock("media-nudge", 60))) return { ran: false, pending: await pendingMediaJobs() };
+  await processMediaJobs(20_000);
+  return { ran: true, pending: await pendingMediaJobs() };
 }
 
 /** Puts a finished render where it belongs: the site's hero film or its story visual. */

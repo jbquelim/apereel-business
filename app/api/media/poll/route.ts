@@ -1,14 +1,15 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { pendingMediaJobs, processMediaJobs } from "@/lib/media";
 
-// Renders take several minutes, so this works in rounds: submit queued jobs
-// to Higgsfield and collect finished ones, then, while anything is still
-// pending, call itself again a few minutes later. Started whenever a
-// service queues renders, plus once a day by cron as a backstop (the Hobby
-// plan allows only daily crons). GET = cron, POST = internal.
+// Collects renders inside the request itself: submit and collect, wait 30
+// seconds, repeat, for up to about 4 minutes (a sleeping background task
+// was dropped by the platform). If renders are still pending, it starts a
+// fresh call before returning. Also run by the daily cron, by services when
+// they queue renders, and nudged by open studio and admin pages.
+// GET = cron, POST = internal. CRON_SECRET-gated.
 
 export const maxDuration = 300;
-const ROUND_GAP_MS = 150_000;
+const WINDOW_MS = 240_000;
 
 function authorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -17,16 +18,24 @@ function authorized(request: Request) {
 
 async function round(request: Request) {
   if (!authorized(request)) return NextResponse.json({ ok: false }, { status: 401 });
-  const result = await processMediaJobs(100_000);
-  const pending = await pendingMediaJobs();
+  const started = Date.now();
+  let submitted = 0;
+  let finished = 0;
+  let pending = 0;
+  while (Date.now() - started < WINDOW_MS) {
+    const r = await processMediaJobs(60_000);
+    submitted += r.submitted;
+    finished += r.finished;
+    pending = await pendingMediaJobs();
+    if (pending === 0) break;
+    await new Promise((res) => setTimeout(res, 30_000));
+  }
   if (pending > 0) {
     const base = (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
-    after(async () => {
-      await new Promise((r) => setTimeout(r, ROUND_GAP_MS));
-      await fetch(`${base}/api/media/poll`, { method: "POST", headers: { "x-internal-secret": process.env.CRON_SECRET ?? "" } }).catch(() => null);
-    });
+    // Start the next window; it runs on its own, we only wait for it to begin.
+    await fetch(`${base}/api/media/poll`, { method: "POST", headers: { "x-internal-secret": process.env.CRON_SECRET ?? "" }, signal: AbortSignal.timeout(4_000) }).catch(() => null);
   }
-  return NextResponse.json({ ok: true, ...result, pending });
+  return NextResponse.json({ ok: true, submitted, finished, pending });
 }
 
 export const GET = round;

@@ -9,6 +9,8 @@ import { StudioItems } from "./studio-items";
 import { WebsiteStudio } from "./website-studio";
 import { BillingButton } from "./billing-button";
 import { refreshPaymentsStatus } from "@/lib/connect";
+import { MediaNudger } from "@/components/media-nudger";
+import { pendingMediaJobs } from "@/lib/media";
 
 // A client's studio: their content, ads or website, made by AI from their
 // own products and what we know of their market. Every item takes changes
@@ -92,6 +94,7 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
           {client.stripe_customer_id && <BillingButton token={token} />}
         </div>
         {body}
+        <MediaNudger pending={await pendingMediaJobs().catch(() => 0)} />
       </section>
     </main>
   );
