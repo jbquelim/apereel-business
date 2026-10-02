@@ -262,7 +262,8 @@ async function attach(job: MediaJob, url: string) {
     if (hero) hero.video = url;
   } else {
     // Premium visuals replace the plain product photos on story sections, one per section.
-    const story = doc.pages.flatMap((p) => p.sections).find((s) => s.type === "story" && !(s.image ?? "").includes("/media/"));
+    const rendered = new Set(((await sql()`SELECT output_url FROM media_jobs WHERE site_id = ${job.site_id} AND status = 'done' AND id <> ${job.id}`) as { output_url: string }[]).map((r) => r.output_url));
+    const story = doc.pages.flatMap((p) => p.sections).find((s) => s.type === "story" && !rendered.has(s.image ?? ""));
     if (story) story.image = url;
   }
   await sql()`UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, updated_at = now() WHERE id = ${job.site_id}`;
