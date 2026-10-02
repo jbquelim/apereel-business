@@ -50,6 +50,8 @@ export type SiteProduct = {
 
 export type SiteDoc = {
   brand: { name: string; tagline: string; email?: string | null; phone?: string | null; address?: string | null; logo?: string | null };
+  /** The hand-designed template this site uses (lib/templates); none = the section renderer. */
+  design?: string;
   /** Products in the business's whole catalog (the site may show fewer while it's imported). */
   catalogTotal?: number;
   tokens: SiteTokens;

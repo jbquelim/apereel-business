@@ -1,4 +1,5 @@
 import type { Section, SiteDoc, SitePage, SiteProduct } from "./site-types";
+import { templateById } from "./templates";
 
 // Renders a customer site to complete HTML documents: no framework on the
 // page, one small stylesheet from the template's tokens, a few lines of
@@ -17,6 +18,8 @@ export type RenderTarget = {
   /** Where lead forms post (Apereel's API). */
   apiOrigin: string;
   preview: boolean;
+  /** Overrides the site's template (gallery previews). */
+  design?: string;
 };
 
 export type RenderResult =
@@ -309,6 +312,9 @@ export function renderPath(t: RenderTarget, path: string[], query: URLSearchPara
     ];
     return { kind: "text", status: 200, contentType: "application/xml", body: `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${esc(t.origin + u)}</loc></url>`).join("")}</urlset>` };
   }
+  // A hand-designed template renders the pages it knows; anything else falls through.
+  const designed = templateById(t.design ?? doc.design)?.render(t, path, query);
+  if (designed) return designed;
   const page = doc.pages.find((p) => (p.slug ? `/${p.slug}` : "/") === joined);
   if (page) return { kind: "html", status: 200, body: pageDoc(page, t) };
   if (joined === "/products") return { kind: "html", status: 200, body: listing(t, null, query)! };
