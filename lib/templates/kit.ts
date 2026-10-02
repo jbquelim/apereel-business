@@ -174,12 +174,16 @@ export function listState(t: RenderTarget, categorySlug: string | null, query: U
   return { cat, q, total, scopeTotal, pages, page, shown, path, pageHref, missing: !!categorySlug && !cat };
 }
 
+/** Main categories in their set order (highest value first), the rest by size. */
+export const byRank = (a: { rank?: number; count?: number }, b: { rank?: number; count?: number }) =>
+  (a.rank ?? 1e6) - (b.rank ?? 1e6) || (b.count ?? 0) - (a.count ?? 0);
+
 /** The category trail (parents first) and the chips to show: children, or siblings at a leaf. */
 export function categoryNav(doc: SiteDoc, current: SiteDoc["categories"][number] | null) {
   const bySlug = new Map(doc.categories.map((c) => [c.slug, c]));
   const trail: SiteDoc["categories"] = [];
   for (let c = current; c; c = c.parent ? bySlug.get(c.parent) ?? null : null) trail.unshift(c);
-  const children = (slug: string | null) => doc.categories.filter((c) => (c.parent ?? null) === slug).sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  const children = (slug: string | null) => doc.categories.filter((c) => (c.parent ?? null) === slug).sort(byRank);
   const kids = current ? children(current.slug) : children(null);
   const chips = kids.length ? kids : current ? children(current.parent ?? null) : [];
   return { trail, chips, parent: current?.parent ? bySlug.get(current.parent) ?? null : null };

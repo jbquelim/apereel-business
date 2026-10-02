@@ -15,6 +15,7 @@ const STATUS_LABEL: Record<string, string> = {
   sent: "Sent",
   failed: "Payment failed",
   generation_failed: "Generation failed",
+  internal: "For a website build (not sent)",
 };
 
 export default async function AdminPage() {

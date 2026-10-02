@@ -383,6 +383,7 @@ await sql`
 `;
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS generation_error TEXT`;
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'growth'`;
+await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS internal BOOLEAN NOT NULL DEFAULT false`;
 
 // Service tier prices, edited by John at /admin/pricing. A tier without a
 // row (or with a null price) is unpriced.

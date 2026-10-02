@@ -12,6 +12,7 @@ import { extractBrand, luminance, type Brand } from "./brand-extract";
 import { upgradeImages } from "./image-upgrade";
 import { imageSize } from "./image-size";
 import { fetchSitemapCatalog } from "./site-fetch";
+import { analysisBrief, siteAnalysis } from "./site-analysis";
 
 // The website service, automated: the best template for the business's
 // industry and tier, filled by Claude with copy from what we measured (their
@@ -262,6 +263,10 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   const gaps = (audit?.demand?.rows ?? []).filter((r) => r.coverage === "none").map((r) => r.query);
   const rich = tier !== "fix";
   const benchmark = rich ? await competitorBenchmark(client.domain).catch(() => "") : "";
+  // The $30 analysis we ran for this build (lib/site-analysis): the copy acts on it.
+  const analysis = await siteAnalysis(client.domain).catch(() => null);
+  const brief = analysisBrief(analysis);
+  const rewrites = new Map((analysis?.preview?.productRewrites ?? []).map((r) => [r.url.replace(/[?#].*$/, "").replace(/\/$/, ""), r]));
 
   const text = await callClaude({
     clientId: client.id,
@@ -272,7 +277,7 @@ export async function buildSite(client: Client): Promise<SiteRow> {
 BUSINESS: ${client.domain}${audit?.industry?.subIndustry ? ` (${audit.industry.subIndustry})` : ""}
 ${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${audit.translateAdvantage.strength}\n` : ""}CATALOG: ${catalogTotal.toLocaleString("en-US")} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
 ${trust.length ? `VERIFIED CONTACT AND TRADE FACTS (shown in the trust strip): ${trust.map((i) => `${i.title}: ${i.body}`).join("; ")}\n` : "NO VERIFIED CONTACT FACTS: leave out the trust section.\n"}HERO CANDIDATES (slug, product, photo size): ${candidates.map((c) => `${c.p.slug} | ${c.p.title} | ${c.size ? `${c.size.width}px` : "size unknown"}`).join("; ")}
-${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}${benchmark ? `${benchmark}\n` : ""}
+${brief ? `${brief}\n` : ""}${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}${benchmark ? `${benchmark}\n` : ""}
 FEATURED PRODUCTS (write a description for each):
 ${featured.map((p) => `- ${p.slug}: ${p.title}${p.price != null ? ` (${p.currency ?? "$"}${p.price})` : ""}`).join("\n")}
 
@@ -342,7 +347,8 @@ ${RULES}
   for (const p of products) {
     const specs = rich && Array.isArray(out.specs?.[p.slug]) ? out.specs![p.slug].map((r) => ({ label: cut(r.label, 40), value: cut(r.value, 120) })).filter((r) => r.label && r.value).slice(0, 12) : [];
     if (specs.length) p.specs = specs;
-    const d = cut(out.products?.[p.slug], 600);
+    // The analysis's rewrite of this product's description wins when there is one.
+    const d = cut(rewrites.get(p.sourceUrl.replace(/[?#].*$/, "").replace(/\/$/, ""))?.description, 600) || cut(out.products?.[p.slug], 600);
     if (d) p.description = d;
     else if (p.category) p.description = `${p.title}, part of the ${categories.find((c) => c.slug === p.category)?.name ?? ""} range from ${name}.`;
     else p.description = `${p.title} from ${name}.`;

@@ -57,7 +57,9 @@ export type SiteDoc = {
   tokens: SiteTokens;
   pages: SitePage[];
   products: SiteProduct[];
-  categories: { slug: string; name: string; description: string; parent?: string | null; count?: number; image?: string | null }[];
+  categories: { slug: string; name: string; description: string; parent?: string | null; count?: number; image?: string | null; rank?: number }[];
+  /** Main categories (from the analysis) that the store's own top-level categories sit under; kept across re-imports. */
+  categoryGroups?: { slug: string; name: string; description: string; members: string[] }[];
   /** Products in site_products (the full catalog); the document keeps only home-page picks. */
   catalogSize?: number;
   /**

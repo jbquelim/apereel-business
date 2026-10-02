@@ -91,8 +91,9 @@ export async function POST(request: Request) {
         const report = order.report as GrowthReport;
         const showcase = await collectShowcase(order.domain);
         const preview = await writePreviewAssets(report, showcase);
-        await saveReport(orderId, { ...report, preview }, "needs_review");
-        await notifyJohn(orderId, "ready", `${order.domain}: plan + preview (${showcase.length} products)`);
+        // Internal (a website build): kept for the build, never delivered.
+        await saveReport(orderId, { ...report, preview }, order.internal ? "internal" : "needs_review");
+        if (!order.internal) await notifyJohn(orderId, "ready", `${order.domain}: plan + preview (${showcase.length} products)`);
       } catch (err) {
         await failGeneration(orderId, err instanceof Error ? err.message : String(err));
         await notifyJohn(orderId, "failed", err instanceof Error ? err.message : String(err));
@@ -112,6 +113,10 @@ export async function POST(request: Request) {
         // $30: keep generating — the preview assets build on the plan.
         await saveReport(orderId, planned, "generating");
         await triggerStage(base, orderId, "assets");
+        return;
+      }
+      if (order.internal) {
+        await saveReport(orderId, planned, "internal");
         return;
       }
       await saveReport(orderId, planned, "needs_review");

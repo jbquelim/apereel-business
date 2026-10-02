@@ -84,11 +84,13 @@ export type GrowthOrder = {
   report: unknown;
   livemode: boolean | null;
   tier: string;
+  /** Run for our own website build; never delivered to the customer. */
+  internal: boolean;
 };
 
 export async function getOrder(id: string): Promise<GrowthOrder | null> {
   const rows = (await sql()`
-    SELECT id, domain, url, email, name, status, report, livemode, tier FROM growth_orders WHERE id = ${id}
+    SELECT id, domain, url, email, name, status, report, livemode, tier, COALESCE(internal, false) AS internal FROM growth_orders WHERE id = ${id}
   `) as GrowthOrder[];
   return rows[0] ?? null;
 }
@@ -103,7 +105,7 @@ export async function claimForGeneration(id: string, from: string[]): Promise<bo
   return rows.length > 0;
 }
 
-export async function saveReport(id: string, report: unknown, status: "generating" | "needs_review"): Promise<void> {
+export async function saveReport(id: string, report: unknown, status: "generating" | "needs_review" | "internal"): Promise<void> {
   await sql()`
     UPDATE growth_orders SET report = ${JSON.stringify(report)}::jsonb, status = ${status}
     WHERE id = ${id} AND status = 'generating'

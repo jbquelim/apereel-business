@@ -1,6 +1,6 @@
 import type { SiteProduct } from "../site-types";
 import type { RenderResult, RenderTarget } from "../site-render";
-import { categoryNav, shortName, esc, fontsLink, href, jsonLdTags, leadForm, listState, money, paras, productAction, productJsonLd, slots, splitTitle, type Slots } from "./kit";
+import { byRank, categoryNav, shortName, esc, fontsLink, href, jsonLdTags, leadForm, listState, money, paras, productAction, productJsonLd, slots, splitTitle, type Slots } from "./kit";
 
 // "Crown": Signature tier. Original design in the language of the great
 // luxury houses: products on a soft spotlit stage, very large bold type,
@@ -154,7 +154,7 @@ function logo(s: Slots, t: RenderTarget, cls: string) {
 
 function page(t: RenderTarget, s: Slots, o: { path: string; title: string; description: string; body: string; jsonLd?: object[]; noindex?: boolean }) {
   const canonical = `${t.origin}${o.path === "/" ? "/" : o.path}`;
-  const topCats = s.categories.filter((c) => !c.parent).sort((a, b) => b.count - a.count).slice(0, 6);
+  const topCats = s.categories.filter((c) => !c.parent).sort(byRank).slice(0, 6);
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(o.title)}</title><meta name="description" content="${esc(o.description)}"><link rel="canonical" href="${esc(canonical)}">
 ${t.preview || o.noindex ? '<meta name="robots" content="noindex">' : ""}<meta property="og:title" content="${esc(o.title)}"><meta property="og:description" content="${esc(o.description)}"><meta property="og:url" content="${esc(canonical)}">
@@ -192,7 +192,7 @@ function home(t: RenderTarget, s: Slots): string {
   const hero = heroVisual
     ? `<section class="hero on-dark"><div class="media cover">${s.hero.video ? `<video src="${esc(s.hero.video)}" autoplay muted loop playsinline></video>` : img(heroVisual, s.hero.heading, "cover", true)}</div>`
     : `<section class="hero stage"><div class="media">${img(s.hero.image, s.hero.heading, "p", true)}</div>`;
-  const cardsFrom = s.categories.filter((c) => c.count > 0 && !c.parent && c.image).sort((a, b) => b.count - a.count).slice(0, 3);
+  const cardsFrom = s.categories.filter((c) => c.count > 0 && !c.parent && c.image).sort(byRank).slice(0, 3);
   const cards =
     cardsFrom.length >= 3
       ? cardsFrom.map((c) => ({ to: `/collections/${c.slug}`, img: c.image, over: `${c.count} products`, title: c.name }))
@@ -222,7 +222,7 @@ function listing(t: RenderTarget, s: Slots, categorySlug: string | null, query: 
   if (ed && !st.q && st.page === 1 && !st.cat && tiles.length > 6) tiles.splice(4, 0, editorialTile(t, ed, s.brand.tagline || s.brand.name, s.brand.name, "/about"));
   const crumbs = st.cat ? `<p class="crumbs" style="padding:0 0 18px"><a href="${href(t, "/products")}">Collection</a>${nav.trail.slice(0, -1).map((c) => ` / <a href="${href(t, `/collections/${c.slug}`)}">${esc(c.name)}</a>`).join("")}</p>` : `<p class="over">${esc(s.brand.name)}</p>`;
   // Categories as photo cards (the biggest), the rest in a compact index; siblings as chips at a leaf.
-  const children = st.q ? [] : t.doc.categories.filter((c) => (c.parent ?? null) === (st.cat?.slug ?? null)).sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  const children = st.q ? [] : t.doc.categories.filter((c) => (c.parent ?? null) === (st.cat?.slug ?? null)).sort(byRank);
   const cardList = children.filter((c) => c.image).slice(0, 8);
   const restList = children.filter((c) => !cardList.includes(c));
   const catCards = children.length

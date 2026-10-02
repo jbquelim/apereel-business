@@ -4,6 +4,7 @@ import { crawlProductUrls } from "./site-crawl";
 import { upgradeImages } from "./image-upgrade";
 import { platformCatalog, type PlatformCatalog } from "./platform-catalog";
 import type { SiteDoc } from "./site-types";
+import { applyGroups } from "./category-groups";
 
 // Imports a business's whole catalog into a generated site, categorised the
 // way the business itself categorises it. Category pages list their products,
@@ -229,7 +230,7 @@ async function assemble(site: { id: string; doc: SiteDoc }, domain: string): Pro
   const featured = rows.filter((r) => r.featured);
   const doc: SiteDoc = {
     ...site.doc,
-    categories,
+    categories: applyGroups(categories, site.doc.categoryGroups),
     // The document keeps only what the home page needs; the catalog lives in site_products.
     products: (featured.length ? featured : rows.filter((r) => r.image).slice(0, 24)).map((r) => ({
       slug: r.slug, title: r.title, price: r.price, currency: r.currency, image: r.image, description: r.description,
@@ -320,7 +321,7 @@ async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: Platfor
   const featured = list.filter((r) => r.featured);
   const doc: SiteDoc = {
     ...site.doc,
-    categories,
+    categories: applyGroups(categories, site.doc.categoryGroups),
     products: (featured.length ? featured : list.filter((r) => r.image).slice(0, 24)).map((r) => ({
       slug: r.slug, title: r.title, price: r.price, currency: r.currency, image: r.image, description: r.description,
       category: r.category, sourceUrl: r.source_url, featured: true, ...(r.specs ? { specs: r.specs } : {}),
