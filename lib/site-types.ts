@@ -57,7 +57,9 @@ export type SiteDoc = {
   tokens: SiteTokens;
   pages: SitePage[];
   products: SiteProduct[];
-  categories: { slug: string; name: string; description: string }[];
+  categories: { slug: string; name: string; description: string; parent?: string | null; count?: number; image?: string | null }[];
+  /** Products in site_products (the full catalog); the document keeps only home-page picks. */
+  catalogSize?: number;
   /**
    * How a buyer acts on a product: pay here with Stripe (the business's own
    * account), buy on their current store, or send an enquiry.

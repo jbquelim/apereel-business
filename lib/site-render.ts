@@ -20,6 +20,8 @@ export type RenderTarget = {
   preview: boolean;
   /** Overrides the site's template (gallery previews). */
   design?: string;
+  /** This page's slice of the full catalog (lib/site-catalog), when imported. */
+  catalog?: import("./site-catalog").CatalogView | null;
 };
 
 export type RenderResult =
@@ -220,11 +222,12 @@ function listing(t: RenderTarget, categorySlug: string | null, query: URLSearchP
   const q = (query.get("q") ?? "").trim().slice(0, 80);
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
   // Search matches every word in the name or address, so part numbers work too.
-  const inScope = cat ? doc.products.filter((p) => p.category === cat.slug) : doc.products;
-  const list = words.length ? inScope.filter((p) => words.every((w) => `${p.title} ${p.slug}`.toLowerCase().includes(w))) : inScope;
-  const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
-  const page = Math.min(pages, Math.max(1, Number(query.get("page")) || 1));
-  const shown = list.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const view = t.catalog?.kind === "listing" ? t.catalog : null;
+  const inScope = view ? { length: view.scopeCount } : cat ? doc.products.filter((p) => p.category === cat.slug) : doc.products;
+  const list = view ? { length: view.total } : words.length ? (inScope as SiteProduct[]).filter((p) => words.every((w) => `${p.title} ${p.slug}`.toLowerCase().includes(w))) : (inScope as SiteProduct[]);
+  const pages = view ? view.pages : Math.max(1, Math.ceil(list.length / PER_PAGE));
+  const page = view ? view.page : Math.min(pages, Math.max(1, Number(query.get("page")) || 1));
+  const shown = view ? view.products : (list as SiteProduct[]).slice((page - 1) * PER_PAGE, page * PER_PAGE);
   const path = cat ? `/collections/${cat.slug}` : "/products";
   const href = (n: number) => `${t.base}${path}?${new URLSearchParams({ ...(q ? { q } : {}), page: String(n) })}`;
   const chips = doc.categories.length
@@ -308,7 +311,7 @@ export function renderPath(t: RenderTarget, path: string[], query: URLSearchPara
       ...doc.pages.map((p) => (p.slug ? `/${p.slug}` : "/")),
       "/products",
       ...doc.categories.map((c) => `/collections/${c.slug}`),
-      ...doc.products.map((p) => `/products/${p.slug}`),
+      ...(t.catalog?.kind === "sitemap" ? t.catalog.slugs : doc.products.map((p) => p.slug)).map((slug) => `/products/${slug}`),
     ];
     return { kind: "text", status: 200, contentType: "application/xml", body: `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${esc(t.origin + u)}</loc></url>`).join("")}</urlset>` };
   }
@@ -323,7 +326,7 @@ export function renderPath(t: RenderTarget, path: string[], query: URLSearchPara
     if (html) return { kind: "html", status: 200, body: html };
   }
   if (path[0] === "products" && path[1]) {
-    const p = doc.products.find((x) => x.slug === path[1]);
+    const p = t.catalog?.kind === "product" ? t.catalog.product : doc.products.find((x) => x.slug === path[1]);
     if (p) return { kind: "html", status: 200, body: productPage(t, p) };
   }
   const to = doc.redirects[joined] ?? doc.redirects[`${joined}/`];

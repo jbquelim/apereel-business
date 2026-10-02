@@ -12,6 +12,8 @@ export type TemplateMeta = {
   /** The site whose design language it's built in (as reference, not copied). */
   reference: string;
   summary: string;
+  /** Products per listing page. */
+  perPage: number;
   render: (t: RenderTarget, path: string[], query: URLSearchParams) => RenderResult | null;
 };
 
@@ -22,6 +24,7 @@ export const TEMPLATES: TemplateMeta[] = [
     tier: "grow",
     reference: "rolex.com",
     summary: "Products on a soft spotlit stage, very large bold type, a dark band of tall collection cards, tiled catalog.",
+    perPage: 24,
     render: crown.render,
   },
 ];

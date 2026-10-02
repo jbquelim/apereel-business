@@ -248,6 +248,48 @@ await sql`
 `;
 await sql`CREATE INDEX IF NOT EXISTS idx_media_jobs_status ON media_jobs (status, created_at)`;
 await sql`ALTER TABLE media_jobs ADD COLUMN IF NOT EXISTS provider_request_id TEXT`;
+// A business's full catalog: its category pages, which products each lists,
+// and the products a generated site shows (one row each, so 10,000 products
+// stay fast to search and page through).
+await sql`
+  CREATE TABLE IF NOT EXISTS catalog_categories (
+    domain TEXT NOT NULL,
+    url TEXT NOT NULL,
+    name TEXT,
+    parent_url TEXT,
+    depth INT,
+    pages_read INT NOT NULL DEFAULT 0,
+    crawled_at TIMESTAMPTZ,
+    PRIMARY KEY (domain, url)
+  )
+`;
+await sql`
+  CREATE TABLE IF NOT EXISTS catalog_links (
+    domain TEXT NOT NULL,
+    category_url TEXT NOT NULL,
+    product_url TEXT NOT NULL,
+    PRIMARY KEY (domain, category_url, product_url)
+  )
+`;
+await sql`CREATE INDEX IF NOT EXISTS idx_catalog_links_product ON catalog_links (domain, product_url)`;
+await sql`
+  CREATE TABLE IF NOT EXISTS site_products (
+    site_id TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    title TEXT NOT NULL,
+    price NUMERIC,
+    currency TEXT,
+    image TEXT,
+    description TEXT,
+    category TEXT,
+    specs JSONB,
+    featured BOOLEAN NOT NULL DEFAULT false,
+    source_url TEXT NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (site_id, slug)
+  )
+`;
+await sql`CREATE INDEX IF NOT EXISTS idx_site_products_cat ON site_products (site_id, category, position)`;
 // Short-lived named locks (e.g. "one render round a minute", "credit email sent").
 await sql`CREATE TABLE IF NOT EXISTS app_locks (name TEXT PRIMARY KEY, until TIMESTAMPTZ NOT NULL)`;
 await sql`ALTER TABLE media_jobs ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ`;

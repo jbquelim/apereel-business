@@ -1,5 +1,6 @@
 import { isAdmin } from "@/lib/admin-auth";
 import { renderPath } from "@/lib/site-render";
+import { loadCatalogView } from "@/lib/site-catalog";
 import { getSiteBySlug } from "@/lib/site-builder";
 import { templateById } from "@/lib/templates";
 
@@ -13,10 +14,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
   const site = slug ? await getSiteBySlug(slug) : null;
   if (!template || !site) return new Response("Not found", { status: 404 });
   const base = `/template-preview/${template.id}/${site.slug}`;
+  const query = new URL(request.url).searchParams;
+  const catalog = await loadCatalogView(site.id, site.doc, rest, query, template.perPage).catch(() => null);
   const result = renderPath(
-    { siteId: site.id, doc: site.doc, base, origin: new URL(request.url).origin + base, apiOrigin: "https://www.apereel.com", preview: true, design: template.id },
+    { siteId: site.id, doc: site.doc, base, origin: new URL(request.url).origin + base, apiOrigin: "https://www.apereel.com", preview: true, design: template.id, catalog },
     rest,
-    new URL(request.url).searchParams,
+    query,
   );
   if (result.kind === "redirect") return new Response(null, { status: 307, headers: { location: result.location } });
   return new Response(result.body, { status: result.status, headers: { "content-type": result.kind === "text" ? result.contentType : "text/html; charset=utf-8", "cache-control": "private, no-store" } });

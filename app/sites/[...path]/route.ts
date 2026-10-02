@@ -1,4 +1,6 @@
 import { renderPath } from "@/lib/site-render";
+import { loadCatalogView } from "@/lib/site-catalog";
+import { templateById as tplById } from "@/lib/templates";
 import { getSiteByDomain, getSiteBySlug } from "@/lib/site-builder";
 
 // Serves customer websites as complete HTML documents (outside Apereel's own
@@ -16,8 +18,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
   if (!site) return new Response("Not found", { status: 404, headers: { "content-type": "text/plain" } });
 
   const origin = onDomain ? `https://${host}` : new URL(request.url).origin + `/sites/${site.slug}`;
+  const query = new URL(request.url).searchParams;
+  const perPage = tplById(site.doc.design)?.perPage ?? 48;
+  const catalog = await loadCatalogView(site.id, site.doc, rest, query, perPage).catch(() => null);
   const result = renderPath(
     {
+      catalog,
       siteId: site.id,
       doc: site.doc,
       base: onDomain ? "" : `/sites/${site.slug}`,
@@ -26,7 +32,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
       preview: !onDomain,
     },
     rest,
-    new URL(request.url).searchParams,
+    query,
   );
   const cache = onDomain ? "public, s-maxage=60, stale-while-revalidate=600" : "private, no-store";
   if (result.kind === "redirect") return new Response(null, { status: 308, headers: { location: result.location } });

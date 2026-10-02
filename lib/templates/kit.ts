@@ -78,8 +78,8 @@ export function slots(doc: SiteDoc): Slots {
     featured: featured.length ? featured : withImage.slice(0, 12),
     products: doc.products,
     categories: doc.categories.map((c) => {
-      const inCat = doc.products.filter((p) => p.category === c.slug);
-      return { ...c, image: inCat.find((p) => p.image)?.image ?? null, count: inCat.length };
+      const inCat = doc.products.filter((p) => p.category === c.slug || (c.slug && doc.categories.some((k) => k.parent === c.slug && k.slug === p.category)));
+      return { ...c, image: c.image ?? inCat.find((p) => p.image)?.image ?? null, count: c.count ?? inCat.length };
     }),
     promise: doc.productPromise ?? [],
     editorial: [...rendered, ...withImage.map((p) => p.image!)].filter((v, i, a) => a.indexOf(v) === i),
@@ -146,19 +146,47 @@ export function splitTitle(title: string): { name: string; detail: string } {
   return { name: title, detail: "" };
 }
 
-/** Product listing state: search, category and page from the query. */
+/** Product listing state: search, category and page (from the imported catalog, or the document). */
 export function listState(t: RenderTarget, categorySlug: string | null, query: URLSearchParams, perPage: number) {
-  const cat = categorySlug ? t.doc.categories.find((c) => c.slug === categorySlug) ?? null : null;
-  const q = (query.get("q") ?? "").trim().slice(0, 80);
-  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-  const scope = cat ? t.doc.products.filter((p) => p.category === cat.slug) : t.doc.products;
-  const list = words.length ? scope.filter((p) => words.every((w) => `${p.title} ${p.slug}`.toLowerCase().includes(w))) : scope;
-  const pages = Math.max(1, Math.ceil(list.length / perPage));
-  const page = Math.min(pages, Math.max(1, Number(query.get("page")) || 1));
+  const view = t.catalog?.kind === "listing" ? t.catalog : null;
+  const cat = view ? view.category : categorySlug ? t.doc.categories.find((c) => c.slug === categorySlug) ?? null : null;
+  const q = view ? view.q : (query.get("q") ?? "").trim().slice(0, 80);
   const path = cat ? `/collections/${cat.slug}` : "/products";
+  let shown: SiteProduct[];
+  let total: number;
+  let scopeTotal: number;
+  let pages: number;
+  let page: number;
+  if (view) {
+    ({ products: shown, total, pages, page } = view);
+    scopeTotal = view.scopeCount;
+  } else {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const scope = cat ? t.doc.products.filter((p) => p.category === cat.slug) : t.doc.products;
+    const list = words.length ? scope.filter((p) => words.every((w) => `${p.title} ${p.slug}`.toLowerCase().includes(w))) : scope;
+    total = list.length;
+    scopeTotal = scope.length;
+    pages = Math.max(1, Math.ceil(total / perPage));
+    page = Math.min(pages, Math.max(1, Number(query.get("page")) || 1));
+    shown = list.slice((page - 1) * perPage, page * perPage);
+  }
   const pageHref = (n: number) => `${t.base}${path}?${new URLSearchParams({ ...(q ? { q } : {}), page: String(n) })}`;
-  return { cat, q, list, scope, pages, page, shown: list.slice((page - 1) * perPage, page * perPage), path, pageHref };
+  return { cat, q, total, scopeTotal, pages, page, shown, path, pageHref, missing: !!categorySlug && !cat };
+}
+
+/** The category trail (parents first) and the chips to show: children, or siblings at a leaf. */
+export function categoryNav(doc: SiteDoc, current: SiteDoc["categories"][number] | null) {
+  const bySlug = new Map(doc.categories.map((c) => [c.slug, c]));
+  const trail: SiteDoc["categories"] = [];
+  for (let c = current; c; c = c.parent ? bySlug.get(c.parent) ?? null : null) trail.unshift(c);
+  const children = (slug: string | null) => doc.categories.filter((c) => (c.parent ?? null) === slug).sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  const kids = current ? children(current.slug) : children(null);
+  const chips = kids.length ? kids : current ? children(current.parent ?? null) : [];
+  return { trail, chips, parent: current?.parent ? bySlug.get(current.parent) ?? null : null };
 }
 
 export const fontsLink = (families: string[]) =>
   `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?${families.map((f) => `family=${f}`).join("&")}&display=swap" rel="stylesheet">`;
+
+/** "Wire & Cord Sets - Lamp Wire" → "Wire & Cord Sets" for compact labels. */
+export const shortName = (name: string) => name.split(/\s+[-–—]\s+/)[0].trim() || name;

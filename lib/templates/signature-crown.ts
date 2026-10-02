@@ -1,6 +1,6 @@
 import type { SiteProduct } from "../site-types";
 import type { RenderResult, RenderTarget } from "../site-render";
-import { esc, fontsLink, href, jsonLdTags, leadForm, listState, money, paras, productAction, productJsonLd, slots, splitTitle, type Slots } from "./kit";
+import { categoryNav, shortName, esc, fontsLink, href, jsonLdTags, leadForm, listState, money, paras, productAction, productJsonLd, slots, splitTitle, type Slots } from "./kit";
 
 // "Crown": Signature tier. Original design in the language of the great
 // luxury houses: products on a soft spotlit stage, very large bold type,
@@ -101,6 +101,13 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .chips{display:flex;gap:8px;overflow-x:auto;justify-content:center;flex-wrap:wrap;padding:24px 0 34px}
 .chips a{white-space:nowrap;padding:9px 16px;border-radius:999px;background:var(--tile);text-decoration:none;font-size:14px}.chips a[aria-current]{background:var(--ink);color:#fff}
 .count{text-align:center;color:var(--muted);font-size:14px;margin:-14px 0 22px}
+.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:6px 0 26px}
+.cg{display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:var(--tile);text-decoration:none}
+.cg .ph{aspect-ratio:4/3;background:#fff;overflow:hidden}.cg .ph img{width:100%;height:100%;object-fit:cover;transition:transform .9s cubic-bezier(.2,.7,.2,1)}.cg:hover .ph img{transform:scale(1.04)}
+.cg .t{padding:16px 18px 18px;display:flex;justify-content:space-between;gap:12px;align-items:baseline}.cg b{font:700 17px/1.2 var(--fd)}.cg span{color:var(--muted);font-size:13px;white-space:nowrap}
+.index{margin:0 0 46px;border-top:1px solid var(--line)}.index summary{cursor:pointer;list-style:none;padding:18px 0;font:600 15px var(--fb);text-align:center}.index summary::-webkit-details-marker{display:none}
+.index ul{list-style:none;padding:0 0 24px;margin:0;columns:4 200px;column-gap:32px}.index li{break-inside:avoid;padding:5px 0;font-size:14.5px}.index a{text-decoration:none}.index a:hover{color:var(--accent)}.index span{color:var(--muted);font-size:12.5px;margin-left:6px}
+@media(max-width:1000px){.cgrid{grid-template-columns:repeat(3,1fr)}}@media(max-width:640px){.cgrid{grid-template-columns:1fr 1fr}}
 .pager{display:flex;gap:14px;align-items:center;justify-content:center;margin:46px 0 90px}
 /* product */
 .pdp{display:grid;grid-template-columns:minmax(260px,1fr) 1.5fr minmax(0,.6fr);align-items:center;min-height:min(84svh,920px);gap:24px}
@@ -147,7 +154,7 @@ function logo(s: Slots, t: RenderTarget, cls: string) {
 
 function page(t: RenderTarget, s: Slots, o: { path: string; title: string; description: string; body: string; jsonLd?: object[]; noindex?: boolean }) {
   const canonical = `${t.origin}${o.path === "/" ? "/" : o.path}`;
-  const topCats = [...s.categories].sort((a, b) => b.count - a.count).slice(0, 6);
+  const topCats = s.categories.filter((c) => !c.parent).sort((a, b) => b.count - a.count).slice(0, 6);
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(o.title)}</title><meta name="description" content="${esc(o.description)}"><link rel="canonical" href="${esc(canonical)}">
 ${t.preview || o.noindex ? '<meta name="robots" content="noindex">' : ""}<meta property="og:title" content="${esc(o.title)}"><meta property="og:description" content="${esc(o.description)}"><meta property="og:url" content="${esc(canonical)}">
@@ -185,7 +192,7 @@ function home(t: RenderTarget, s: Slots): string {
   const hero = heroVisual
     ? `<section class="hero on-dark"><div class="media cover">${s.hero.video ? `<video src="${esc(s.hero.video)}" autoplay muted loop playsinline></video>` : img(heroVisual, s.hero.heading, "cover", true)}</div>`
     : `<section class="hero stage"><div class="media">${img(s.hero.image, s.hero.heading, "p", true)}</div>`;
-  const cardsFrom = s.categories.filter((c) => c.count > 0).sort((a, b) => b.count - a.count).slice(0, 3);
+  const cardsFrom = s.categories.filter((c) => c.count > 0 && !c.parent && c.image).sort((a, b) => b.count - a.count).slice(0, 3);
   const cards =
     cardsFrom.length >= 3
       ? cardsFrom.map((c) => ({ to: `/collections/${c.slug}`, img: c.image, over: `${c.count} products`, title: c.name }))
@@ -207,21 +214,42 @@ ${s.closing ? `<section class="closing stage"><p class="over" data-r>${esc(s.bra
 
 function listing(t: RenderTarget, s: Slots, categorySlug: string | null, query: URLSearchParams): string | null {
   const st = listState(t, categorySlug, query, PER_PAGE);
-  if (categorySlug && !st.cat) return null;
+  if (st.missing) return null;
+  const nav = categoryNav(t.doc, st.cat);
   const title = st.q ? `Results for “${st.q}”` : st.cat ? st.cat.name : "The collection";
   const tiles = st.shown.map((p) => tile(t, p));
   const ed = s.editorial.find((u) => isLarge(u));
-  if (ed && !st.q && st.page === 1 && tiles.length > 6) tiles.splice(4, 0, editorialTile(t, ed, s.brand.tagline || s.brand.name, s.brand.name, "/about"));
-  const body = `<section class="lh"><div class="w"><p class="over">${esc(s.brand.name)}</p><h1 class="display">${esc(title)}</h1>${st.cat?.description && !st.q ? `<p class="lead">${esc(st.cat.description)}</p>` : ""}
-<form class="search" role="search" method="get" action="${t.base}${st.path}"><input name="q" value="${esc(st.q)}" placeholder="Search by name or part number" aria-label="Search"><button class="pill dark" type="submit">Search</button></form>
-${s.categories.length ? `<div class="chips"><a href="${href(t, "/products")}"${!st.cat ? ' aria-current="page"' : ""}>All</a>${s.categories.map((c) => `<a href="${href(t, `/collections/${c.slug}`)}"${st.cat?.slug === c.slug ? ' aria-current="page"' : ""}>${esc(c.name)}</a>`).join("")}</div>` : '<div style="height:30px"></div>'}
-<p class="count">${st.list.length.toLocaleString("en-US")} ${st.q ? "matches" : "products"}</p></div></section>
-<div class="w"><div class="tiles">${tiles.join("")}</div>${st.list.length === 0 ? `<p class="lead" style="text-align:center;margin:40px auto">Nothing matches that yet. <a href="${href(t, "/contact")}">Ask us</a>, we may well have it.</p>` : ""}
+  if (ed && !st.q && st.page === 1 && !st.cat && tiles.length > 6) tiles.splice(4, 0, editorialTile(t, ed, s.brand.tagline || s.brand.name, s.brand.name, "/about"));
+  const crumbs = st.cat ? `<p class="crumbs" style="padding:0 0 18px"><a href="${href(t, "/products")}">Collection</a>${nav.trail.slice(0, -1).map((c) => ` / <a href="${href(t, `/collections/${c.slug}`)}">${esc(c.name)}</a>`).join("")}</p>` : `<p class="over">${esc(s.brand.name)}</p>`;
+  // Categories as photo cards (the biggest), the rest in a compact index; siblings as chips at a leaf.
+  const children = st.q ? [] : t.doc.categories.filter((c) => (c.parent ?? null) === (st.cat?.slug ?? null)).sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  const cardList = children.filter((c) => c.image).slice(0, 8);
+  const restList = children.filter((c) => !cardList.includes(c));
+  const catCards = children.length
+    ? `<div class="cgrid">${cardList.map((c) => `<a class="cg" data-r href="${href(t, `/collections/${c.slug}`)}"><div class="ph">${img(c.image ?? null, c.name, "")}</div><div class="t"><b>${esc(shortName(c.name))}</b><span>${(c.count ?? 0).toLocaleString("en-US")}</span></div></a>`).join("")}</div>${
+        restList.length
+          ? `<details class="index"><summary>All ${children.length} ${st.cat ? `${esc(shortName(st.cat.name).toLowerCase())} categories` : "categories"} ↓</summary><ul>${children.map((c) => `<li><a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a><span>${(c.count ?? 0).toLocaleString("en-US")}</span></li>`).join("")}</ul></details>`
+          : ""
+      }`
+    : "";
+  const siblings = !children.length && st.cat ? nav.chips : [];
+  const chips = siblings.length
+    ? `<div class="chips"><a href="${href(t, nav.parent ? `/collections/${nav.parent.slug}` : "/products")}">← ${esc(shortName(nav.parent?.name ?? "All"))}</a>${siblings
+        .slice(0, 24)
+        .map((c) => `<a href="${href(t, `/collections/${c.slug}`)}"${st.cat?.slug === c.slug ? ' aria-current="page"' : ""}>${esc(shortName(c.name))}</a>`)
+        .join("")}</div>`
+    : '<div style="height:26px"></div>';
+  const body = `<section class="lh"><div class="w">${crumbs}<h1 class="display">${esc(title)}</h1>${st.cat?.description && !st.q ? `<p class="lead">${esc(st.cat.description)}</p>` : ""}
+<form class="search" role="search" method="get" action="${t.base}${st.path}"><input name="q" value="${esc(st.q)}" placeholder="Search ${st.cat ? esc(st.cat.name.toLowerCase()) : "by name or part number"}" aria-label="Search"><button class="pill dark" type="submit">Search</button></form>
+${chips}</div></section>
+${catCards ? `<section class="w">${catCards}</section>` : ""}
+<div class="w"><p class="count" style="margin:0 0 22px">${st.total.toLocaleString("en-US")} ${st.q ? "matches" : st.cat ? `products in ${esc(shortName(st.cat.name).toLowerCase())}` : "products"}</p></div>
+<div class="w"><div class="tiles">${tiles.join("")}</div>${st.total === 0 ? `<p class="lead" style="text-align:center;margin:40px auto">Nothing matches that yet. <a href="${href(t, "/contact")}">Ask us</a>, we may well have it.</p>` : ""}
 ${st.pages > 1 ? `<nav class="pager" aria-label="Pages">${st.page > 1 ? `<a class="pill" href="${st.pageHref(st.page - 1)}" rel="prev">Previous</a>` : ""}<span style="color:var(--muted)">Page ${st.page} of ${st.pages}</span>${st.page < st.pages ? `<a class="pill" href="${st.pageHref(st.page + 1)}" rel="next">Next</a>` : ""}</nav>` : '<div style="height:90px"></div>'}</div>`;
   return page(t, s, {
     path: st.page > 1 && !st.q ? `${st.path}?page=${st.page}` : st.path,
     title: `${title}${st.page > 1 ? ` (page ${st.page})` : ""} | ${s.brand.name}`,
-    description: st.cat?.description || `Browse ${st.scope.length.toLocaleString("en-US")} products from ${s.brand.name}.`,
+    description: st.cat?.description || `Browse ${st.scopeTotal.toLocaleString("en-US")} products from ${s.brand.name}.`,
     noindex: !!st.q,
     body,
   });
@@ -232,8 +260,9 @@ function product(t: RenderTarget, s: Slots, p: SiteProduct): string {
   const cat = t.doc.categories.find((c) => c.slug === p.category) ?? null;
   const { name, detail } = splitTitle(p.title);
   const action = productAction(t, p, url, "pill dark");
-  const related = t.doc.products.filter((x) => x.slug !== p.slug && x.image && (p.category ? x.category === p.category : true)).slice(0, 3);
-  const body = `<div class="w crumbs"><a href="${href(t, "/products")}">Collection</a>${cat ? ` / <a href="${href(t, `/collections/${cat.slug}`)}">${esc(cat.name)}</a>` : ""}</div>
+  const related = t.catalog?.kind === "product" ? t.catalog.related : t.doc.products.filter((x) => x.slug !== p.slug && x.image && (p.category ? x.category === p.category : true)).slice(0, 3);
+  const trail = categoryNav(t.doc, cat).trail;
+  const body = `<div class="w crumbs"><a href="${href(t, "/products")}">Collection</a>${trail.map((c) => ` / <a href="${href(t, `/collections/${c.slug}`)}">${esc(c.name)}</a>`).join("")}</div>
 <section class="stage"><div class="w pdp"><div class="info" data-r>${cat ? `<p class="over">${esc(cat.name)}</p>` : ""}<h1>${esc(name)}</h1>${detail ? `<p class="d">${esc(detail)}</p>` : ""}${p.price != null ? `<p class="price">${esc(money(p))}</p>` : '<div style="height:22px"></div>'}${action.html}${s.promise.length ? `<ul class="promise">${s.promise.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div><div class="img">${img(p.image, p.title, "p", true)}</div><div></div></div></section>
 <section class="w"><div class="specs"><div><p class="over">Details</p><h2 class="h3" style="margin-bottom:16px">About this ${cat ? esc(cat.name.toLowerCase()) : "piece"}</h2><div class="about-p">${paras(p.description)}</div></div><div>${p.specs?.length ? `<table>${p.specs.map((r) => `<tr><th scope="row">${esc(r.label)}</th><td>${esc(r.value)}</td></tr>`).join("")}</table>` : ""}</div></div></section>
 ${action.enquire ? `<section class="w" id="enquire"><div class="contact"><div><p class="over">Enquire</p><h2 class="h2">Ask about this piece</h2><p class="about-p">We reply personally, usually within a working day.</p></div>${leadForm(t, `product:${p.slug}`, "Send enquiry", true)}</div></section>` : ""}
@@ -286,7 +315,7 @@ export function render(t: RenderTarget, path: string[], query: URLSearchParams):
     if (r) return html(r);
   }
   if (path[0] === "products" && path[1]) {
-    const p = t.doc.products.find((x) => x.slug === path[1]);
+    const p = t.catalog?.kind === "product" ? t.catalog.product : t.doc.products.find((x) => x.slug === path[1]);
     if (p) return html(product(t, s, p));
   }
   return null;

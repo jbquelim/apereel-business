@@ -2,7 +2,8 @@ import { neon } from "@neondatabase/serverless";
 import type { Client } from "./clients";
 import { NEXT_STAGE, generateMonth, type MonthStage } from "./content-engine";
 import { generateAdsMonth } from "./ads-engine";
-import { buildSite, topUpCatalog } from "./site-builder";
+import { buildSite, getSiteForClient } from "./site-builder";
+import { importCatalogStep } from "./catalog-import";
 import { kickMediaWorker } from "./media";
 
 // One entry point for every AI service: this month's content, this month's
@@ -42,12 +43,15 @@ export async function runService(client: Client, stage?: MonthStage): Promise<{ 
   }
   // Website: the build, then catalog import steps until every product is on the site.
   if (stage === "catalog") {
-    const r = await topUpCatalog(client);
-    return { summary: `catalog: +${r.added}, ${r.remaining} to go`, next: r.remaining > 0 ? "catalog" : null };
+    const site = await getSiteForClient(client.id);
+    if (!site) return { summary: "no site to import into", next: null };
+    const cap = client.tier === "fix" ? 300 : 20_000;
+    const r = await importCatalogStep(site, client.domain, 240_000, cap);
+    return { summary: `catalog: ${r.products} products in ${r.categories} categories, ${r.remaining} still to read`, next: r.remaining > 0 ? "catalog" : null };
   }
   const site = await buildSite(client);
-  const total = site.doc.catalogTotal ?? 0;
-  return { summary: `site built: /sites/${site.slug}`, next: client.tier !== "fix" && total > site.doc.products.length ? "catalog" : null };
+  // Then the whole catalog, categorised the way the business does it.
+  return { summary: `site built: /sites/${site.slug}`, next: "catalog" };
 }
 
 /** Starts the next step in a fresh function call (internal, CRON_SECRET). */
