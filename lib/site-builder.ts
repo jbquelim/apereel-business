@@ -367,6 +367,8 @@ ${RULES}
   };
 
   const existing = await getSiteForClient(client.id);
+  // A rebuild keeps the main categories already chosen (re-applied on catalog import).
+  if (existing?.doc.categoryGroups?.length) doc.categoryGroups = existing.doc.categoryGroups;
   const row = existing
     ? ((await sql()`
         UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, template_id = ${template.id},
