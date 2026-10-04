@@ -20,6 +20,8 @@ export function visibleText(html: string): string {
     .replace(/<(script|style|head)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<div class="note">[\s\S]*?<\/div>/gi, " ")
     .replace(/<div[^>]*>\s*Preview[^<]{0,60}built by Apereel\s*<\/div>/gi, " ")
+    // Separate elements stay separate ("since 1913" + "Products" is not "1913 Products").
+    .replace(/<\/(p|h[1-6]|div|li|a|span|td|th|section|header|footer|nav|button|label|summary|b)>/gi, " ¶ ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
     .replace(/\s+/g, " ")

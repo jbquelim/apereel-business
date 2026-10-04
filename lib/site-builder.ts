@@ -371,7 +371,9 @@ ${RULES}
   // A rebuild keeps the main categories already chosen (re-applied on catalog import).
   if (existing?.doc.categoryGroups?.length) doc.categoryGroups = existing.doc.categoryGroups;
   // The hand-designed template for the tier (lib/templates), kept on rebuilds; none yet = section renderer.
-  const design = existing?.doc.design ?? TEMPLATES.find((t) => t.tier === tier)?.id;
+  // A new site gets its tier's least-used template, so sites in the library don't all look alike.
+  const used = new Map(((await sql()`SELECT doc->>'design' AS d, count(*)::int AS n FROM sites GROUP BY 1`) as { d: string | null; n: number }[]).map((r) => [r.d, r.n]));
+  const design = existing?.doc.design ?? TEMPLATES.filter((t) => t.tier === tier).sort((a, b) => (used.get(a.id) ?? 0) - (used.get(b.id) ?? 0))[0]?.id;
   if (design) doc.design = design;
   const row = existing
     ? ((await sql()`

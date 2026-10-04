@@ -2,6 +2,9 @@ import type { RenderResult, RenderTarget } from "../site-render";
 import * as crown from "./signature-crown";
 import * as studio from "./custom-studio";
 import * as ledger from "./template-ledger";
+import * as apex from "./signature-apex";
+import * as stride from "./custom-stride";
+import * as fleet from "./template-fleet";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -46,6 +49,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "Retail catalogue: utility bar, wide header search, category bar, banner hero, round category tiles, dense product grid, numbered pages.",
     perPage: 24,
     render: ledger.render,
+  },
+  {
+    id: "apex",
+    name: "Apex",
+    tier: "grow",
+    reference: "lamborghini.com",
+    summary: "Near-black, condensed uppercase type, angular cut corners, numbered product lines, a full-screen hero.",
+    perPage: 24,
+    render: apex.render,
+  },
+  {
+    id: "stride",
+    name: "Stride",
+    tier: "build",
+    reference: "nike.com",
+    summary: "Loud condensed headlines, edge-to-edge photos on light grey, big category cards, a swipeable trending row.",
+    perPage: 24,
+    render: stride.render,
+  },
+  {
+    id: "fleet",
+    name: "Fleet",
+    tier: "fix",
+    reference: "toyota.com",
+    summary: "Clean and practical: photo hero with a content card, a find-what-you-need panel, cards with price and two actions, a sticky quote bar on phones.",
+    perPage: 24,
+    render: fleet.render,
   },
 ];
 
