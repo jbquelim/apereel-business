@@ -13,6 +13,7 @@ import { upgradeImages } from "./image-upgrade";
 import { imageSize } from "./image-size";
 import { fetchSitemapCatalog } from "./site-fetch";
 import { analysisBrief, siteAnalysis } from "./site-analysis";
+import { TEMPLATES } from "./templates";
 
 // The website service, automated: the best template for the business's
 // industry and tier, filled by Claude with copy from what we measured (their
@@ -369,6 +370,9 @@ ${RULES}
   const existing = await getSiteForClient(client.id);
   // A rebuild keeps the main categories already chosen (re-applied on catalog import).
   if (existing?.doc.categoryGroups?.length) doc.categoryGroups = existing.doc.categoryGroups;
+  // The hand-designed template for the tier (lib/templates), kept on rebuilds; none yet = section renderer.
+  const design = existing?.doc.design ?? TEMPLATES.find((t) => t.tier === tier)?.id;
+  if (design) doc.design = design;
   const row = existing
     ? ((await sql()`
         UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, template_id = ${template.id},
