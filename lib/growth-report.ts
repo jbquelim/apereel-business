@@ -1,4 +1,5 @@
 import { checkPage, pageSpeed, samplePages, type PageCheck, type PageSpeedResult } from "./page-checks";
+import { callClaude } from "./ai";
 import { fetchAuditResult, fetchCompetitorSet } from "./marketdb";
 import { historyForMany, type HistoryFacts } from "./market-history";
 import { dataForSeoConfigured, rankedKeywords, rankingGaps, searchVolumes, type Rankings } from "./dataforseo";
@@ -287,24 +288,8 @@ Rules:
   let lastError = "";
   for (const model of ["claude-opus-5-5", "claude-sonnet-5"]) {
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-        body: JSON.stringify({
-          model,
-          // Opus 5.5 thinking is always-on and spends output tokens.
-          max_tokens: model === "claude-opus-5-5" ? 16000 : 6000,
-          ...(model === "claude-opus-5-5" ? {} : { thinking: { type: "disabled" } }),
-          messages: [{ role: "user", content: prompt }],
-        }),
-        signal: AbortSignal.timeout(200_000),
-      });
-      if (!res.ok) {
-        lastError = `${model} ${res.status}`;
-        continue;
-      }
-      const data = await res.json();
-      const text: string = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
+      // Through lib/ai so the cost is logged (ai_requests), like every other call.
+      const text = await callClaude({ model: model as "claude-opus-5-5" | "claude-sonnet-5", maxTokens: model === "claude-opus-5-5" ? 16000 : 6000, prompt, purpose: "analysis:plan", clientId: null });
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) {
         lastError = `${model} returned no JSON`;

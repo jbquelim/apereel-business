@@ -300,7 +300,26 @@ ${related.length ? `<div style="margin-top:80px"><h2>More ${cat ? esc(cat.name) 
   });
 }
 
+/** Hosts of our own rendered visuals: full-size PNGs, served resized and compressed through Vercel's image optimizer. */
+const OPTIMIZE = /^https:\/\/(d3u0tzju9qaucj\.cloudfront\.net|[a-z0-9]+\.public\.blob\.vercel-storage\.com)\//;
+const OPT_WIDTHS = [828, 1200, 1920];
+
+/** Rewrites rendered-visual <img> tags to responsive, optimized sources (a 4 MB PNG becomes ~150 KB). */
+export function optimizeImages(html: string, apiOrigin: string): string {
+  const opt = (u: string, w: number) => `${apiOrigin}/_next/image?url=${encodeURIComponent(u)}&amp;w=${w}&amp;q=75`;
+  return html.replace(/<img([^>]*?) src="([^"]+)"/g, (m, attrs: string, src: string) => {
+    const url = src.replace(/&amp;/g, "&");
+    if (!OPTIMIZE.test(url)) return m;
+    return `<img${attrs} src="${opt(url, 1200)}" srcset="${OPT_WIDTHS.map((w) => `${opt(url, w)} ${w}w`).join(", ")}" sizes="100vw"`;
+  });
+}
+
 export function renderPath(t: RenderTarget, path: string[], query: URLSearchParams = new URLSearchParams()): RenderResult {
+  const r = renderRaw(t, path, query);
+  return r.kind === "html" ? { ...r, body: optimizeImages(r.body, t.apiOrigin) } : r;
+}
+
+function renderRaw(t: RenderTarget, path: string[], query: URLSearchParams): RenderResult {
   const { doc } = t;
   const joined = `/${path.join("/")}`.replace(/\/+$/, "") || "/";
   if (joined === "/robots.txt") {

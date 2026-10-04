@@ -6,6 +6,14 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Rendered site visuals (full-size PNGs) are served resized and compressed (lib/site-render optimizeImages).
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "d3u0tzju9qaucj.cloudfront.net" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+    ],
+    formats: ["image/webp"],
+  },
   turbopack: {
     root: projectRoot,
   },

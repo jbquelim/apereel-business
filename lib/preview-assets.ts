@@ -1,4 +1,5 @@
 import type { GrowthReport } from "./growth-report";
+import { callClaude } from "./ai";
 import type { ShowcaseProduct } from "./showcase";
 
 // The $30 preview: ready-to-use drafts built from the business's own site —
@@ -82,23 +83,8 @@ Rules:
   let lastError = "";
   for (const model of ["claude-opus-5-5", "claude-sonnet-5"]) {
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-        body: JSON.stringify({
-          model,
-          max_tokens: model === "claude-opus-5-5" ? 12000 : 4000,
-          ...(model === "claude-opus-5-5" ? {} : { thinking: { type: "disabled" } }),
-          messages: [{ role: "user", content: prompt }],
-        }),
-        signal: AbortSignal.timeout(200_000),
-      });
-      if (!res.ok) {
-        lastError = `${model} ${res.status}`;
-        continue;
-      }
-      const data = await res.json();
-      const text: string = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
+      // Through lib/ai so the cost is logged (ai_requests), like every other call.
+      const text = await callClaude({ model: model as "claude-opus-5-5" | "claude-sonnet-5", maxTokens: model === "claude-opus-5-5" ? 12000 : 4000, prompt, purpose: "analysis:preview", clientId: null });
       const raw = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "null");
       if (!raw?.homepage || !raw?.ads) {
         lastError = `${model} returned incomplete assets`;
