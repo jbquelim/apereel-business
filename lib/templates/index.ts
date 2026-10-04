@@ -5,6 +5,9 @@ import * as ledger from "./template-ledger";
 import * as apex from "./signature-apex";
 import * as stride from "./custom-stride";
 import * as fleet from "./template-fleet";
+import * as maison from "./signature-maison";
+import * as flow from "./custom-flow";
+import * as lab from "./template-lab";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -76,6 +79,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "Clean and practical: photo hero with a content card, a find-what-you-need panel, cards with price and two actions, a sticky quote bar on phones.",
     perPage: 24,
     render: fleet.render,
+  },
+  {
+    id: "maison",
+    name: "Maison",
+    tier: "grow",
+    reference: "cartier.com",
+    summary: "Warm ivory, light wide type in small capitals, a two-tier centred header, arch-topped photo frames, hairline rules.",
+    perPage: 24,
+    render: maison.render,
+  },
+  {
+    id: "flow",
+    name: "Flow",
+    tier: "build",
+    reference: "lululemon.com",
+    summary: "Clean white, a big image hero with two promo tiles, rounded cards, soft grey panels, a values strip.",
+    perPage: 24,
+    render: flow.render,
+  },
+  {
+    id: "lab",
+    name: "Lab",
+    tier: "fix",
+    reference: "dyson.com",
+    summary: "Engineering-led: black top bar, light grey ground, white spec cards listing each product's key specs, a dark hero band.",
+    perPage: 24,
+    render: lab.render,
   },
 ];
 
