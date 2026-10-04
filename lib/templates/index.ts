@@ -11,6 +11,9 @@ import * as lab from "./template-lab";
 import * as regent from "./signature-regent";
 import * as torque from "./custom-torque";
 import * as gridT from "./template-grid";
+import * as atelier from "./signature-atelier";
+import * as heritage from "./custom-heritage";
+import * as arena from "./template-arena";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -136,6 +139,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "Bright retail: a sliding hero, round category icons, a bento block of promo tiles, product cards with two clear actions.",
     perPage: 24,
     render: gridT.render,
+  },
+  {
+    id: "atelier",
+    name: "Atelier",
+    tier: "grow",
+    reference: "louisvuitton.com",
+    summary: "Stark white and black, tiny uppercase type, a slide-out menu, a full-bleed two-column editorial mosaic.",
+    perPage: 24,
+    render: atelier.render,
+  },
+  {
+    id: "heritage",
+    name: "Heritage",
+    tier: "build",
+    reference: "coach.com",
+    summary: "Warm cream and tan, chunky display type, a three-photo collage hero, pill category tabs, numbered craft notes.",
+    perPage: 24,
+    render: heritage.render,
+  },
+  {
+    id: "arena",
+    name: "Arena",
+    tier: "fix",
+    reference: "footlocker.com",
+    summary: "High-energy retail: italic condensed headlines, a promo bar, a slanted hero, a swipeable new-in row, bold category blocks.",
+    perPage: 24,
+    render: arena.render,
   },
 ];
 
