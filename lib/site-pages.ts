@@ -72,7 +72,9 @@ Section shapes:
 RULES:
 - Guides are genuinely useful: explain the parts, sizes and steps a buyer needs, in plain language, 600-1000 words each. Only widely accepted technical facts; where a step involves electricity, say to unplug first and to use a qualified electrician for wiring in walls or ceilings
 - Every guide links into the shop at least 4 times with "links" sections, using ONLY the category slugs and filter values listed above
-- State nothing about the business beyond the facts given: no prices, discounts, delivery times, minimum orders, years, awards or guarantees that aren't listed
+- State nothing about the business beyond the facts given: no prices, discounts, trade pricing, delivery times, minimum orders, years, awards or guarantees that aren't listed
+- Never answer a question about the business's own policies (accounts, ordering, returns, pricing, shipping) unless the facts above answer it; leave such questions out
+- Step titles are short phrases without numbers (the page numbers them)
 - Never mention the analysis, competitors, search volumes, SEO or "searches"; write for the buyer
 - No hype words. Plain, confident, helpful
 
@@ -106,6 +108,8 @@ Return ONLY JSON: { "pages": [ ... ] }`,
       const s = x as Record<string, unknown>;
       if (s.type === "links") return { ...s, items: ((s.items as { href: string }[]) ?? []).filter((i) => typeof i?.href === "string" && okHref(i.href)) };
       if (s.type === "cta" && !okHref(String(s.ctaHref ?? ""))) return { ...s, ctaHref: "/products" };
+      // The page numbers steps itself; "1. Unplug" would read "1  1. Unplug".
+      if (s.type === "steps" || s.type === "features") return { ...s, items: ((s.items as { title: string }[]) ?? []).map((i) => ({ ...i, title: String(i.title ?? "").replace(/^\s*(step\s*)?\d+[.):]\s*/i, "") })) };
       return s;
     }).filter((s) => s.type !== "links" || (s.items as unknown[]).length) as unknown as Section[];
     if (sections.length < 2) continue;
