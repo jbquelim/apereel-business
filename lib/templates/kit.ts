@@ -194,3 +194,23 @@ export const fontsLink = (families: string[]) =>
 
 /** "Wire & Cord Sets - Lamp Wire" → "Wire & Cord Sets" for compact labels. */
 export const shortName = (name: string) => name.split(/\s+[-–—]\s+/)[0].trim() || name;
+
+/** Black or white, whichever reads better on a hex colour (for text on accent buttons). */
+export function onColor(hex: string): string {
+  const m = hex.replace("#", "").match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i);
+  if (!m) return "#fff";
+  const [r, g, b] = m.slice(1).map((x) => {
+    const c = parseInt(x, 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? "#141414" : "#fff";
+}
+
+/** An <img> that removes itself if the photo fails to load. */
+export function imgTag(src: string | null | undefined, alt: string, cls = "", eager = false) {
+  return src ? `<img${cls ? ` class="${cls}"` : ""} src="${esc(src)}" alt="${esc(alt)}"${eager ? ' fetchpriority="high"' : ' loading="lazy"'} onerror="this.remove()">` : "";
+}
+
+/** Contact lines from the brand (email, phone, address) as list items. */
+export const contactItems = (b: SiteDoc["brand"]) =>
+  [b.email && `<li><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></li>`, b.phone && `<li><a href="tel:${esc(b.phone)}">${esc(b.phone)}</a></li>`, b.address && `<li>${esc(b.address)}</li>`].filter(Boolean).join("");
