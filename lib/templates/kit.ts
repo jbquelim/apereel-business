@@ -142,6 +142,9 @@ export function splitTitle(title: string): { name: string; detail: string } {
   const parts = title.split(/\s+[–—-]\s+/);
   // A first part that's only a size or number ("1", "1/0-13") reads better joined to the next.
   while (parts.length > 2 && parts[0].replace(/[^a-z]/gi, "").length < 3) parts.splice(0, 2, `${parts[0]} ${parts[1]}`);
+  // "1-1/16in Center Hole - Plain Brass Canopy - Polished Copper": the product is the
+  // part that names a thing, not the measurement, so it leads.
+  if (parts.length > 1 && /^\d[\d\s./-]*(in|ips|mm|cm|ft)\b/i.test(parts[0]) && !/^\d/.test(parts[1]) && parts[1].split(/\s+/).length > 1) parts.unshift(...parts.splice(1, 1));
   if (parts.length > 1) return { name: parts[0], detail: parts.slice(1).join(" · ") };
   return { name: title, detail: "" };
 }
