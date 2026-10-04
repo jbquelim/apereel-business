@@ -8,6 +8,9 @@ import * as fleet from "./template-fleet";
 import * as maison from "./signature-maison";
 import * as flow from "./custom-flow";
 import * as lab from "./template-lab";
+import * as regent from "./signature-regent";
+import * as torque from "./custom-torque";
+import * as gridT from "./template-grid";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -106,6 +109,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "Engineering-led: black top bar, light grey ground, white spec cards listing each product's key specs, a dark hero band.",
     perPage: 24,
     render: lab.render,
+  },
+  {
+    id: "regent",
+    name: "Regent",
+    tier: "grow",
+    reference: "rolls-roycemotorcars.com",
+    summary: "Midnight and stone bands, sparse light uppercase type, a transparent header over a full-bleed hero, a one-at-a-time product slider.",
+    perPage: 24,
+    render: regent.render,
+  },
+  {
+    id: "torque",
+    name: "Torque",
+    tier: "build",
+    reference: "porsche.com",
+    summary: "Precise light grey and white, a left-aligned hero, a range picker: tabs that switch the product grid between main categories.",
+    perPage: 24,
+    render: torque.render,
+  },
+  {
+    id: "grid",
+    name: "Grid",
+    tier: "fix",
+    reference: "samsung.com",
+    summary: "Bright retail: a sliding hero, round category icons, a bento block of promo tiles, product cards with two clear actions.",
+    perPage: 24,
+    render: gridT.render,
   },
 ];
 

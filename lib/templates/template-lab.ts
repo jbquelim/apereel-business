@@ -28,7 +28,7 @@ img{display:block;max-width:100%}a{color:inherit}
 /* header */
 .hd{background:var(--ink);color:#fff;position:sticky;top:0;z-index:30}
 .hd .w{display:flex;align-items:center;gap:26px;height:62px}
-.logo{font:700 21px var(--f);letter-spacing:-.02em;text-decoration:none;flex:none}.logo img{max-height:38px;width:auto;filter:brightness(0) invert(1)}
+.logo{font:700 21px var(--f);letter-spacing:-.02em;text-decoration:none;flex:none}.logo img{max-height:38px;width:auto}
 .hd nav{display:flex;gap:22px;flex:1;white-space:nowrap;overflow:hidden;font:500 14.5px var(--f)}.hd nav a{text-decoration:none;opacity:.85}.hd nav a:hover{opacity:1}
 .hd form{display:flex;align-items:center;background:#2a2a2a;border-radius:var(--r);height:38px;padding:0 4px 0 12px;width:min(300px,28vw)}.hd form input{flex:1;min-width:0;border:0;background:none;outline:none;color:#fff;font:inherit;font-size:14px}.hd form button{border:0;background:none;color:#fff;cursor:pointer;font:600 13px var(--f);padding:0 8px}
 .hd .btn{height:38px;font-size:14px;padding:0 16px}
