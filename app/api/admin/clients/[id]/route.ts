@@ -22,6 +22,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!(await claimRun(client.id))) {
     return NextResponse.json({ ok: false, error: "Already running. Give it a few minutes." }, { status: 409 });
   }
-  after(() => runAndContinue(client, undefined, (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "")));
+  // A single later step of a website build (John re-running the analysis pages or the catalog), or the whole run.
+  const { stage } = (await request.json().catch(() => ({}))) as { stage?: string };
+  const step = client.service === "web-development" && (stage === "pages" || stage === "catalog") ? stage : undefined;
+  after(() => runAndContinue(client, step, (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "")));
   return NextResponse.json({ ok: true });
 }

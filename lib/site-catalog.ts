@@ -15,6 +15,8 @@ export type ListingView = {
   category: SiteDoc["categories"][number] | null;
   /** The category itself and everything under it (for the listing query). */
   scopeCount: number;
+  /** Spec filters for this listing: values with counts, and the one chosen. */
+  facets: { key: string; label: string; values: { value: string; count: number }[]; selected: string | null }[];
 };
 export type ProductView = { kind: "product"; product: SiteProduct; related: SiteProduct[] };
 export type SitemapView = { kind: "sitemap"; slugs: string[] };
@@ -70,10 +72,14 @@ export async function loadCatalogView(siteId: string, doc: SiteDoc, path: string
   const scope = category ? withChildren(doc, category.slug) : null;
   const q = (query.get("q") ?? "").trim().slice(0, 80);
   const like = q ? q.split(/\s+/).filter(Boolean).map((w) => `%${w.replace(/[%_]/g, "")}%`) : [];
+  // Spec filters (lib/facets): ?thread=1/8 IPS&finish=Polished Brass
+  const chosen = Object.fromEntries((doc.facets ?? []).map((f) => [f.key, (query.get(f.key) ?? "").slice(0, 60)]).filter(([, v]) => v));
+  const where = JSON.stringify(chosen);
   const count = ((await sql()`
     SELECT count(*)::int AS n FROM site_products WHERE site_id = ${siteId}
       AND (${scope}::text[] IS NULL OR category = ANY(${scope}))
       AND (cardinality(${like}::text[]) = 0 OR (SELECT bool_and((title || ' ' || slug) ILIKE w) FROM unnest(${like}::text[]) AS w))
+      AND (${where}::jsonb = '{}'::jsonb OR facets @> ${where}::jsonb)
   `) as { n: number }[])[0].n;
   const pages = Math.max(1, Math.ceil(count / perPage));
   const page = Math.min(pages, Math.max(1, Number(query.get("page")) || 1));
@@ -81,10 +87,27 @@ export async function loadCatalogView(siteId: string, doc: SiteDoc, path: string
     SELECT * FROM site_products WHERE site_id = ${siteId}
       AND (${scope}::text[] IS NULL OR category = ANY(${scope}))
       AND (cardinality(${like}::text[]) = 0 OR (SELECT bool_and((title || ' ' || slug) ILIKE w) FROM unnest(${like}::text[]) AS w))
+      AND (${where}::jsonb = '{}'::jsonb OR facets @> ${where}::jsonb)
     ORDER BY (image IS NULL), position LIMIT ${perPage} OFFSET ${(page - 1) * perPage}
   `) as Row[];
-  const scopeCount = q
+  // Each filter's values among what's listed (within the category, search and other filters).
+  const counts = doc.facets?.length
+    ? ((await sql()`
+        SELECT f.key, f.value, count(*)::int AS n FROM site_products p, jsonb_each_text(p.facets) AS f
+        WHERE p.site_id = ${siteId} AND p.facets IS NOT NULL
+          AND (${scope}::text[] IS NULL OR p.category = ANY(${scope}))
+          AND (cardinality(${like}::text[]) = 0 OR (SELECT bool_and((p.title || ' ' || p.slug) ILIKE w) FROM unnest(${like}::text[]) AS w))
+          AND (${where}::jsonb = '{}'::jsonb OR p.facets @> ${where}::jsonb)
+        GROUP BY 1, 2
+      `) as { key: string; value: string; n: number }[])
+    : [];
+  const facets = (doc.facets ?? []).map((f) => ({
+    ...f,
+    values: counts.filter((c) => c.key === f.key).sort((a, b) => b.n - a.n).slice(0, 14).map((c) => ({ value: c.value, count: c.n })),
+    selected: chosen[f.key] ?? null,
+  })).filter((f) => f.selected || f.values.length > 1);
+  const scopeCount = q || Object.keys(chosen).length
     ? ((await sql()`SELECT count(*)::int AS n FROM site_products WHERE site_id = ${siteId} AND (${scope}::text[] IS NULL OR category = ANY(${scope}))`) as { n: number }[])[0].n
     : count;
-  return { kind: "listing", products: rows.map(toProduct), total: count, page, pages, q, category, scopeCount };
+  return { kind: "listing", products: rows.map(toProduct), total: count, page, pages, q, category, scopeCount, facets };
 }

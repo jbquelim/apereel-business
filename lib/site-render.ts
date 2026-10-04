@@ -165,6 +165,8 @@ function section(s: Section, t: RenderTarget, first: boolean): string {
       return `<section><div class="wrap"><${H}>${esc(s.heading)}</${H}>${s.body ? `<p class="lead">${esc(s.body)}</p>` : ""}${
         [doc.brand.email && `<a href="mailto:${esc(doc.brand.email)}">${esc(doc.brand.email)}</a>`, doc.brand.phone && `<a href="tel:${esc(doc.brand.phone)}">${esc(doc.brand.phone)}</a>`, doc.brand.address && esc(doc.brand.address)].filter(Boolean).map((x) => `<p>${x}</p>`).join("")
       }<div style="margin-top:28px">${leadForm(t, "contact", s.quoteForm ? "Request a quote" : "Send", !!s.quoteForm)}</div></div></section>`;
+    case "links":
+      return `<section><div class="wrap"><${H}>${esc(s.heading)}</${H}><ul>${s.items.map((i) => `<li><a href="${esc(link(i.href, t))}">${esc(i.label)}</a>${i.note ? ` · ${esc(i.note)}` : ""}</li>`).join("")}</ul></div></section>`;
   }
 }
 

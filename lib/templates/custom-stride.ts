@@ -1,6 +1,6 @@
 import type { SiteProduct } from "../site-types";
 import type { RenderResult, RenderTarget } from "../site-render";
-import { byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, metaTitle, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
+import { articleBody, contentPage, extraLinks, filterBar, filteredTitle, listPath, byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, metaTitle, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
 
 // "Stride": Custom tier. Original design in the language of athletic
 // brands: loud condensed uppercase headlines, edge-to-edge product photos
@@ -129,7 +129,7 @@ ${t.preview ? '<div class="note">Preview · Stride template · built by Apereel<
 <footer class="ft"><div class="w"><div class="cols">
 <div><h4>Shop</h4><ul><li><a href="${href(t, "/products")}">All products</a></li>${top.slice(0, 5).map((c) => `<li><a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a></li>`).join("")}</ul></div>
 <div><h4>Help</h4><ul><li><a href="${href(t, "/contact")}">Contact us</a></li>${contactItems(s.brand)}</ul></div>
-<div><h4>${esc(s.brand.name)}</h4><ul><li><a href="${href(t, "/about")}">About us</a></li></ul></div>
+<div><h4>${esc(s.brand.name)}</h4><ul><li><a href="${href(t, "/about")}">About us</a></li>${extraLinks(t)}</ul></div>
 <div><p>${esc(s.brand.tagline)}</p></div></div>
 <div class="base"><span>© ${new Date().getFullYear()} ${esc(s.brand.name)}. All rights reserved.</span></div></div></footer>
 ${JS}</body></html>`;
@@ -177,13 +177,13 @@ function listing(t: RenderTarget, s: Slots, categorySlug: string | null, query: 
   const title = st.q ? `Results for “${st.q}”` : st.cat ? shortName(st.cat.name) : "All products";
   const side = `<aside class="side"><details open><summary>Filter ▾</summary><form role="search" method="get" action="${t.base}${st.path}"><input name="q" value="${esc(st.q)}" placeholder="Search ${st.cat ? esc(shortName(st.cat.name).toLowerCase()) : "products"}" aria-label="Search"><button type="submit">Go</button></form>${st.cat ? `<a class="up" href="${href(t, nav.parent ? `/collections/${nav.parent.slug}` : "/products")}">← ${esc(shortName(nav.parent?.name ?? "All products"))}</a>` : ""}${list.slice(0, 50).map((c) => `<a href="${href(t, `/collections/${c.slug}`)}"${st.cat?.slug === c.slug ? ' aria-current="page"' : ""}>${esc(shortName(c.name))}<span>${(c.count ?? 0).toLocaleString("en-US")}</span></a>`).join("")}</details></aside>`;
   const body = `<div class="w"><div class="sh"><div><p class="crumbs"><a href="${href(t, "/")}">Home</a>${nav.trail.slice(0, -1).map((c) => ` / <a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a>`).join("")}</p><h1>${esc(title)} <span>(${st.total.toLocaleString("en-US")})</span></h1></div></div>
-<div class="shop">${side}<div>${st.cat?.description && !st.q && st.page === 1 ? `<p class="lead" style="color:var(--muted);margin:0 0 20px">${esc(st.cat.description)}</p>` : ""}<div class="grid" style="grid-template-columns:repeat(3,1fr)">${st.shown.map((p) => pc(t, p, catName(t, p), false)).join("")}</div>${st.total === 0 ? `<p class="lead" style="margin:30px 0">Nothing matches that yet. <a href="${href(t, "/contact")}">Ask us</a>, we may well have it.</p>` : ""}
+<div class="shop">${side}<div>${st.cat?.description && !st.q && st.page === 1 ? `<p class="lead" style="color:var(--muted);margin:0 0 20px">${esc(st.cat.description)}</p>` : ""}${filterBar(t, st)}<div class="grid" style="grid-template-columns:repeat(3,1fr)">${st.shown.map((p) => pc(t, p, catName(t, p), false)).join("")}</div>${st.total === 0 ? `<p class="lead" style="margin:30px 0">Nothing matches that yet. <a href="${href(t, "/contact")}">Ask us</a>, we may well have it.</p>` : ""}
 ${st.pages > 1 ? `<nav class="pager" aria-label="Pages">${st.page > 1 ? `<a class="btn line" href="${st.pageHref(st.page - 1)}" rel="prev">Previous</a>` : ""}<span>Page ${st.page} of ${st.pages}</span>${st.page < st.pages ? `<a class="btn" href="${st.pageHref(st.page + 1)}" rel="next">Next</a>` : ""}</nav>` : ""}</div></div></div>`;
   return page(t, s, {
-    path: st.page > 1 && !st.q ? `${st.path}?page=${st.page}` : st.path,
-    title: metaTitle(`${st.cat ? st.cat.name : title}${st.page > 1 ? ` (page ${st.page})` : ""}`, s.brand.name),
+    path: listPath(st),
+    title: metaTitle(filteredTitle(`${st.cat ? st.cat.name : title}${st.page > 1 ? ` (page ${st.page})` : ""}`, st), s.brand.name),
     description: st.cat?.description || `Shop ${st.scopeTotal.toLocaleString("en-US")} products from ${s.brand.name}.`,
-    noindex: !!st.q,
+    noindex: !!st.q || Object.keys(st.chosen).length > 1,
     body,
   });
 }
@@ -230,6 +230,8 @@ export function render(t: RenderTarget, path: string[], query: URLSearchParams):
   }
   if (joined === "/about") return html(about(t, s));
   if (joined === "/contact") return html(contact(t, s));
+  const cp = contentPage(t, joined);
+  if (cp) return html(page(t, s, { path: joined, title: cp.metaTitle || metaTitle(cp.title, s.brand.name), description: cp.metaDescription, body: `<section class="w">${articleBody(t, cp)}</section>` }));
   if (joined === "/products") return html(listing(t, s, null, query)!);
   if (path[0] === "collections" && path[1]) {
     const r = listing(t, s, path[1], query);

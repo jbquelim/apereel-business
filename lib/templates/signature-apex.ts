@@ -1,6 +1,6 @@
 import type { SiteProduct } from "../site-types";
 import type { RenderResult, RenderTarget } from "../site-render";
-import { byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, metaTitle, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
+import { articleBody, contentPage, extraLinks, filterBar, filteredTitle, listPath, byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, metaTitle, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
 
 // "Apex": Signature tier. Original design in the language of performance
 // supercar houses: near-black throughout, condensed uppercase type, angular
@@ -126,7 +126,7 @@ ${t.preview ? '<div class="note">Preview · Apex template · built by Apereel</d
 <main>${o.body}</main>
 <footer class="ft"><div class="w"><div class="cols"><div>${logo(s, t)}<p>${esc(s.brand.tagline)}</p></div>
 <div><h4>Range</h4><ul><li><a href="${href(t, "/products")}">All products</a></li>${top.slice(0, 6).map((c) => `<li><a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a></li>`).join("")}</ul></div>
-<div><h4>${esc(s.brand.name)}</h4><ul><li><a href="${href(t, "/about")}">About</a></li><li><a href="${href(t, "/contact")}">Contact</a></li></ul></div>
+<div><h4>${esc(s.brand.name)}</h4><ul><li><a href="${href(t, "/about")}">About</a></li>${extraLinks(t)}<li><a href="${href(t, "/contact")}">Contact</a></li></ul></div>
 <div><h4>Contact</h4><ul>${contactItems(s.brand) || `<li><a href="${href(t, "/contact")}">Send us a message</a></li>`}</ul></div></div>
 <div class="base"><span>© ${new Date().getFullYear()} ${esc(s.brand.name)}</span><span>${esc(s.brand.tagline)}</span></div></div></footer>
 ${JS}</body></html>`;
@@ -167,13 +167,13 @@ function listing(t: RenderTarget, s: Slots, categorySlug: string | null, query: 
   const body = `<section class="w lh"><p class="crumbs"><a href="${href(t, "/")}">Home</a> / <a href="${href(t, "/products")}">Range</a>${nav.trail.slice(0, -1).map((c) => ` / <a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a>`).join("")}</p><h1 class="display" style="font-size:clamp(44px,6.4vw,104px)">${esc(title)}</h1>${st.cat?.description && !st.q ? `<p class="lead">${esc(st.cat.description)}</p>` : ""}
 <div class="bar"><form role="search" method="get" action="${t.base}${st.path}"><input name="q" value="${esc(st.q)}" placeholder="Search ${st.cat ? esc(shortName(st.cat.name).toLowerCase()) : "the range"}" aria-label="Search"><button type="submit">Search</button></form><span class="n">${st.total.toLocaleString("en-US")} ${st.q ? "results" : "products"}</span></div>
 ${chips.length ? `<div class="chips">${!kids.length && st.cat ? `<a href="${href(t, nav.parent ? `/collections/${nav.parent.slug}` : "/products")}">← ${esc(shortName(nav.parent?.name ?? "All"))}</a>` : ""}${chips.slice(0, 30).map((c) => `<a href="${href(t, `/collections/${c.slug}`)}"${st.cat?.slug === c.slug ? ' aria-current="page"' : ""}>${esc(shortName(c.name))}<span>${(c.count ?? 0).toLocaleString("en-US")}</span></a>`).join("")}</div>` : ""}</section>
-<section class="w"><div class="grid">${st.shown.map((p) => pc(t, p, false)).join("")}</div>${st.total === 0 ? `<p class="lead" style="margin:40px 0">Nothing matches that. <a href="${href(t, "/contact")}">Ask us</a>, we may well have it.</p>` : ""}
+<section class="w">${filterBar(t, st)}<div class="grid">${st.shown.map((p) => pc(t, p, false)).join("")}</div>${st.total === 0 ? `<p class="lead" style="margin:40px 0">Nothing matches that. <a href="${href(t, "/contact")}">Ask us</a>, we may well have it.</p>` : ""}
 ${st.pages > 1 ? `<nav class="pager" aria-label="Pages">${st.page > 1 ? `<a class="btn ghost" href="${st.pageHref(st.page - 1)}" rel="prev">Previous</a>` : ""}<span>Page ${st.page} / ${st.pages}</span>${st.page < st.pages ? `<a class="btn" href="${st.pageHref(st.page + 1)}" rel="next">Next</a>` : ""}</nav>` : ""}</section>`;
   return page(t, s, {
-    path: st.page > 1 && !st.q ? `${st.path}?page=${st.page}` : st.path,
-    title: metaTitle(`${st.q ? `Results for “${st.q}”` : st.cat ? st.cat.name : "All products"}${st.page > 1 ? ` (page ${st.page})` : ""}`, s.brand.name),
+    path: listPath(st),
+    title: metaTitle(filteredTitle(`${st.q ? `Results for “${st.q}”` : st.cat ? st.cat.name : "All products"}${st.page > 1 ? ` (page ${st.page})` : ""}`, st), s.brand.name),
     description: st.cat?.description || `Explore ${st.scopeTotal.toLocaleString("en-US")} products from ${s.brand.name}.`,
-    noindex: !!st.q,
+    noindex: !!st.q || Object.keys(st.chosen).length > 1,
     body,
   });
 }
@@ -220,6 +220,8 @@ export function render(t: RenderTarget, path: string[], query: URLSearchParams):
   }
   if (joined === "/about") return html(about(t, s));
   if (joined === "/contact") return html(contact(t, s));
+  const cp = contentPage(t, joined);
+  if (cp) return html(page(t, s, { path: joined, title: cp.metaTitle || metaTitle(cp.title, s.brand.name), description: cp.metaDescription, body: `<section class="w" style="padding-top:90px">${articleBody(t, cp)}</section>` }));
   if (joined === "/products") return html(listing(t, s, null, query)!);
   if (path[0] === "collections" && path[1]) {
     const r = listing(t, s, path[1], query);

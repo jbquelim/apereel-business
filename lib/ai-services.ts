@@ -8,6 +8,8 @@ import { kickMediaWorker } from "./media";
 import { ensureSiteAnalysis } from "./site-analysis";
 import { groupCategories } from "./category-groups";
 import { runSiteQa } from "./site-qa-run";
+import { buildFacets } from "./facets";
+import { writeAnalysisPages } from "./site-pages";
 
 // One entry point for every AI service: this month's content, this month's
 // ads, or the website build. Used by John's button and the monthly cron.
@@ -55,9 +57,17 @@ export async function runService(client: Client, stage: MonthStage | undefined, 
     if (r.remaining > 0) return { summary: `catalog: ${r.products} products in ${r.categories} categories, ${r.remaining} still to read`, next: "catalog" };
     const fresh = await getSiteForClient(client.id);
     const groups = fresh ? await groupCategories(fresh, client.domain, client.id).catch((err) => (console.error("Category groups:", err instanceof Error ? err.message : err), 0)) : 0;
-    // Last: the quality checks, so John sees what needs attention before the customer does.
-    const qa = fresh ? await runSiteQa(fresh.id).catch((err) => (console.error("Site QA:", err instanceof Error ? err.message : err), null)) : null;
-    return { summary: `catalog: ${r.products} products in ${r.categories} categories${groups ? `, ${groups} main categories` : ""}${qa ? `, ${qa.length} QA issues` : ""}`, next: null };
+    return { summary: `catalog: ${r.products} products in ${r.categories} categories${groups ? `, ${groups} main categories` : ""}`, next: "pages" };
+  }
+  if (stage === "pages") {
+    // Spec filters (no AI), the pages the analysis says are missing, then the quality checks.
+    const site = await getSiteForClient(client.id);
+    if (!site) return { summary: "no site", next: null };
+    if (site.doc.catalogSize) await buildFacets(site).catch((err) => console.error("Facets:", err instanceof Error ? err.message : err));
+    const withFacets = (await getSiteForClient(client.id)) ?? site;
+    const pages = await writeAnalysisPages(withFacets, client).catch((err) => (console.error("Analysis pages:", err instanceof Error ? err.message : err), 0));
+    const qa = await runSiteQa(site.id).catch((err) => (console.error("Site QA:", err instanceof Error ? err.message : err), null));
+    return { summary: `${pages} pages from the analysis${qa ? `, ${qa.length} QA issues` : ""}`, next: null };
   }
   if (stage !== "build") {
     // Waits up to ~3.5 minutes per step for the analysis, then hands on to a fresh step.

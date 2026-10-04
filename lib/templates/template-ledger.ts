@@ -1,6 +1,6 @@
 import type { SiteProduct } from "../site-types";
 import type { RenderResult, RenderTarget } from "../site-render";
-import { metaTitle, byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
+import { articleBody, contentPage, extraLinks, filterBar, filteredTitle, listPath, metaTitle, byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
 
 // "Ledger": Template tier. Original design in the language of established
 // retail catalogues: a utility bar, a wide search box in the header, a
@@ -120,7 +120,7 @@ ${top.length ? `<nav class="cats" aria-label="Categories"><div class="w"><a href
 <main>${o.body}</main>
 <footer class="ft"><div class="w"><div class="cols"><div>${logo(s, t)}<p>${esc(s.brand.tagline)}</p></div>
 <div><h4>Shop</h4><ul><li><a href="${href(t, "/products")}">All products</a></li>${top.slice(0, 6).map((c) => `<li><a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a></li>`).join("")}</ul></div>
-<div><h4>Company</h4><ul><li><a href="${href(t, "/about")}">About us</a></li><li><a href="${href(t, "/contact")}">Contact</a></li></ul></div>
+<div><h4>Company</h4><ul><li><a href="${href(t, "/about")}">About us</a></li>${extraLinks(t)}<li><a href="${href(t, "/contact")}">Contact</a></li></ul></div>
 <div><h4>Customer service</h4><ul>${contactItems(s.brand) || `<li><a href="${href(t, "/contact")}">Send us a message</a></li>`}</ul></div></div>
 <div class="base"><span>© ${new Date().getFullYear()} ${esc(s.brand.name)}. All rights reserved.</span><span>${esc(s.brand.name)}</span></div></div></footer>
 ${JS}</body></html>`;
@@ -170,13 +170,13 @@ function listing(t: RenderTarget, s: Slots, categorySlug: string | null, query: 
 <div class="lh"><div><h1 class="h1" style="font-size:clamp(26px,3vw,40px)">${esc(title)}</h1>${st.cat?.description && !st.q ? `<p class="muted">${esc(st.cat.description)}</p>` : ""}</div></div>
 ${chips.length ? `<div class="chips">${!kids.length && st.cat ? `<a href="${href(t, nav.parent ? `/collections/${nav.parent.slug}` : "/products")}">‹ ${esc(shortName(nav.parent?.name ?? "All products"))}</a>` : ""}${chips.slice(0, 40).map((c) => `<a href="${href(t, `/collections/${c.slug}`)}"${st.cat?.slug === c.slug ? ' aria-current="page"' : ""}>${esc(shortName(c.name))}<span>${(c.count ?? 0).toLocaleString("en-US")}</span></a>`).join("")}</div>` : '<div style="height:18px"></div>'}
 <div class="res"><span>${st.total.toLocaleString("en-US")} ${st.q ? "results" : "items"}${st.pages > 1 ? ` · page ${st.page} of ${st.pages}` : ""}</span>${st.cat ? `<form role="search" method="get" action="${t.base}${st.path}"><input name="q" value="${esc(st.q)}" placeholder="Search in ${esc(shortName(st.cat.name).toLowerCase())}" aria-label="Search in this category"><button type="submit">Go</button></form>` : ""}</div>
-<div class="grid">${st.shown.map((p) => pc(t, p)).join("")}</div>${st.total === 0 ? `<p style="margin:30px 0">No products match that. <a href="${href(t, "/contact")}">Contact us</a> and we'll check for you.</p>` : ""}
+${filterBar(t, st)}<div class="grid">${st.shown.map((p) => pc(t, p)).join("")}</div>${st.total === 0 ? `<p style="margin:30px 0">No products match that. <a href="${href(t, "/contact")}">Contact us</a> and we'll check for you.</p>` : ""}
 ${st.pages > 1 ? `<nav class="pages" aria-label="Pages">${pageLinks(st.pages, st.page, st.pageHref)}</nav>` : '<div style="height:48px"></div>'}</div>`;
   return page(t, s, {
-    path: st.page > 1 && !st.q ? `${st.path}?page=${st.page}` : st.path,
-    title: metaTitle(`${title}${st.page > 1 ? ` (page ${st.page})` : ""}`, s.brand.name),
+    path: listPath(st),
+    title: metaTitle(filteredTitle(`${title}${st.page > 1 ? ` (page ${st.page})` : ""}`, st), s.brand.name),
     description: st.cat?.description || `Shop ${st.scopeTotal.toLocaleString("en-US")} products from ${s.brand.name}.`,
-    noindex: !!st.q,
+    noindex: !!st.q || Object.keys(st.chosen).length > 1,
     current: top,
     q: st.q,
     body,
@@ -227,6 +227,8 @@ export function render(t: RenderTarget, path: string[], query: URLSearchParams):
   }
   if (joined === "/about") return html(about(t, s));
   if (joined === "/contact") return html(contact(t, s));
+  const cp = contentPage(t, joined);
+  if (cp) return html(page(t, s, { path: joined, title: cp.metaTitle || metaTitle(cp.title, s.brand.name), description: cp.metaDescription, body: `<section class="w">${articleBody(t, cp)}</section>` }));
   if (joined === "/products") return html(listing(t, s, null, query)!);
   if (path[0] === "collections" && path[1]) {
     const r = listing(t, s, path[1], query);

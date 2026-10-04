@@ -27,11 +27,13 @@ export type Section =
   | { type: "stats"; items: { value: string; label: string }[] }
   /** Facts that build trust (contact, shipping and returns pages, trade accounts), from the business's own site. */
   | { type: "trust"; items: { title: string; body: string; href?: string }[] }
-  | { type: "steps"; heading: string; items: { title: string; body: string }[] };
+  | { type: "steps"; heading: string; items: { title: string; body: string }[] }
+  /** Links into the shop (categories, filtered listings, other pages), used by guides. */
+  | { type: "links"; heading: string; items: { label: string; href: string; note?: string }[] };
 
 export type SectionType = Section["type"];
 
-export type SitePage = { slug: string; navLabel?: string; title: string; metaTitle: string; metaDescription: string; sections: Section[] };
+export type SitePage = { slug: string; navLabel?: string; title: string; metaTitle: string; metaDescription: string; sections: Section[]; /** Written from the analysis (guides, trade page); replaced when rewritten. */ source?: "analysis" };
 
 export type SiteProduct = {
   slug: string;
@@ -60,6 +62,8 @@ export type SiteDoc = {
   categories: { slug: string; name: string; description: string; parent?: string | null; count?: number; image?: string | null; rank?: number }[];
   /** Main categories (from the analysis) that the store's own top-level categories sit under; kept across re-imports. */
   categoryGroups?: { slug: string; name: string; description: string; members: string[] }[];
+  /** Shop filters this catalog supports (lib/facets), read from product names. */
+  facets?: { key: string; label: string }[];
   /** Products in site_products (the full catalog); the document keeps only home-page picks. */
   catalogSize?: number;
   /**

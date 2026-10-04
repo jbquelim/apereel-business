@@ -317,6 +317,8 @@ await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_checkout_session T
 await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS stripe_account_id TEXT`;
 await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS payments_status TEXT`;
 await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS qa JSONB`;
+await sql`ALTER TABLE site_products ADD COLUMN IF NOT EXISTS facets JSONB`;
+await sql`CREATE INDEX IF NOT EXISTS idx_site_products_facets ON site_products USING gin (facets)`;
 await sql`ALTER TABLE sites ADD COLUMN IF NOT EXISTS qa_at TIMESTAMPTZ`;
 // Product photos copied to our own storage (Vercel Blob): client sites'
 // servers often block hotlinking, and old sites go away after a move.

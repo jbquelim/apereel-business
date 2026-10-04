@@ -177,8 +177,21 @@ export function listState(t: RenderTarget, categorySlug: string | null, query: U
     page = Math.min(pages, Math.max(1, Number(query.get("page")) || 1));
     shown = list.slice((page - 1) * perPage, page * perPage);
   }
-  const pageHref = (n: number) => `${t.base}${path}?${new URLSearchParams({ ...(q ? { q } : {}), page: String(n) })}`;
-  return { cat, q, total, scopeTotal, pages, page, shown, path, pageHref, missing: !!categorySlug && !cat };
+  const facets = view?.facets ?? [];
+  const chosen = Object.fromEntries(facets.filter((f) => f.selected).map((f) => [f.key, f.selected!]));
+  /** This listing's link with filters changed (null removes one); back to page 1. */
+  const withFilters = (change: Record<string, string | null>) => {
+    const next = { ...chosen, ...change };
+    const params = new URLSearchParams({ ...(q ? { q } : {}) });
+    for (const [k, v] of Object.entries(next)) if (v) params.set(k, v);
+    const qs = params.toString();
+    return `${t.base}${path}${qs ? `?${qs}` : ""}`;
+  };
+  const pageHref = (n: number) => {
+    const params = new URLSearchParams({ ...(q ? { q } : {}), ...chosen, page: String(n) });
+    return `${t.base}${path}?${params}`;
+  };
+  return { cat, q, total, scopeTotal, pages, page, shown, path, pageHref, facets, chosen, withFilters, missing: !!categorySlug && !cat };
 }
 
 /** Main categories in their set order (highest value first), the rest by size. */
@@ -227,4 +240,94 @@ export function metaTitle(name: string, brand: string, max = 62): string {
   const room = max - brand.length - 3;
   const short = name.length <= room ? name : `${name.slice(0, room).replace(/\s+\S*$/, "").replace(/[\s,–—·-]+$/, "")}…`;
   return room < 20 ? name.slice(0, max) : `${short} | ${brand}`;
+}
+
+/**
+ * The spec filters (thread size, finish, …) as a row of dropdown chips. Plain
+ * HTML (no script); colours come from the template's own --accent and text.
+ */
+export function filterBar(t: RenderTarget, st: ReturnType<typeof listState>): string {
+  if (!st.facets.length) return "";
+  const accent = t.doc.tokens.palette.accent;
+  const css = `<style>.fx{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 20px;font-size:14px;position:relative;z-index:6}
+.fx details{position:relative}.fx summary{list-style:none;cursor:pointer;display:inline-flex;gap:8px;align-items:center;height:38px;padding:0 14px;border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:999px;white-space:nowrap;user-select:none}
+.fx summary::-webkit-details-marker{display:none}.fx summary:after{content:"▾";font-size:11px;opacity:.7}.fx details[open] summary{border-color:currentColor}
+.fx .on{background:${esc(accent)};color:${onColor(accent)};border-color:${esc(accent)}}
+.fx .menu{position:absolute;top:44px;left:0;min-width:220px;max-height:320px;overflow:auto;background:#fff;color:#141414;border:1px solid #e3e3e3;border-radius:12px;box-shadow:0 18px 40px -20px rgba(0,0,0,.35);padding:6px;display:grid}
+.fx .menu a{display:flex;justify-content:space-between;gap:14px;padding:9px 12px;border-radius:8px;text-decoration:none;color:#141414}.fx .menu a:hover{background:#f2f2f2}.fx .menu a[aria-current]{font-weight:700}.fx .menu span{color:#777;font-size:12.5px}
+.fx .chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;text-decoration:none;background:${esc(accent)};color:${onColor(accent)}}.fx .clear{text-decoration:underline;text-underline-offset:3px;opacity:.8}</style>`;
+  const groups = st.facets.map((f) => `<details><summary${f.selected ? ' class="on"' : ""}>${esc(f.label)}${f.selected ? `: ${esc(f.selected)}` : ""}</summary><div class="menu">${f.selected ? `<a href="${esc(st.withFilters({ [f.key]: null }))}">Any ${esc(f.label.toLowerCase())}</a>` : ""}${f.values
+    .map((v) => `<a href="${esc(st.withFilters({ [f.key]: v.value }))}"${f.selected === v.value ? ' aria-current="true"' : ""}>${esc(v.value)}<span>${v.count.toLocaleString("en-US")}</span></a>`)
+    .join("")}</div></details>`);
+  const chosen = Object.keys(st.chosen).length ? `<a class="clear" href="${esc(st.withFilters(Object.fromEntries(Object.keys(st.chosen).map((k) => [k, null]))))}">Clear filters</a>` : "";
+  return `${css}<div class="fx" role="group" aria-label="Filter products">${groups.join("")}${chosen}</div>`;
+}
+
+/** Listing page title with a single chosen filter ("2-1/4in neck · Shades & Glass"). */
+export function filteredTitle(base: string, st: ReturnType<typeof listState>): string {
+  const sel = st.facets.filter((f) => f.selected);
+  return sel.length === 1 ? `${sel[0].selected} ${sel[0].label.toLowerCase().split(" / ")[0]} · ${base}` : base;
+}
+
+/** A listing's canonical path: page and a single filter are their own pages; searches aren't. */
+export function listPath(st: ReturnType<typeof listState>): string {
+  const params = new URLSearchParams();
+  const sel = Object.entries(st.chosen);
+  if (sel.length === 1) params.set(sel[0][0], sel[0][1]);
+  if (st.page > 1) params.set("page", String(st.page));
+  const qs = st.q ? "" : params.toString();
+  return `${st.path}${qs ? `?${qs}` : ""}`;
+}
+
+/** Pages beyond home, about and contact (guides, trade): top-level ones linked from the footer. */
+export function extraLinks(t: RenderTarget): string {
+  return t.doc.pages
+    .filter((p) => p.slug && !["about", "contact"].includes(p.slug) && !p.slug.includes("/"))
+    .map((p) => `<li><a href="${href(t, `/${p.slug}`)}">${esc(p.navLabel ?? p.title)}</a></li>`)
+    .join("");
+}
+
+/** The site page at this path other than home, about and contact. */
+export const contentPage = (t: RenderTarget, joined: string) =>
+  t.doc.pages.find((p) => p.slug && !["about", "contact"].includes(p.slug) && `/${p.slug}` === joined) ?? null;
+
+/**
+ * A content page (guide, trade page) in any template: readable article
+ * layout using the template's own fonts and colours (--accent, --muted,
+ * --line). The template wraps it in its page shell.
+ */
+export function articleBody(t: RenderTarget, page: SiteDoc["pages"][number]): string {
+  const css = `<style>.art{max-width:860px;margin:0 auto;padding-block:clamp(36px,5vw,72px) 20px}.art .crumb{font-size:14px;color:var(--muted);margin:0 0 16px}.art .crumb a{text-decoration:none}
+.art h1{font-size:clamp(32px,4vw,52px);line-height:1.08;letter-spacing:-.02em;margin:0 0 18px}.art h2{font-size:clamp(22px,2.2vw,30px);line-height:1.2;margin:clamp(36px,4vw,56px) 0 14px}
+.art p,.art li{font-size:18px;line-height:1.65}.art .intro{font-size:20px;color:var(--muted)}
+.art ol.st{list-style:none;padding:0;margin:0;display:grid;gap:14px;counter-reset:s}.art ol.st li{display:grid;grid-template-columns:44px 1fr;gap:14px;border-top:1px solid var(--line);padding-top:16px}.art ol.st li:before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--accent);color:${onColor(t.doc.tokens.palette.accent)};font-weight:700}
+.art ol.st b{display:block;font-size:18px}.art .fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:0;list-style:none}.art .fl li{border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-size:16px}.art .fl b{display:block;margin-bottom:4px}
+.art .ln{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}.art .ln a{display:block;border:1px solid var(--line);border-radius:12px;padding:14px 18px;text-decoration:none;font-weight:600;font-size:16px;transition:border-color .2s}.art .ln a:hover{border-color:var(--accent)}.art .ln span{display:block;font-weight:400;color:var(--muted);font-size:14px;margin-top:2px}
+.art details{border-bottom:1px solid var(--line);padding:16px 0}.art summary{cursor:pointer;font-weight:600;font-size:18px}.art details p{margin:10px 0 0;color:var(--muted)}
+.art .cta{margin-top:clamp(36px,4vw,56px);border-top:2px solid var(--accent);padding-top:24px}.art .cta a.go{display:inline-block;margin-top:8px;font-weight:700;color:var(--accent)}
+.art .form{margin-top:18px}</style>`;
+  const sec = page.sections.map((s) => {
+    switch (s.type) {
+      case "hero":
+        return `${s.eyebrow ? `<p class="crumb">${esc(s.eyebrow)}</p>` : ""}<h1>${esc(s.heading)}</h1>${s.subheading ? `<p class="intro">${esc(s.subheading)}</p>` : ""}`;
+      case "story":
+        return `<h2>${esc(s.heading)}</h2>${paras(s.body)}`;
+      case "steps":
+        return `<h2>${esc(s.heading)}</h2><ol class="st">${s.items.map((i) => `<li><div><b>${esc(i.title)}</b>${esc(i.body)}</div></li>`).join("")}</ol>`;
+      case "features":
+        return `<h2>${esc(s.heading)}</h2><ul class="fl">${s.items.map((i) => `<li><b>${esc(i.title)}</b>${esc(i.body)}</li>`).join("")}</ul>`;
+      case "links":
+        return `<h2>${esc(s.heading)}</h2><ul class="ln">${s.items.map((i) => `<li><a href="${esc(href(t, i.href))}">${esc(i.label)}${i.note ? `<span>${esc(i.note)}</span>` : ""}</a></li>`).join("")}</ul>`;
+      case "faq":
+        return `<h2>${esc(s.heading)}</h2>${s.items.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("")}`;
+      case "cta":
+        return `<div class="cta"><h2 style="margin-top:0">${esc(s.heading)}</h2>${s.body ? `<p>${esc(s.body)}</p>` : ""}<a class="go" href="${esc(href(t, s.ctaHref))}">${esc(s.ctaLabel)} →</a></div>`;
+      case "contact":
+        return `<h2 id="apply">${esc(s.heading)}</h2>${s.body ? `<p>${esc(s.body)}</p>` : ""}${leadForm(t, `page:${page.slug}`, s.quoteForm ? "Send application" : "Send message", !!s.quoteForm)}`;
+      default:
+        return "";
+    }
+  });
+  const hasHero = page.sections[0]?.type === "hero";
+  return `${css}<article class="art">${hasHero ? "" : `<h1>${esc(page.title)}</h1>`}${sec.join("")}</article>`;
 }
