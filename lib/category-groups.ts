@@ -98,7 +98,7 @@ Rules:
 - Every slug above goes in exactly one group
 - Group names are what a buyer of this business would look for: 1 to 3 words, plain, no marketing words
 - Order the groups by value to the business, highest first: follow the analysis where it names a revenue lever, otherwise weigh product count and average price
-- One sentence description per group, factual, max 140 characters
+- One sentence description per group for shoppers, saying what they will find there; max 140 characters. Never mention prices, value, revenue, the analysis or the ordering
 
 Return ONLY JSON: [{ "name": "...", "description": "...", "members": ["slug", ...] }]`,
   });

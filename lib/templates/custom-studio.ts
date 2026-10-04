@@ -37,7 +37,7 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .burger{display:none;cursor:pointer;font:600 15px var(--f)}#nav{display:none}
 .drawer{display:none}
 /* hero */
-.hero{display:grid;grid-template-columns:1fr 1.05fr;gap:clamp(28px,4vw,64px);align-items:center;padding:clamp(28px,4vw,56px) 0 clamp(56px,7vw,100px)}
+.hero{display:grid;grid-template-columns:1fr 1.05fr;gap:clamp(28px,4vw,64px);align-items:center;padding-block:clamp(28px,4vw,56px) clamp(56px,7vw,100px)}
 .hero .sub{margin:22px 0 32px}.hero .acts{display:flex;gap:12px;flex-wrap:wrap}
 .hero .nums{display:flex;gap:clamp(22px,3vw,44px);margin-top:44px;padding-top:28px;border-top:1px solid var(--line)}
 .hero .nums b{display:block;font:700 clamp(26px,2.4vw,36px)/1 var(--f);letter-spacing:-.03em}.hero .nums span{font-size:14px;color:var(--muted)}
@@ -48,7 +48,7 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .panel .tag b{display:block;font-size:15px}
 @keyframes lift{from{opacity:0;transform:translateY(22px) scale(.96)}to{opacity:1;transform:none}}
 /* sections */
-.sec{padding:clamp(48px,6vw,88px) 0}.sec .top{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:34px}
+.sec{padding-block:clamp(48px,6vw,88px)}.sec .top{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:34px}
 .sec .top a{font-weight:600;text-decoration:none;white-space:nowrap}
 .rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(200px,1fr);gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;scrollbar-width:thin}
 .cat{scroll-snap-align:start;text-decoration:none;display:block}
@@ -82,7 +82,7 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .closing{background:var(--accent);color:var(--on);border-radius:calc(var(--r) + 10px);padding:clamp(48px,7vw,100px) clamp(24px,5vw,80px);display:grid;grid-template-columns:1.4fr auto;gap:30px;align-items:center}
 .closing .lead{color:inherit;opacity:.82;margin:14px 0 0}.closing .btn{background:var(--on);color:var(--accent)}
 /* shop */
-.sh{padding:clamp(34px,4vw,60px) 0 28px}.crumbs{font-size:14px;color:var(--muted);margin:0 0 14px}.crumbs a{text-decoration:none}.crumbs a:hover{color:var(--ink)}
+.sh{padding-block:clamp(34px,4vw,60px) 28px}.crumbs{font-size:14px;color:var(--muted);margin:0 0 14px}.crumbs a{text-decoration:none}.crumbs a:hover{color:var(--ink)}
 .sh .lead{margin:14px 0 0}
 .shop{display:grid;grid-template-columns:250px 1fr;gap:clamp(24px,3vw,48px);align-items:start;padding-bottom:90px}
 .side{position:sticky;top:98px;max-height:calc(100vh - 120px);overflow:auto;padding-right:6px}
@@ -99,7 +99,7 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .pager{display:flex;gap:12px;justify-content:center;align-items:center;margin-top:44px}.pager span{color:var(--muted)}
 .side details summary{display:none}
 /* product */
-.pdp{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(28px,5vw,80px);align-items:start;padding:10px 0 clamp(56px,7vw,100px)}
+.pdp{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(28px,5vw,80px);align-items:start;padding-block:10px clamp(56px,7vw,100px)}
 .pdp .panel{aspect-ratio:1}
 .pdp .info{position:sticky;top:100px}.pdp h1{font:700 clamp(30px,3vw,44px)/1.08 var(--f);letter-spacing:-.03em;margin:0}
 .pdp .d{color:var(--muted);margin:12px 0 0;font-size:17px}.pdp .price{font:700 26px var(--f);margin:24px 0}
@@ -160,9 +160,9 @@ ${t.preview ? '<div class="note">Preview · Studio template · built by Apereel<
 ${JS}</body></html>`;
 }
 
-function card(t: RenderTarget, p: SiteProduct) {
+function card(t: RenderTarget, p: SiteProduct, reveal = true) {
   const { name, detail } = splitTitle(p.title);
-  return `<a class="card" data-r href="${href(t, `/products/${p.slug}`)}"><div class="ph">${img(p.image, p.title)}</div><div class="t"><h3>${esc(name)}</h3>${detail ? `<p class="d">${esc(detail)}</p>` : ""}<div class="pr"><span>${esc(money(p)) || "Ask for price"}</span><i class="arrow"></i></div></div></a>`;
+  return `<a class="card"${reveal ? " data-r" : ""} href="${href(t, `/products/${p.slug}`)}"><div class="ph">${img(p.image, p.title)}</div><div class="t"><h3>${esc(name)}</h3>${detail ? `<p class="d">${esc(detail)}</p>` : ""}<div class="pr"><span>${esc(money(p)) || "Ask for price"}</span><i class="arrow"></i></div></div></a>`;
 }
 
 function home(t: RenderTarget, s: Slots): string {
@@ -209,7 +209,7 @@ function listing(t: RenderTarget, s: Slots, categorySlug: string | null, query: 
   const title = st.q ? `Results for “${st.q}”` : st.cat ? st.cat.name : "Shop all";
   const body = `<section class="w sh"><p class="crumbs"><a href="${href(t, "/")}">Home</a> / <a href="${href(t, "/products")}">Shop</a>${trail.slice(0, -1).map((c) => ` / <a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a>`).join("")}</p><h1 class="display" style="font-size:clamp(36px,4.4vw,64px)">${esc(title)}</h1>${st.cat?.description && !st.q ? `<p class="lead">${esc(st.cat.description)}</p>` : ""}</section>
 <div class="w shop">${sidebar(t, st.cat) || "<div></div>"}<div><div class="bar"><form role="search" method="get" action="${t.base}${st.path}"><input name="q" value="${esc(st.q)}" placeholder="Search ${st.cat ? esc(shortName(st.cat.name).toLowerCase()) : "by name or part number"}" aria-label="Search"><button type="submit">Search</button></form><span class="n">${st.total.toLocaleString("en-US")} ${st.q ? "matches" : "products"}</span></div>
-<div class="grid">${st.shown.map((p) => card(t, p)).join("")}</div>${st.total === 0 ? `<p class="lead" style="margin:30px 0">Nothing matches that yet. <a href="${href(t, "/contact")}">Ask us</a>, we may well have it.</p>` : ""}
+<div class="grid">${st.shown.map((p) => card(t, p, false)).join("")}</div>${st.total === 0 ? `<p class="lead" style="margin:30px 0">Nothing matches that yet. <a href="${href(t, "/contact")}">Ask us</a>, we may well have it.</p>` : ""}
 ${st.pages > 1 ? `<nav class="pager" aria-label="Pages">${st.page > 1 ? `<a class="btn ghost" href="${st.pageHref(st.page - 1)}" rel="prev">Previous</a>` : ""}<span>Page ${st.page} of ${st.pages}</span>${st.page < st.pages ? `<a class="btn ghost" href="${st.pageHref(st.page + 1)}" rel="next">Next</a>` : ""}</nav>` : ""}</div></div>`;
   return page(t, s, {
     path: st.page > 1 && !st.q ? `${st.path}?page=${st.page}` : st.path,
@@ -232,7 +232,7 @@ function product(t: RenderTarget, s: Slots, p: SiteProduct): string {
 ${s.promise.length ? `<ul class="ticks">${s.promise.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
 <div class="acc"><details open><summary>Description</summary><div class="body">${paras(p.description)}</div></details>${p.specs?.length ? `<details><summary>Specifications</summary><div class="body"><table>${p.specs.map((r) => `<tr><th scope="row">${esc(r.label)}</th><td>${esc(r.value)}</td></tr>`).join("")}</table></div></details>` : ""}</div></div></section>
 ${action.enquire ? `<section class="w" id="enquire"><div class="box split" style="align-items:start"><div><p class="eyebrow">Enquire</p><h2 class="h2">Ask about this product</h2><p class="lead" style="margin-top:14px">We reply personally, usually within a working day.</p></div>${leadForm(t, `product:${p.slug}`, "Send enquiry", true)}</div></section>` : ""}
-${related.length ? `<section class="w sec"><div class="top"><h2 class="h2">You might also need</h2></div><div class="grid">${related.map((r) => card(t, r)).join("")}</div></section>` : ""}`;
+${related.length ? `<section class="w sec"><div class="top"><h2 class="h2">You might also need</h2></div><div class="grid">${related.map((r) => card(t, r, false)).join("")}</div></section>` : ""}`;
   return page(t, s, { path: `/products/${p.slug}`, title: `${p.title} | ${s.brand.name}`, description: p.description.slice(0, 155), body, jsonLd: productJsonLd(t, p, url, cat?.name ?? null) });
 }
 
