@@ -1,6 +1,6 @@
 import type { SiteProduct } from "../site-types";
 import type { RenderResult, RenderTarget } from "../site-render";
-import { byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
+import { metaTitle, byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
 
 // "Studio": Custom tier. Original design in the language of design-led
 // product makers: warm off-white, products on soft tinted panels, a confident
@@ -213,7 +213,7 @@ function listing(t: RenderTarget, s: Slots, categorySlug: string | null, query: 
 ${st.pages > 1 ? `<nav class="pager" aria-label="Pages">${st.page > 1 ? `<a class="btn ghost" href="${st.pageHref(st.page - 1)}" rel="prev">Previous</a>` : ""}<span>Page ${st.page} of ${st.pages}</span>${st.page < st.pages ? `<a class="btn ghost" href="${st.pageHref(st.page + 1)}" rel="next">Next</a>` : ""}</nav>` : ""}</div></div>`;
   return page(t, s, {
     path: st.page > 1 && !st.q ? `${st.path}?page=${st.page}` : st.path,
-    title: `${title}${st.page > 1 ? ` (page ${st.page})` : ""} | ${s.brand.name}`,
+    title: metaTitle(`${title}${st.page > 1 ? ` (page ${st.page})` : ""}`, s.brand.name),
     description: st.cat?.description || `Shop ${st.scopeTotal.toLocaleString("en-US")} products from ${s.brand.name}.`,
     noindex: !!st.q,
     body,
@@ -233,7 +233,7 @@ ${s.promise.length ? `<ul class="ticks">${s.promise.map((x) => `<li>${esc(x)}</l
 <div class="acc"><details open><summary>Description</summary><div class="body">${paras(p.description)}</div></details>${p.specs?.length ? `<details><summary>Specifications</summary><div class="body"><table>${p.specs.map((r) => `<tr><th scope="row">${esc(r.label)}</th><td>${esc(r.value)}</td></tr>`).join("")}</table></div></details>` : ""}</div></div></section>
 ${action.enquire ? `<section class="w" id="enquire"><div class="box split" style="align-items:start"><div><p class="eyebrow">Enquire</p><h2 class="h2">Ask about this product</h2><p class="lead" style="margin-top:14px">We reply personally, usually within a working day.</p></div>${leadForm(t, `product:${p.slug}`, "Send enquiry", true)}</div></section>` : ""}
 ${related.length ? `<section class="w sec"><div class="top"><h2 class="h2">You might also need</h2></div><div class="grid">${related.map((r) => card(t, r, false)).join("")}</div></section>` : ""}`;
-  return page(t, s, { path: `/products/${p.slug}`, title: `${p.title} | ${s.brand.name}`, description: p.description.slice(0, 155), body, jsonLd: productJsonLd(t, p, url, cat?.name ?? null) });
+  return page(t, s, { path: `/products/${p.slug}`, title: metaTitle(p.title, s.brand.name), description: p.description.slice(0, 155), body, jsonLd: productJsonLd(t, p, url, cat?.name ?? null) });
 }
 
 function about(t: RenderTarget, s: Slots): string {

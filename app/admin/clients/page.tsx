@@ -59,7 +59,19 @@ export default async function ClientsPage() {
                     <td className="py-3 pr-4 font-mono text-ink/85">{c.used} / {t?.requests ?? 0}</td>
                     <td className="py-3 pr-4 font-mono text-ink/85">
                       {c.service === "web-development" ? (
-                        c.site_slug ? <a href={`/sites/${c.site_slug}`} className="text-electric underline underline-offset-4">View site</a> : "Not built"
+                        c.site_slug ? (
+                          <>
+                            <a href={`/sites/${c.site_slug}`} className="text-electric underline underline-offset-4">View site</a>
+                            {c.site_qa && (
+                              <details className="mt-1 text-[11px]">
+                                <summary className={`cursor-pointer ${c.site_qa.length ? "text-signal" : "text-muted"}`}>{c.site_qa.length ? `${c.site_qa.length} to check` : "Checks passed"}</summary>
+                                <ul className="mt-1 max-w-[340px] space-y-1 whitespace-normal font-sans text-ink/80">
+                                  {c.site_qa.map((q, i) => <li key={i}><span className="font-mono text-muted">{q.page} · {q.check}</span> {q.detail}</li>)}
+                                </ul>
+                              </details>
+                            )}
+                          </>
+                        ) : "Not built"
                       ) : (
                         c.items
                       )}

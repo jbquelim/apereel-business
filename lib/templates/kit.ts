@@ -75,7 +75,11 @@ export function slots(doc: SiteDoc): Slots {
     closing: cta ? { heading: cta.heading, body: cta.body ?? "", cta: cta.ctaLabel, href: cta.ctaHref } : null,
     contact: { heading: contactSection?.heading ?? "Get in touch", body: contactSection?.body ?? "", quote: !!contactSection?.quoteForm },
     trust: (first(all, "trust")?.items ?? []).slice(0, 4),
-    featured: featured.length ? featured : withImage.slice(0, 12),
+    // Picks with photos first; a grid of empty frames looks broken.
+    featured: (() => {
+      const pics = featured.filter((p) => p.image);
+      return pics.length >= 4 ? pics : featured.length ? [...pics, ...featured.filter((p) => !p.image)] : withImage.slice(0, 12);
+    })(),
     products: doc.products,
     categories: doc.categories.map((c) => {
       const inCat = doc.products.filter((p) => p.category === c.slug || (c.slug && doc.categories.some((k) => k.parent === c.slug && k.slug === p.category)));
@@ -217,3 +221,10 @@ export function imgTag(src: string | null | undefined, alt: string, cls = "", ea
 /** Contact lines from the brand (email, phone, address) as list items. */
 export const contactItems = (b: SiteDoc["brand"]) =>
   [b.email && `<li><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></li>`, b.phone && `<li><a href="tel:${esc(b.phone)}">${esc(b.phone)}</a></li>`, b.address && `<li>${esc(b.address)}</li>`].filter(Boolean).join("");
+
+/** A page title Google shows whole: the name cut at a word to fit, then the brand. */
+export function metaTitle(name: string, brand: string, max = 62): string {
+  const room = max - brand.length - 3;
+  const short = name.length <= room ? name : `${name.slice(0, room).replace(/\s+\S*$/, "").replace(/[\s,–—·-]+$/, "")}…`;
+  return room < 20 ? name.slice(0, max) : `${short} | ${brand}`;
+}

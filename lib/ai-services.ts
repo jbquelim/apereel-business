@@ -7,6 +7,7 @@ import { importCatalogStep } from "./catalog-import";
 import { kickMediaWorker } from "./media";
 import { ensureSiteAnalysis } from "./site-analysis";
 import { groupCategories } from "./category-groups";
+import { runSiteQa } from "./site-qa-run";
 
 // One entry point for every AI service: this month's content, this month's
 // ads, or the website build. Used by John's button and the monthly cron.
@@ -54,7 +55,9 @@ export async function runService(client: Client, stage: MonthStage | undefined, 
     if (r.remaining > 0) return { summary: `catalog: ${r.products} products in ${r.categories} categories, ${r.remaining} still to read`, next: "catalog" };
     const fresh = await getSiteForClient(client.id);
     const groups = fresh ? await groupCategories(fresh, client.domain, client.id).catch((err) => (console.error("Category groups:", err instanceof Error ? err.message : err), 0)) : 0;
-    return { summary: `catalog: ${r.products} products in ${r.categories} categories${groups ? `, ${groups} main categories` : ""}`, next: null };
+    // Last: the quality checks, so John sees what needs attention before the customer does.
+    const qa = fresh ? await runSiteQa(fresh.id).catch((err) => (console.error("Site QA:", err instanceof Error ? err.message : err), null)) : null;
+    return { summary: `catalog: ${r.products} products in ${r.categories} categories${groups ? `, ${groups} main categories` : ""}${qa ? `, ${qa.length} QA issues` : ""}`, next: null };
   }
   if (stage !== "build") {
     // Waits up to ~3.5 minutes per step for the analysis, then hands on to a fresh step.

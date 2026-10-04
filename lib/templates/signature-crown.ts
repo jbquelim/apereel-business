@@ -1,6 +1,6 @@
 import type { SiteProduct } from "../site-types";
 import type { RenderResult, RenderTarget } from "../site-render";
-import { byRank, categoryNav, shortName, esc, fontsLink, href, jsonLdTags, leadForm, listState, money, paras, productAction, productJsonLd, slots, splitTitle, type Slots } from "./kit";
+import { metaTitle, byRank, categoryNav, shortName, esc, fontsLink, href, jsonLdTags, leadForm, listState, money, paras, productAction, productJsonLd, slots, splitTitle, type Slots } from "./kit";
 
 // "Crown": Signature tier. Original design in the language of the great
 // luxury houses: products on a soft spotlit stage, very large bold type,
@@ -47,6 +47,9 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .hero .media.cover img,.hero .media video{width:100%;height:100%;object-fit:cover;animation:settle 18s ease-out both}
 .hero .media.cover:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,.55))}
 .hero .txt{position:relative;z-index:1;max-width:980px;padding:0 20px}
+.hero.stage{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:clamp(28px,4vh,48px);padding-top:clamp(36px,6vh,72px)}
+.hero.stage .media{position:relative;inset:auto;width:100%}
+.hero.stage .media img.p{height:min(46vh,520px);width:auto;max-width:min(86vw,520px);max-height:none;aspect-ratio:1;object-fit:cover;border-radius:18px;mix-blend-mode:normal;box-shadow:0 30px 60px -40px rgba(0,0,0,.45)}
 .hero.on-dark{color:#fff}.hero .sub{margin:18px auto 26px;color:inherit;opacity:.75;max-width:620px}
 @keyframes rise{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes settle{from{transform:scale(1.07)}to{transform:scale(1)}}
@@ -77,7 +80,7 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .tile .pr{margin-top:16px;font-size:16px}
 .tile .im{display:grid;place-items:center}
 .tile .im img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:#fff;mix-blend-mode:normal;box-shadow:0 1px 0 rgba(0,0,0,.04)}
-.tile.ed{grid-template-columns:1fr;padding:0;overflow:hidden;color:#fff}
+.tile.bare{grid-template-columns:1fr}.tile.ed{grid-template-columns:1fr;padding:0;overflow:hidden;color:#fff}
 .tile.ed img{position:absolute;inset:0;width:100%;height:100%;max-height:none;object-fit:cover;mix-blend-mode:normal}
 .tile.ed .t{position:relative;align-self:end;padding:36px;background:linear-gradient(0deg,rgba(0,0,0,.55),transparent)}
 .coll .more{text-align:center;margin-top:44px}
@@ -134,7 +137,7 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .ft .base{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid #ddd;margin-top:56px;padding-top:22px;font-size:13px;color:var(--muted)}
 .note{background:#111;color:#fff;text-align:center;font:13px system-ui;padding:8px}
 [data-r]{opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}[data-r].in{opacity:1;transform:none}
-@media(max-width:1000px){.cards,.tiles,.hl .grid{grid-template-columns:1fr 1fr}.pdp{grid-template-columns:1fr;padding:30px 0}.pdp .img{order:-1}.pdp .img img{max-height:52vh}.faq,.specs,.contact{grid-template-columns:1fr}.hd nav a.t{display:none}}
+@media(max-width:1000px){.cards,.tiles,.hl .grid{grid-template-columns:1fr 1fr}.pdp{grid-template-columns:1fr;padding-block:30px}.pdp .img{order:-1}.pdp .img img{max-height:52vh}.faq,.specs,.contact{grid-template-columns:1fr}.hd nav a.t{display:none}}
 @media(max-width:640px){.cards,.tiles,.hl .grid,.ft .cols{grid-template-columns:1fr}.tile{min-height:300px}.form{grid-template-columns:1fr}.hd nav{gap:16px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}[data-r]{opacity:1;transform:none}}`;
 }
@@ -177,7 +180,7 @@ ${JS}</body></html>`;
 
 function tile(t: RenderTarget, p: SiteProduct) {
   const { name, detail } = splitTitle(p.title);
-  return `<a class="tile" data-r href="${href(t, `/products/${p.slug}`)}"><div><h3>${esc(name)}</h3>${detail ? `<p class="d">${esc(detail)}</p>` : ""}${p.price != null ? `<p class="pr">${esc(money(p))}</p>` : ""}</div><div class="im">${img(p.image, p.title)}</div></a>`;
+  return `<a class="tile${p.image ? "" : " bare"}" data-r href="${href(t, `/products/${p.slug}`)}"><div><h3>${esc(name)}</h3>${detail ? `<p class="d">${esc(detail)}</p>` : ""}${p.price != null ? `<p class="pr">${esc(money(p))}</p>` : ""}</div>${p.image ? `<div class="im">${img(p.image, p.title)}</div>` : ""}</a>`;
 }
 
 function editorialTile(t: RenderTarget, src: string, title: string, label: string, to: string) {
@@ -248,7 +251,7 @@ ${catCards ? `<section class="w">${catCards}</section>` : ""}
 ${st.pages > 1 ? `<nav class="pager" aria-label="Pages">${st.page > 1 ? `<a class="pill" href="${st.pageHref(st.page - 1)}" rel="prev">Previous</a>` : ""}<span style="color:var(--muted)">Page ${st.page} of ${st.pages}</span>${st.page < st.pages ? `<a class="pill" href="${st.pageHref(st.page + 1)}" rel="next">Next</a>` : ""}</nav>` : '<div style="height:90px"></div>'}</div>`;
   return page(t, s, {
     path: st.page > 1 && !st.q ? `${st.path}?page=${st.page}` : st.path,
-    title: `${title}${st.page > 1 ? ` (page ${st.page})` : ""} | ${s.brand.name}`,
+    title: metaTitle(`${title}${st.page > 1 ? ` (page ${st.page})` : ""}`, s.brand.name),
     description: st.cat?.description || `Browse ${st.scopeTotal.toLocaleString("en-US")} products from ${s.brand.name}.`,
     noindex: !!st.q,
     body,
@@ -269,7 +272,7 @@ ${action.enquire ? `<section class="w" id="enquire"><div class="contact"><div><p
 ${related.length ? `<section class="coll" style="padding-top:20px"><div class="w"><div class="head"><p class="over">You may also like</p></div><div class="tiles">${related.map((r) => tile(t, r)).join("")}</div></div></section>` : ""}`;
   return page(t, s, {
     path: `/products/${p.slug}`,
-    title: `${p.title} | ${s.brand.name}`,
+    title: metaTitle(p.title, s.brand.name),
     description: p.description.slice(0, 155),
     body,
     jsonLd: productJsonLd(t, p, url, cat?.name ?? null),

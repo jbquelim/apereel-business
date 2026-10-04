@@ -1,6 +1,6 @@
 import type { SiteProduct } from "../site-types";
 import type { RenderResult, RenderTarget } from "../site-render";
-import { byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
+import { metaTitle, byRank, categoryNav, contactItems, esc, fontsLink, href, imgTag as img, jsonLdTags, leadForm, listState, money, onColor, paras, productAction, productJsonLd, shortName, slots, splitTitle, type Slots } from "./kit";
 
 // "Ledger": Template tier. Original design in the language of established
 // retail catalogues: a utility bar, a wide search box in the header, a
@@ -35,8 +35,8 @@ img{display:block;max-width:100%}a{color:inherit}
 /* hero */
 .banner{background:var(--soft);display:grid;grid-template-columns:1fr 1fr;align-items:center;min-height:440px;margin-top:24px;overflow:hidden}
 .banner .t{padding:clamp(28px,5vw,64px)}.banner .t p{font-size:18px;color:#444;margin:16px 0 28px;max-width:520px}
-.banner .im{height:100%;display:grid;place-items:center;padding:28px;background:#fff}.banner .im img{max-height:400px;object-fit:contain}
-.banner .im img.cover{width:100%;height:100%;max-height:none;object-fit:cover}.banner .im.full{padding:0}
+.banner .im{height:100%;display:grid;place-items:center;padding:28px}.banner .im img{height:min(380px,100%);width:auto;max-width:100%;aspect-ratio:1;object-fit:cover;box-shadow:0 24px 50px -36px rgba(0,0,0,.5)}
+.banner .im img.cover{width:100%;height:100%;max-height:none;aspect-ratio:auto;object-fit:cover;box-shadow:none}.banner .im.full{padding:0}
 /* trust */
 .trust{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);margin-top:24px}
 .trust div{padding:22px 24px;border-right:1px solid var(--line)}.trust div:last-child{border-right:0}
@@ -94,7 +94,7 @@ img{display:block;max-width:100%}a{color:inherit}
 .note{background:var(--accent);color:var(--on);text-align:center;font:13px system-ui;padding:8px}
 @media(max-width:1000px){.grid{grid-template-columns:repeat(3,1fr)}.trust{grid-template-columns:1fr 1fr}.trust div:nth-child(2){border-right:0}.trust div:nth-child(-n+2){border-bottom:1px solid var(--line)}.hd .links{display:none}}
 @media(max-width:800px){.banner,.promo,.pdp,.two,.tabs .cols,.qa{grid-template-columns:1fr}.banner .im{order:-1;max-height:300px}.feat{grid-template-columns:1fr}.ft .cols{grid-template-columns:1fr 1fr}.util .l{display:none}
-.hd .row{flex-wrap:wrap;height:auto;padding:12px 0;gap:12px}.find{order:3;flex-basis:100%;max-width:none}}
+.hd .row{flex-wrap:wrap;height:auto;padding-block:12px;gap:12px}.find{order:3;flex-basis:100%;max-width:none}}
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr;gap:10px}.pc .t{padding:12px}.trust{grid-template-columns:1fr}.trust div{border-right:0;border-bottom:1px solid var(--line)}.form{grid-template-columns:1fr}.ft .cols{grid-template-columns:1fr}.res input{width:100%}.res form{flex:1}}`;
 }
 
@@ -174,7 +174,7 @@ ${chips.length ? `<div class="chips">${!kids.length && st.cat ? `<a href="${href
 ${st.pages > 1 ? `<nav class="pages" aria-label="Pages">${pageLinks(st.pages, st.page, st.pageHref)}</nav>` : '<div style="height:48px"></div>'}</div>`;
   return page(t, s, {
     path: st.page > 1 && !st.q ? `${st.path}?page=${st.page}` : st.path,
-    title: `${title}${st.page > 1 ? ` (page ${st.page})` : ""} | ${s.brand.name}`,
+    title: metaTitle(`${title}${st.page > 1 ? ` (page ${st.page})` : ""}`, s.brand.name),
     description: st.cat?.description || `Shop ${st.scopeTotal.toLocaleString("en-US")} products from ${s.brand.name}.`,
     noindex: !!st.q,
     current: top,
@@ -196,7 +196,7 @@ ${s.promise.length ? `<ul class="checks">${s.promise.map((x) => `<li>${esc(x)}</
 <section class="tabs"><div class="cols"><div><h2>Product details</h2>${paras(p.description)}</div>${p.specs?.length ? `<div><h2>Specifications</h2><table>${p.specs.map((r) => `<tr><th scope="row">${esc(r.label)}</th><td>${esc(r.value)}</td></tr>`).join("")}</table></div>` : ""}</div></section>
 ${action.enquire ? `<section class="tabs" id="enquire"><div class="two" style="padding-top:0"><div><h2>Ask about this product</h2><p class="muted">Part numbers, quantities or fit questions. We reply within a working day.</p></div>${leadForm(t, `product:${p.slug}`, "Send enquiry", true)}</div></section>` : ""}
 ${related.length ? `<section class="sec"><div class="head"><h2 class="h2">Related products</h2></div><div class="grid">${related.map((r) => pc(t, r)).join("")}</div></section>` : ""}</div>`;
-  return page(t, s, { path: `/products/${p.slug}`, title: `${p.title} | ${s.brand.name}`, description: p.description.slice(0, 155), body, jsonLd: productJsonLd(t, p, url, cat?.name ?? null), current: trail[0]?.slug ?? null });
+  return page(t, s, { path: `/products/${p.slug}`, title: metaTitle(p.title, s.brand.name), description: p.description.slice(0, 155), body, jsonLd: productJsonLd(t, p, url, cat?.name ?? null), current: trail[0]?.slug ?? null });
 }
 
 function about(t: RenderTarget, s: Slots): string {

@@ -5,6 +5,7 @@ import { upgradeImages } from "./image-upgrade";
 import { platformCatalog, type PlatformCatalog } from "./platform-catalog";
 import type { SiteDoc } from "./site-types";
 import { applyGroups } from "./category-groups";
+import { syncCount } from "./site-qa";
 
 // Imports a business's whole catalog into a generated site, categorised the
 // way the business itself categorises it. Category pages list their products,
@@ -319,15 +320,20 @@ async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: Platfor
       return { slug, name: c.name, description: prevCats.get(slug)?.description ?? "", parent, count: total.get(c.key) ?? 0, image: photo.get(c.key) ?? null };
     });
   const featured = list.filter((r) => r.featured);
+  // The copy was written before the import; its product count follows what the shop lists.
+  const was = site.doc.catalogTotal;
   const doc: SiteDoc = {
     ...site.doc,
+    pages: syncCount(site.doc.pages, was, list.length),
+    brand: syncCount(site.doc.brand, was, list.length),
+    ...(site.doc.productPromise ? { productPromise: syncCount(site.doc.productPromise, was, list.length) } : {}),
     categories: applyGroups(categories, site.doc.categoryGroups),
     products: (featured.length ? featured : list.filter((r) => r.image).slice(0, 24)).map((r) => ({
       slug: r.slug, title: r.title, price: r.price, currency: r.currency, image: r.image, description: r.description,
       category: r.category, sourceUrl: r.source_url, featured: true, ...(r.specs ? { specs: r.specs } : {}),
     })),
     catalogSize: list.length,
-    catalogTotal: Math.max(site.doc.catalogTotal ?? 0, cat.products.length),
+    catalogTotal: list.length,
   };
   await sql()`UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, updated_at = now() WHERE id = ${site.id}`;
   return { products: list.length, categories: categories.length };

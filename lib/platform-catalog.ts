@@ -13,6 +13,10 @@ export type PlatformProduct = { url: string; title: string; price: number | null
 export type PlatformCatalog = { platform: "bigcommerce" | "shopify" | "woocommerce"; categories: PlatformCategory[]; products: PlatformProduct[] };
 
 const CATCH_ALL = /^(all|frontpage|home|sale|new|new-arrivals|best-sellers?|featured|clearance|gift-cards?|shop-all.*|all-products)$/i;
+/** Promotions, not categories ("25% off sitewide", "Black Friday deals"). */
+const PROMO = /\b(sale|off|sitewide|clearance|discount(?:ed)?|deals?|promo|black[- ]friday|cyber[- ]monday|bogo)\b|%/i;
+/** The store's own working collections ("404 recommendations", "Piercing test"), never shown to buyers. */
+const INTERNAL = /\b(test|testing|404|recommendations?|hidden|draft|internal|staff|do[- ]not|upsell|cross[- ]?sell|search|homepage|algolia|klaviyo)\b/i;
 
 async function getText(url: string, init?: RequestInit): Promise<{ status: number; text: string } | null> {
   try {
@@ -103,7 +107,7 @@ async function shopify(host: string, deadline: number): Promise<PlatformCatalog 
   const categories: PlatformCategory[] = [];
   // Collections are the store's own categories; membership comes from each collection's feed.
   const cols = (await getJson<{ collections: { handle: string; title: string }[] }>(`https://${host}/collections.json?limit=250`))?.collections ?? [];
-  for (const c of cols.filter((c) => !CATCH_ALL.test(c.handle)).slice(0, 80)) {
+  for (const c of cols.filter((c) => !CATCH_ALL.test(c.handle) && !PROMO.test(c.handle) && !PROMO.test(c.title) && !INTERNAL.test(c.handle) && !INTERNAL.test(c.title)).slice(0, 80)) {
     if (Date.now() > deadline) break;
     let n = 0;
     for (let page = 1; page <= 10; page++) {
