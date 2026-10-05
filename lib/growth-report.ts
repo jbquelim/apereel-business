@@ -279,6 +279,7 @@ Rules:
 - CRAWL FINDINGS and PRODUCT PAGES SIDE BY SIDE are the strongest evidence in this report (we read those pages ourselves): base the top priorities on them where they apply, quoting the counts as "X of the Y pages we checked" and naming competitors from the side-by-side
 - Every priority's "evidence" must quote facts and numbers that appear in the evidence above. Never invent numbers, rankings, traffic, conversion rates or revenue figures
 - Prefer specific, verifiable fixes (e.g. "add Product structured data with price and availability to product pages") over generic advice
+- A category's highest price is often a bulk, wholesale or equipment item filed under it: never describe the top of a price range as a kind of product ("rare lots", "luxury pieces") unless a named product at that price shows it
 - Missing or unmeasured data is a limitation of our crawler, never a claim about the client's site; a tool "not seen" on a homepage may still be in use
 - Never promise outcomes ("will double traffic"); describe what each fix enables
 - Roadmap: 2-4 items per period, each a concrete deliverable, building on the priorities

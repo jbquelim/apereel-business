@@ -86,6 +86,22 @@ export function checkDoc(doc: SiteDoc): QaIssue[] {
   if ((hero?.heading?.length ?? 0) > 70) out.push({ page: "/", check: "hero-length", detail: `hero headline is ${hero!.heading!.length} characters` });
   if (doc.designMatched === false) out.push({ page: "site", check: "design", detail: "no template matched this business's industry; the design was picked by usage only, so check it suits them", level: "note" });
   if (!doc.brand.logo) out.push({ page: "site", check: "logo", detail: "no logo found; the business name is shown as text", level: "note" });
+  // Prices in the copy (not on product cards) are usually a range's extreme, often a bulk or wholesale item.
+  const total = doc.catalogTotal ?? doc.catalogSize ?? doc.products.length;
+  for (const page of doc.pages) {
+    const where = page.slug === "" ? "/" : `/${page.slug}`;
+    const prices = new Set(JSON.stringify(page.sections.filter((s) => !/product/i.test(s.type))).match(/\$\d{1,3}(?:,\d{3})+(?:\.\d\d)?|\$\d+(?:\.\d\d)?/g) ?? []);
+    if (prices.size) out.push({ page: where, check: "price-claim", detail: `copy quotes ${[...prices].slice(0, 4).join(", ")}; check each is a real product's price, not a bulk or wholesale outlier` });
+    // A stat's number and label render apart, so the page text check can't pair them.
+    for (const s of page.sections) {
+      if (s.type !== "stats") continue;
+      for (const it of s.items) {
+        const n = Number(it.value.replace(/[^\d]/g, ""));
+        if (total > 100 && n > 100 && /\b(products?|items?|catalog|shop)\b/i.test(it.label) && Math.abs(n - total) / total > 0.1)
+          out.push({ page: where, check: "count-mismatch", detail: `stat says "${it.value} ${it.label}", the shop lists ${total.toLocaleString("en-US")}` });
+      }
+    }
+  }
   const photos = doc.products.filter((p) => p.image).length;
   if (doc.products.length && photos / doc.products.length < 0.75) out.push({ page: "site", check: "photos", detail: `${photos} of ${doc.products.length} featured products have photos` });
   return out;

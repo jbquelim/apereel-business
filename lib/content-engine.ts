@@ -97,7 +97,8 @@ export const RULES = `Rules:
 - Use only facts given here: product names, prices and the business's advantage. Never invent discounts, awards, reviews, statistics, shipping or guarantees.
 - Plain, confident language for real buyers; no hype words ("revolutionary", "game-changing", "unparalleled").
 - Never name competitors in customer-facing copy.
-- Prices exactly as given; leave prices out when none is given.`;
+- Prices exactly as given; leave prices out when none is given.
+- Never use price ranges or a top price ("from $X", "up to $Y", "lots to $Z") in headlines, stats or claims: the extremes are often bulk or wholesale items. Quote a named product's price instead.`;
 
 async function writePosts(client: Client, brief: string, products: Product[]): Promise<PostData[]> {
   const out: PostData[] = [];

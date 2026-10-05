@@ -41,8 +41,9 @@ export async function readShopifyCatalog(domain: string): Promise<{ products: Sh
     );
     const batch = data?.products;
     if (!Array.isArray(batch)) return { products, complete: page > 1 };
+    // A short page isn't the last (unpublished products are dropped from it); only an empty one is.
+    if (batch.length === 0) return { products, complete: true };
     products.push(...batch);
-    if (batch.length < 250) return { products, complete: true };
   }
   return { products, complete: false };
 }

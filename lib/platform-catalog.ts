@@ -96,11 +96,11 @@ async function shopify(host: string, deadline: number): Promise<PlatformCatalog 
   const first = await getJson<{ products: ShopProduct[] }>(`https://${host}/products.json?limit=250&page=1`);
   if (!first?.products) return null;
   const all: ShopProduct[] = [...first.products];
-  for (let page = 2; first.products.length === 250 && page <= 60 && Date.now() < deadline; page++) {
+  // Pages can come back short of 250 (unpublished products are dropped) and still not be the last: read until an empty page.
+  for (let page = 2; first.products.length > 0 && page <= 60 && Date.now() < deadline; page++) {
     const next = await getJson<{ products: ShopProduct[] }>(`https://${host}/products.json?limit=250&page=${page}`);
     if (!next?.products?.length) break;
     all.push(...next.products);
-    if (next.products.length < 250) break;
   }
   const byHandle = new Map(all.map((p) => [p.handle, p]));
   const keys = new Map<string, string[]>();
@@ -117,7 +117,7 @@ async function shopify(host: string, deadline: number): Promise<PlatformCatalog 
         keys.set(p.handle, [...(keys.get(p.handle) ?? []), `c:${c.handle}`]);
         n++;
       }
-      if (r.products.length < 250) break;
+      if (r.products.length < 200) break;
     }
     if (n) categories.push({ key: `c:${c.handle}`, name: c.title, parentKey: null, url: `https://${host}/collections/${c.handle}` });
   }
