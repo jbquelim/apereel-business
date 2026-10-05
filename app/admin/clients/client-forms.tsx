@@ -67,3 +67,31 @@ export function GenerateButton({ id, label }: { id: string; label: string }) {
     </span>
   );
 }
+
+/** John's design override for a site: any of the templates, grouped by tier. */
+export function DesignSelect({ siteId, current, options }: { siteId: string; current: string | null; options: { id: string; name: string; tier: string }[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const tiers: [string, string][] = [["grow", "Signature"], ["build", "Custom"], ["fix", "Template"]];
+  return (
+    <select
+      aria-label="Site design"
+      disabled={busy}
+      value={current ?? ""}
+      onChange={async (e) => {
+        setBusy(true);
+        await fetch("/api/admin/sites/design", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ siteId, design: e.target.value }) }).catch(() => null);
+        setBusy(false);
+        router.refresh();
+      }}
+      className="mt-1 block max-w-[180px] rounded-md border border-white/15 bg-navy-mid px-2 py-1 font-sans text-[12px] text-ink"
+    >
+      {!current && <option value="">Old layout</option>}
+      {tiers.map(([tier, label]) => (
+        <optgroup key={tier} label={label}>
+          {options.filter((o) => o.tier === tier).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+        </optgroup>
+      ))}
+    </select>
+  );
+}

@@ -369,18 +369,26 @@ export const TEMPLATES: TemplateMeta[] = [
 ];
 
 /**
- * The best template of a tier for a business: words its industry shares with
- * what each template suits, then whether the template fits the catalog's
- * size, then the least-used (so similar businesses don't all look alike).
+ * A tier's templates ranked for a business: +3 for each word its industry
+ * shares with what a template suits, +2 when the template fits the
+ * catalog's size (-3 when it clearly doesn't), -0.5 per site already using
+ * it so similar businesses don't all look alike. `hits` is the word matches.
  */
-export function matchTemplate(tier: TemplateMeta["tier"], industry: string, catalogSize: number, used: Map<string | null, number>): TemplateMeta | null {
+export function rankTemplates(tier: TemplateMeta["tier"], industry: string, catalogSize: number, used: Map<string | null, number>) {
   const words = new Set(industry.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 2));
   const size = catalogSize >= 1000 ? "large" : catalogSize > 0 && catalogSize < 300 ? "small" : null;
-  const score = (t: TemplateMeta) =>
-    (t.fits ?? []).filter((f) => words.has(f) || [...words].some((w) => w.startsWith(f) || f.startsWith(w) && w.length > 4)).length * 3 +
-    (size && t.catalog === size ? 2 : size && t.catalog && t.catalog !== size ? -3 : 0) -
-    (used.get(t.id) ?? 0) * 0.5;
-  return TEMPLATES.filter((t) => t.tier === tier).sort((a, b) => score(b) - score(a))[0] ?? null;
+  return TEMPLATES.filter((t) => t.tier === tier)
+    .map((t) => {
+      const hits = (t.fits ?? []).filter((f) => words.has(f) || [...words].some((w) => w.startsWith(f) || (f.startsWith(w) && w.length > 4))).length;
+      const score = hits * 3 + (size && t.catalog === size ? 2 : size && t.catalog && t.catalog !== size ? -3 : 0) - (used.get(t.id) ?? 0) * 0.5;
+      return { template: t, score, hits };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+/** The best template of a tier for a business (see rankTemplates). */
+export function matchTemplate(tier: TemplateMeta["tier"], industry: string, catalogSize: number, used: Map<string | null, number>): TemplateMeta | null {
+  return rankTemplates(tier, industry, catalogSize, used)[0]?.template ?? null;
 }
 
 export const templateById = (id: string | null | undefined) => TEMPLATES.find((t) => t.id === id) ?? null;

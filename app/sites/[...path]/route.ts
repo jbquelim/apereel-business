@@ -17,16 +17,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
   const site = onDomain ? await getSiteByDomain(host) : await getSiteBySlug(first ?? "");
   if (!site) return new Response("Not found", { status: 404, headers: { "content-type": "text/plain" } });
 
+  // Preview in another design (the studio's design picker): /sites/<slug>/_design/<id>/...
+  // Only on apereel.com previews, never on the customer's own domain.
+  const designOverride = !onDomain && rest[0] === "_design" && tplById(rest[1]) ? rest[1] : undefined;
+  if (designOverride) rest.splice(0, 2);
+  const base = onDomain ? "" : `/sites/${site.slug}${designOverride ? `/_design/${designOverride}` : ""}`;
   const origin = onDomain ? `https://${host}` : new URL(request.url).origin + `/sites/${site.slug}`;
   const query = new URL(request.url).searchParams;
-  const perPage = tplById(site.doc.design)?.perPage ?? 48;
+  const perPage = tplById(designOverride ?? site.doc.design)?.perPage ?? 48;
   const catalog = await loadCatalogView(site.id, site.doc, rest, query, perPage).catch(() => null);
   const result = renderPath(
     {
       catalog,
       siteId: site.id,
       doc: site.doc,
-      base: onDomain ? "" : `/sites/${site.slug}`,
+      base,
+      design: designOverride,
       origin,
       apiOrigin: API_ORIGIN,
       preview: !onDomain,

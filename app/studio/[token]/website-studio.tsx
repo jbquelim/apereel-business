@@ -22,7 +22,11 @@ export function WebsiteStudio({
   leads,
   paymentsStatus,
   productAction,
+  designs,
+  currentDesign,
 }: {
+  designs: { id: string; name: string; summary: string }[];
+  currentDesign: string | null;
   token: string;
   slug: string;
   published: boolean;
@@ -43,7 +47,10 @@ export function WebsiteStudio({
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [domainInput, setDomainInput] = useState(domain ?? "");
   const [domainInfo, setDomainInfo] = useState<DomainInfo | null>(domain ? { status: domainStatus ?? "" } : null);
-  const src = `/sites/${slug}${page ? `/${page}` : ""}`;
+  // Previewing another design shows the same pages in that layout.
+  const [previewDesign, setPreviewDesign] = useState<string | null>(null);
+  const trying = previewDesign && previewDesign !== currentDesign ? previewDesign : null;
+  const src = `/sites/${slug}${trying ? `/_design/${trying}` : ""}${page ? `/${page}` : ""}`;
 
   async function act(action: string, extra: object = {}) {
     setBusy(action);
@@ -63,6 +70,52 @@ export function WebsiteStudio({
   return (
     <div className="mt-10 grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
+        {designs.length > 1 && (
+          <section aria-label="Choose your design" className="mb-6">
+            <p className="font-mono text-[11px] tracking-[0.2em] text-electric uppercase">Your design</p>
+            <p className="mt-1 text-[13px] text-muted">The three designs that best fit your business. Preview any of them with your own pages; switching is free and keeps all your content.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              {designs.map((d) => {
+                const isCurrent = d.id === currentDesign;
+                const isPreview = (trying ?? currentDesign) === d.id;
+                return (
+                  <div key={d.id} className={`rounded-2xl border p-4 ${isPreview ? "border-electric" : "border-white/10"}`}>
+                    <p className="flex items-center justify-between gap-2 text-[15px] text-ink">
+                      {d.name}
+                      {isCurrent && <span className="rounded-full bg-electric/15 px-2 py-0.5 font-mono text-[10px] tracking-[0.14em] text-electric uppercase">Current</span>}
+                    </p>
+                    <p className="mt-1 text-[12.5px] leading-snug text-muted">{d.summary}</p>
+                    <div className="mt-3 flex gap-2">
+                      {!isCurrent && (
+                        <button type="button" onClick={() => { setPreviewDesign(d.id); setFrameKey((k) => k + 1); }} className={`h-9 rounded-full border px-3 text-[12.5px] ${isPreview ? "border-electric text-ink" : "border-white/20 text-ink"}`}>
+                          {isPreview ? "Previewing" : "Preview"}
+                        </button>
+                      )}
+                      {!isCurrent && (
+                        <button
+                          type="button"
+                          disabled={!!busy}
+                          onClick={async () => {
+                            if (await act("site-design", { design: d.id })) {
+                              setPreviewDesign(null);
+                              setMsg({ ok: true, text: `Your site now uses ${d.name}.` });
+                            }
+                          }}
+                          className="press-scale h-9 rounded-full bg-electric px-3 text-[12.5px] font-semibold text-navy disabled:opacity-50"
+                        >
+                          {busy === "site-design" ? "Switching…" : "Use this design"}
+                        </button>
+                      )}
+                      {isCurrent && trying && (
+                        <button type="button" onClick={() => { setPreviewDesign(null); setFrameKey((k) => k + 1); }} className="h-9 rounded-full border border-white/20 px-3 text-[12.5px] text-ink">Back to current</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           {[...pages, { slug: "products", label: `Products (${products})` }].map((p) => (
             <button

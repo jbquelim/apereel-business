@@ -62,6 +62,8 @@ export type SiteDoc = {
   categories: { slug: string; name: string; description: string; parent?: string | null; count?: number; image?: string | null; rank?: number }[];
   /** Main categories (from the analysis) that the store's own top-level categories sit under; kept across re-imports. */
   categoryGroups?: { slug: string; name: string; description: string; members: string[] }[];
+  /** False when no template matched the business's industry at build (the design was picked by usage only). */
+  designMatched?: boolean;
   /** Shop filters this catalog supports (lib/facets), read from product names. */
   facets?: { key: string; label: string }[];
   /** Products in site_products (the full catalog); the document keeps only home-page picks. */

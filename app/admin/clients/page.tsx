@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin-auth";
 import { listClients, tierFor } from "@/lib/clients";
-import { NewClientForm, GenerateButton } from "./client-forms";
+import { NewClientForm, GenerateButton, DesignSelect } from "./client-forms";
+import { TEMPLATES } from "@/lib/templates";
 import { MediaNudger } from "@/components/media-nudger";
 import { pendingMediaJobs } from "@/lib/media";
 
@@ -62,6 +63,7 @@ export default async function ClientsPage() {
                         c.site_slug ? (
                           <>
                             <a href={`/sites/${c.site_slug}`} className="text-electric underline underline-offset-4">View site</a>
+                            {c.site_id && <DesignSelect siteId={c.site_id} current={c.site_design} options={TEMPLATES.map((t) => ({ id: t.id, name: t.name, tier: t.tier }))} />}
                             {c.site_qa && (
                               <details className="mt-1 text-[11px]">
                                 <summary className={`cursor-pointer ${c.site_qa.length ? "text-signal" : "text-muted"}`}>{c.site_qa.length ? `${c.site_qa.length} to check` : "Checks passed"}</summary>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { setDesign } from "@/lib/site-design";
 import { getClientByToken } from "@/lib/clients";
 import { reviseItem, setItemStatus } from "@/lib/content-engine";
 import { getSiteForClient, reviseSite, setPublished, undoSite } from "@/lib/site-builder";
@@ -15,7 +16,7 @@ export const maxDuration = 300;
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const client = await getClientByToken((await params).token);
   if (!client) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-  const b = (await request.json().catch(() => ({}))) as { action?: string; itemId?: number; instruction?: string; domain?: string; mode?: string };
+  const b = (await request.json().catch(() => ({}))) as { action?: string; itemId?: number; instruction?: string; domain?: string; mode?: string; design?: string };
 
   const base = (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
   const studio = `${base}/studio/${client.token}`;
@@ -60,6 +61,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       }
     }
     if (b.action === "site-undo") return NextResponse.json({ ok: await undoSite(client) });
+    // Choosing a design from the plan's templates: free, doesn't use a request.
+    if (b.action === "site-design") {
+      const site = await getSiteForClient(client.id);
+      if (!site || typeof b.design !== "string") return NextResponse.json({ ok: false, error: "Pick a design." }, { status: 400 });
+      const r = await setDesign(site.id, b.design, { tier: client.tier });
+      return NextResponse.json(r, { status: r.ok ? 200 : 400 });
+    }
     if (b.action === "site-publish" || b.action === "site-unpublish") return NextResponse.json({ ok: await setPublished(client, b.action === "site-publish") });
     if (b.action === "site-domain") {
       const site = await getSiteForClient(client.id);

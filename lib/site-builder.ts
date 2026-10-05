@@ -13,7 +13,7 @@ import { upgradeImages } from "./image-upgrade";
 import { imageSize } from "./image-size";
 import { fetchSitemapCatalog } from "./site-fetch";
 import { analysisBrief, siteAnalysis } from "./site-analysis";
-import { matchTemplate } from "./templates";
+import { rankTemplates } from "./templates";
 
 // The website service, automated: the best template for the business's
 // industry and tier, filled by Claude with copy from what we measured (their
@@ -373,8 +373,12 @@ ${RULES}
   // The hand-designed template for the tier (lib/templates), kept on rebuilds; none yet = section renderer.
   // A new site gets the tier's template that best fits its business and catalog (least-used breaks ties).
   const used = new Map(((await sql()`SELECT doc->>'design' AS d, count(*)::int AS n FROM sites GROUP BY 1`) as { d: string | null; n: number }[]).map((r) => [r.d, r.n]));
-  const design = existing?.doc.design ?? matchTemplate(tier, industryTexts.join(" "), catalogTotal, used)?.id;
+  const ranked = rankTemplates(tier, industryTexts.join(" "), catalogTotal, used);
+  const design = existing?.doc.design ?? ranked[0]?.template.id;
   if (design) doc.design = design;
+  // No template's "best for" words matched this industry: the pick is only the least-used, so flag it for review.
+  if (!existing?.doc.design) doc.designMatched = (ranked[0]?.hits ?? 0) > 0;
+  else if (existing.doc.designMatched != null) doc.designMatched = existing.doc.designMatched;
   const row = existing
     ? ((await sql()`
         UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, template_id = ${template.id},

@@ -84,6 +84,7 @@ export function checkDoc(doc: SiteDoc): QaIssue[] {
   if (contrast(accent, "#ffffff") < 3) out.push({ page: "site", check: "accent-contrast", detail: `${accent} on white is ${contrast(accent, "#ffffff").toFixed(1)}:1 (needs 3:1 for text and icons)` });
   const hero = doc.pages.find((p) => p.slug === "")?.sections.find((s) => s.type === "hero") as { heading?: string } | undefined;
   if ((hero?.heading?.length ?? 0) > 70) out.push({ page: "/", check: "hero-length", detail: `hero headline is ${hero!.heading!.length} characters` });
+  if (doc.designMatched === false) out.push({ page: "site", check: "design", detail: "no template matched this business's industry; the design was picked by usage only, so check it suits them", level: "note" });
   if (!doc.brand.logo) out.push({ page: "site", check: "logo", detail: "no logo found; the business name is shown as text", level: "note" });
   const photos = doc.products.filter((p) => p.image).length;
   if (doc.products.length && photos / doc.products.length < 0.75) out.push({ page: "site", check: "photos", detail: `${photos} of ${doc.products.length} featured products have photos` });

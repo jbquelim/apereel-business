@@ -7,6 +7,7 @@ import { jobsForItems } from "@/lib/media";
 import { getSiteForClient } from "@/lib/site-builder";
 import { StudioItems } from "./studio-items";
 import { WebsiteStudio } from "./website-studio";
+import { designChoices } from "@/lib/site-design";
 import { BillingButton } from "./billing-button";
 import { refreshPaymentsStatus } from "@/lib/connect";
 import { MediaNudger } from "@/components/media-nudger";
@@ -40,8 +41,11 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
           SELECT name, email, phone, message, page, created_at FROM site_leads WHERE site_id = ${site.id} ORDER BY id DESC LIMIT 50
         `) as { name: string; email: string; phone: string; message: string; page: string; created_at: string }[])
       : [];
+    const design = site ? await designChoices(site, client).catch(() => null) : null;
     body = site ? (
       <WebsiteStudio
+        designs={(design?.choices ?? []).map((t) => ({ id: t.id, name: t.name, summary: t.summary }))}
+        currentDesign={design?.current ?? null}
         token={token}
         slug={site.slug}
         published={site.published}
