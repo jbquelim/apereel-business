@@ -20,6 +20,9 @@ import * as depot from "./template-depot";
 import * as officina from "./signature-officina";
 import * as sleek from "./custom-sleek";
 import * as outpost from "./template-outpost";
+import * as showroom from "./signature-showroom";
+import * as edge from "./custom-edge";
+import * as flyer from "./template-flyer";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -226,6 +229,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "Outdoor outfitter: forest green and canvas, sturdy condensed headings, department tiles, an expert-advice strip linking the site's guides.",
     perPage: 24,
     render: outpost.render,
+  },
+  {
+    id: "showroom",
+    name: "Showroom",
+    tier: "grow",
+    reference: "subzero-wolf.com",
+    summary: "Crisp white and brushed steel, products on steel backdrops, an inspiration gallery, a talk-to-us block leading to the enquiry form.",
+    perPage: 24,
+    render: showroom.render,
+  },
+  {
+    id: "edge",
+    name: "Edge",
+    tier: "build",
+    reference: "acura.com",
+    summary: "Angular cut panels and italic uppercase type, a diagonal split hero, a choose-by quick bar, a stats band.",
+    perPage: 24,
+    render: edge.render,
+  },
+  {
+    id: "flyer",
+    name: "Flyer",
+    tier: "fix",
+    reference: "sail.ca",
+    summary: "Weekly retail flyer: a banner grid beside a department list, product cards with round price stickers, a this-week band.",
+    perPage: 24,
+    render: flyer.render,
   },
 ];
 
