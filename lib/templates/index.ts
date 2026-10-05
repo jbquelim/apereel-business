@@ -43,12 +43,17 @@ export type TemplateMeta = {
   summary: string;
   /** Products per listing page. */
   perPage: number;
+  /** Kinds of business it suits (words matched against the business's industry). */
+  fits?: string[];
+  /** Built for a big catalog (strong shop, filters, lists) or a small, image-led one. */
+  catalog?: "large" | "small";
   render: (t: RenderTarget, path: string[], query: URLSearchParams) => RenderResult | null;
 };
 
 export const TEMPLATES: TemplateMeta[] = [
   {
     id: "crown",
+    fits: ["watch", "jewelry", "jewellery", "luxury", "accessories", "timepiece"],
     name: "Crown",
     tier: "grow",
     reference: "rolex.com",
@@ -58,6 +63,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "studio",
+    fits: ["kitchen", "appliance", "home", "cookware", "coffee", "housewares"],
     name: "Studio",
     tier: "build",
     reference: "breville.com",
@@ -67,6 +73,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "ledger",
+    fits: ["kitchen", "cookware", "cutlery", "hardware", "tools", "parts", "supplies"],
+    catalog: "large",
     name: "Ledger",
     tier: "fix",
     reference: "henckels.com",
@@ -76,6 +84,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "apex",
+    fits: ["automotive", "car", "performance", "motor", "motorsport", "supercar"],
     name: "Apex",
     tier: "grow",
     reference: "lamborghini.com",
@@ -85,6 +94,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "stride",
+    fits: ["sport", "athletic", "footwear", "shoes", "sneaker", "apparel", "fitness", "running"],
     name: "Stride",
     tier: "build",
     reference: "nike.com",
@@ -94,6 +104,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "fleet",
+    fits: ["parts", "hardware", "supplies", "wholesale", "distributor", "industrial", "lighting", "components", "b2b"],
+    catalog: "large",
     name: "Fleet",
     tier: "fix",
     reference: "toyota.com",
@@ -103,6 +115,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "maison",
+    fits: ["jewelry", "jewellery", "watch", "luxury", "beauty", "fragrance", "bridal", "diamond"],
+    catalog: "small",
     name: "Maison",
     tier: "grow",
     reference: "cartier.com",
@@ -112,6 +126,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "flow",
+    fits: ["activewear", "yoga", "fitness", "apparel", "wellness", "athleisure"],
+    catalog: "small",
     name: "Flow",
     tier: "build",
     reference: "lululemon.com",
@@ -121,6 +137,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "lab",
+    fits: ["electronics", "appliance", "technical", "hardware", "parts", "components", "electrical"],
+    catalog: "large",
     name: "Lab",
     tier: "fix",
     reference: "dyson.com",
@@ -130,6 +148,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "regent",
+    fits: ["luxury", "bespoke", "yacht", "furniture", "interior", "automotive"],
+    catalog: "small",
     name: "Regent",
     tier: "grow",
     reference: "rolls-roycemotorcars.com",
@@ -139,6 +159,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "torque",
+    fits: ["automotive", "car", "parts", "performance", "tools", "motorsport"],
     name: "Torque",
     tier: "build",
     reference: "porsche.com",
@@ -148,6 +169,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "grid",
+    fits: ["electronics", "appliance", "phones", "computers", "general", "retail"],
     name: "Grid",
     tier: "fix",
     reference: "samsung.com",
@@ -157,6 +179,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "atelier",
+    fits: ["fashion", "apparel", "leather", "bag", "handbag", "luxury", "designer"],
+    catalog: "small",
     name: "Atelier",
     tier: "grow",
     reference: "louisvuitton.com",
@@ -166,6 +190,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "heritage",
+    fits: ["leather", "bags", "accessories", "heritage", "gifts", "craft", "goods"],
+    catalog: "small",
     name: "Heritage",
     tier: "build",
     reference: "coach.com",
@@ -175,6 +201,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "arena",
+    fits: ["footwear", "sneaker", "sport", "apparel", "streetwear"],
     name: "Arena",
     tier: "fix",
     reference: "footlocker.com",
@@ -184,6 +211,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "chrono",
+    fits: ["watch", "timepiece", "sport", "precision", "eyewear", "instrument"],
     name: "Chrono",
     tier: "grow",
     reference: "tagheuer.com",
@@ -193,6 +221,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "calm",
+    fits: ["wellness", "beauty", "skincare", "cosmetics", "apparel", "home", "candles"],
+    catalog: "small",
     name: "Calm",
     tier: "build",
     reference: "aloyoga.com",
@@ -202,6 +232,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "depot",
+    fits: ["general", "retail", "supplies", "hardware", "home", "grocery", "office", "wholesale"],
+    catalog: "large",
     name: "Depot",
     tier: "fix",
     reference: "walmart.com",
@@ -211,6 +243,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "officina",
+    fits: ["coffee", "espresso", "kitchen", "appliance", "machine", "cookware", "food"],
     name: "Officina",
     tier: "grow",
     reference: "faema.com",
@@ -220,6 +253,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "sleek",
+    fits: ["automotive", "luxury", "electronics", "audio", "technology"],
     name: "Sleek",
     tier: "build",
     reference: "lexus.com",
@@ -229,6 +263,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "outpost",
+    fits: ["outdoor", "hunting", "fishing", "camping", "sporting", "marine", "garden"],
     name: "Outpost",
     tier: "fix",
     reference: "basspro.com",
@@ -238,6 +273,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "showroom",
+    fits: ["appliance", "kitchen", "home", "furniture", "interior", "lighting", "fixture", "design"],
     name: "Showroom",
     tier: "grow",
     reference: "subzero-wolf.com",
@@ -247,6 +283,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "edge",
+    fits: ["automotive", "performance", "tools", "outdoor", "sport", "power", "equipment"],
     name: "Edge",
     tier: "build",
     reference: "acura.com",
@@ -256,6 +293,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "flyer",
+    fits: ["retail", "outdoor", "sporting", "general", "deals", "hardware", "home"],
     name: "Flyer",
     tier: "fix",
     reference: "sail.ca",
@@ -265,6 +303,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "gallery",
+    fits: ["eyewear", "sunglasses", "glasses", "art", "fashion", "design", "gallery", "ceramics"],
+    catalog: "small",
     name: "Gallery",
     tier: "grow",
     reference: "gentlemonster.com",
@@ -274,6 +314,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "legacy",
+    fits: ["watch", "jewelry", "jewellery", "heritage", "luxury", "pens"],
+    catalog: "small",
     name: "Legacy",
     tier: "build",
     reference: "longines.com",
@@ -283,6 +325,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "field",
+    fits: ["parts", "equipment", "machinery", "hardware", "industrial", "agricultural", "lighting", "components", "electrical", "plumbing"],
+    catalog: "large",
     name: "Field",
     tier: "fix",
     reference: "deere.com",
@@ -292,6 +336,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "campaign",
+    fits: ["outerwear", "apparel", "fashion", "clothing", "jacket", "coat", "streetwear"],
+    catalog: "small",
     name: "Campaign",
     tier: "grow",
     reference: "mackage.com",
@@ -301,6 +347,7 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "drive",
+    fits: ["automotive", "electronics", "appliance", "technology", "mobility"],
     name: "Drive",
     tier: "build",
     reference: "bmw.com",
@@ -310,6 +357,8 @@ export const TEMPLATES: TemplateMeta[] = [
   },
   {
     id: "pop",
+    fits: ["home", "appliance", "coffee", "kitchen", "beauty", "gifts", "toys", "pets"],
+    catalog: "small",
     name: "Pop",
     tier: "fix",
     reference: "keurig.com",
@@ -318,5 +367,20 @@ export const TEMPLATES: TemplateMeta[] = [
     render: pop.render,
   },
 ];
+
+/**
+ * The best template of a tier for a business: words its industry shares with
+ * what each template suits, then whether the template fits the catalog's
+ * size, then the least-used (so similar businesses don't all look alike).
+ */
+export function matchTemplate(tier: TemplateMeta["tier"], industry: string, catalogSize: number, used: Map<string | null, number>): TemplateMeta | null {
+  const words = new Set(industry.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 2));
+  const size = catalogSize >= 1000 ? "large" : catalogSize > 0 && catalogSize < 300 ? "small" : null;
+  const score = (t: TemplateMeta) =>
+    (t.fits ?? []).filter((f) => words.has(f) || [...words].some((w) => w.startsWith(f) || f.startsWith(w) && w.length > 4)).length * 3 +
+    (size && t.catalog === size ? 2 : size && t.catalog && t.catalog !== size ? -3 : 0) -
+    (used.get(t.id) ?? 0) * 0.5;
+  return TEMPLATES.filter((t) => t.tier === tier).sort((a, b) => score(b) - score(a))[0] ?? null;
+}
 
 export const templateById = (id: string | null | undefined) => TEMPLATES.find((t) => t.id === id) ?? null;

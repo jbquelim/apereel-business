@@ -13,7 +13,7 @@ import { upgradeImages } from "./image-upgrade";
 import { imageSize } from "./image-size";
 import { fetchSitemapCatalog } from "./site-fetch";
 import { analysisBrief, siteAnalysis } from "./site-analysis";
-import { TEMPLATES } from "./templates";
+import { matchTemplate } from "./templates";
 
 // The website service, automated: the best template for the business's
 // industry and tier, filled by Claude with copy from what we measured (their
@@ -371,9 +371,9 @@ ${RULES}
   // A rebuild keeps the main categories already chosen (re-applied on catalog import).
   if (existing?.doc.categoryGroups?.length) doc.categoryGroups = existing.doc.categoryGroups;
   // The hand-designed template for the tier (lib/templates), kept on rebuilds; none yet = section renderer.
-  // A new site gets its tier's least-used template, so sites in the library don't all look alike.
+  // A new site gets the tier's template that best fits its business and catalog (least-used breaks ties).
   const used = new Map(((await sql()`SELECT doc->>'design' AS d, count(*)::int AS n FROM sites GROUP BY 1`) as { d: string | null; n: number }[]).map((r) => [r.d, r.n]));
-  const design = existing?.doc.design ?? TEMPLATES.filter((t) => t.tier === tier).sort((a, b) => (used.get(a.id) ?? 0) - (used.get(b.id) ?? 0))[0]?.id;
+  const design = existing?.doc.design ?? matchTemplate(tier, industryTexts.join(" "), catalogTotal, used)?.id;
   if (design) doc.design = design;
   const row = existing
     ? ((await sql()`
