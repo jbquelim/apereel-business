@@ -25,7 +25,7 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .btn:hover{opacity:.82}.btn.light{background:var(--bg);color:var(--ink)}.btn.line{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
 /* header */
 .hd{position:sticky;top:0;z-index:30;background:rgba(251,250,248,.94);backdrop-filter:blur(14px)}
-.hd .w{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:72px}
+.hd .w{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:20px;align-items:center;height:72px}
 .logo{justify-self:center;font:600 23px var(--f);letter-spacing:.06em;text-decoration:none}.logo img{max-height:40px;width:auto}
 .hd nav{display:flex;gap:22px;font:500 15px var(--f);white-space:nowrap;overflow:hidden}.hd nav a{text-decoration:none}.hd nav a:hover{color:var(--muted)}
 .hd .r{justify-self:end;display:flex;gap:12px;align-items:center}
@@ -105,7 +105,7 @@ ${t.preview || o.noindex ? '<meta name="robots" content="noindex">' : ""}<meta p
 ${fontsLink(["Albert+Sans:wght@400;500;600"])}<style>${css(t.doc.tokens.palette.accent)}</style>${jsonLdTags(o.jsonLd ?? [])}</head><body>
 ${t.preview ? '<div class="note">Preview · Calm template · built by Apereel</div>' : ""}
 <input type="checkbox" id="nav" aria-hidden="true">
-<header class="hd"><div class="w"><nav aria-label="Main"><a href="${href(t, "/products")}">Shop</a>${top.slice(0, 3).map((c) => `<a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a>`).join("")}</nav><label class="burger" for="nav">Menu</label>${logo(s, t)}<div class="r"><form role="search" method="get" action="${t.base}/products"><input name="q" placeholder="Search" aria-label="Search products"><button type="submit">Go</button></form><a href="${href(t, "/contact")}" style="text-decoration:none;font-weight:500">Contact</a></div></div></header>
+<header class="hd"><div class="w"><nav aria-label="Main"><a href="${href(t, "/products")}">Shop</a>${top.slice(0, 2).map((c) => `<a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a>`).join("")}</nav><label class="burger" for="nav">Menu</label>${logo(s, t)}<div class="r"><form role="search" method="get" action="${t.base}/products"><input name="q" placeholder="Search" aria-label="Search products"><button type="submit">Go</button></form><a href="${href(t, "/contact")}" style="text-decoration:none;font-weight:500">Contact</a></div></div></header>
 <div class="drawer"><a href="${href(t, "/products")}">Shop all</a>${top.slice(0, 8).map((c) => `<a href="${href(t, `/collections/${c.slug}`)}">${esc(shortName(c.name))}</a>`).join("")}<a href="${href(t, "/about")}">About</a><a href="${href(t, "/contact")}">Contact</a></div>
 <main>${o.body}</main>
 <footer class="ft"><div class="w"><div class="cols"><div>${logo(s, t)}<p>${esc(s.brand.tagline)}</p></div>

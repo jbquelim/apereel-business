@@ -23,6 +23,9 @@ import * as outpost from "./template-outpost";
 import * as showroom from "./signature-showroom";
 import * as edge from "./custom-edge";
 import * as flyer from "./template-flyer";
+import * as galleryT from "./signature-gallery";
+import * as legacy from "./custom-legacy";
+import * as field from "./template-field";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -256,6 +259,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "Weekly retail flyer: a banner grid beside a department list, product cards with round price stickers, a this-week band.",
     perPage: 24,
     render: flyer.render,
+  },
+  {
+    id: "gallery",
+    name: "Gallery",
+    tier: "grow",
+    reference: "gentlemonster.com",
+    summary: "Avant-garde art space: stark monochrome, an off-grid layout, products as numbered exhibits with wall labels, a scrolling text band.",
+    perPage: 24,
+    render: galleryT.render,
+  },
+  {
+    id: "legacy",
+    name: "Legacy",
+    tier: "build",
+    reference: "longines.com",
+    summary: "Navy and silver heritage elegance, a navy hero band, each collection as its own split row with a strip of its products.",
+    perPage: 24,
+    render: legacy.render,
+  },
+  {
+    id: "field",
+    name: "Field",
+    tier: "fix",
+    reference: "deere.com",
+    summary: "Practical equipment-maker style: a find-what-you-need selector, help blocks, and the shop as a catalog list with specs on each row.",
+    perPage: 30,
+    render: field.render,
   },
 ];
 
