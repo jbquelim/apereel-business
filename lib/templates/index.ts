@@ -26,6 +26,9 @@ import * as flyer from "./template-flyer";
 import * as galleryT from "./signature-gallery";
 import * as legacy from "./custom-legacy";
 import * as field from "./template-field";
+import * as campaign from "./signature-campaign";
+import * as drive from "./custom-drive";
+import * as pop from "./template-pop";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -286,6 +289,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "Practical equipment-maker style: a find-what-you-need selector, help blocks, and the shop as a catalog list with specs on each row.",
     perPage: 30,
     render: field.render,
+  },
+  {
+    id: "campaign",
+    name: "Campaign",
+    tier: "grow",
+    reference: "mackage.com",
+    summary: "Outerwear-campaign editorial: monochrome, full-height imagery, a pinned text column beside a scrolling image column, a condensed wordmark.",
+    perPage: 24,
+    render: campaign.render,
+  },
+  {
+    id: "drive",
+    name: "Drive",
+    tier: "build",
+    reference: "bmw.com",
+    summary: "Big rounded image frames, a hero with buttons over the image, category tabs opening swipeable card rows, twin action boxes.",
+    perPage: 24,
+    render: drive.render,
+  },
+  {
+    id: "pop",
+    name: "Pop",
+    tier: "fix",
+    reference: "keurig.com",
+    summary: "Friendly and rounded: each category on its own pastel card, a hero with a round product cut-out, benefit pills, best-seller cards.",
+    perPage: 24,
+    render: pop.render,
   },
 ];
 
