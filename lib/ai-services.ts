@@ -9,7 +9,7 @@ import { ensureSiteAnalysis } from "./site-analysis";
 import { groupCategories } from "./category-groups";
 import { runSiteQa } from "./site-qa-run";
 import { buildFacets } from "./facets";
-import { writeAnalysisPages } from "./site-pages";
+import { expandGuides, writeAnalysisPages } from "./site-pages";
 
 // One entry point for every AI service: this month's content, this month's
 // ads, or the website build. Used by John's button and the monthly cron.
@@ -66,6 +66,9 @@ export async function runService(client: Client, stage: MonthStage | undefined, 
     if (site.doc.catalogSize) await buildFacets(site).catch((err) => console.error("Facets:", err instanceof Error ? err.message : err));
     const withFacets = (await getSiteForClient(client.id)) ?? site;
     const pages = await writeAnalysisPages(withFacets, client).catch((err) => (console.error("Analysis pages:", err instanceof Error ? err.message : err), 0));
+    // Guides that came out short get more depth (about $0.015 each).
+    const written = await getSiteForClient(client.id);
+    if (pages && written) await expandGuides(written, client.id).catch((err) => console.error("Expand guides:", err instanceof Error ? err.message : err));
     const qa = await runSiteQa(site.id).catch((err) => (console.error("Site QA:", err instanceof Error ? err.message : err), null));
     return { summary: `${pages} pages from the analysis${qa ? `, ${qa.length} QA issues` : ""}`, next: null };
   }

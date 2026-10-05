@@ -1,7 +1,10 @@
 import { NextResponse, after } from "next/server";
 import { isAdmin, sameOrigin } from "@/lib/admin-auth";
 import { getClient } from "@/lib/clients";
-import { claimRun, runAndContinue } from "@/lib/ai-services";
+import { claimRun, releaseRun, runAndContinue } from "@/lib/ai-services";
+import { getSiteForClient } from "@/lib/site-builder";
+import { expandGuides } from "@/lib/site-pages";
+import { runSiteQa } from "@/lib/site-qa-run";
 
 // Runs a client's service now: this month's content or ads, or the website
 // build. Runs after the response (crawl if needed, then AI): a few minutes.
@@ -21,6 +24,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (client.status !== "active") return NextResponse.json({ ok: false, error: "This client's plan has ended." }, { status: 409 });
   if (!(await claimRun(client.id))) {
     return NextResponse.json({ ok: false, error: "Already running. Give it a few minutes." }, { status: 409 });
+  }
+  // Deepen a site's short guides (lib/site-pages expandGuides), then re-check the site.
+  const body = (await request.clone().json().catch(() => ({}))) as { stage?: string };
+  if (client.service === "web-development" && body.stage === "guides") {
+    after(async () => {
+      try {
+        const site = await getSiteForClient(client.id);
+        if (!site) return;
+        const n = await expandGuides(site, client.id);
+        await runSiteQa(site.id);
+        console.log(`Expanded ${n} guides for ${client.domain}`);
+      } finally {
+        await releaseRun(client.id);
+      }
+    });
+    return NextResponse.json({ ok: true, stage: "guides" });
   }
   // A single later step of a website build (John re-running the analysis pages or the catalog), or the whole run.
   const { stage } = (await request.json().catch(() => ({}))) as { stage?: string };

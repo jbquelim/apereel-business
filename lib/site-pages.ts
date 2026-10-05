@@ -127,3 +127,62 @@ Return ONLY JSON: { "pages": [ ... ] }`,
   await sql()`UPDATE sites SET doc = ${JSON.stringify(next)}::jsonb, updated_at = now() WHERE id = ${site.id}`;
   return pages.length;
 }
+
+const words = (v: unknown) => JSON.stringify(v ?? "").split(/\s+/).length;
+
+/**
+ * Deepens short guides (under ~600 words) by adding two or three new
+ * sections each: more steps, troubleshooting, buyer questions. The existing
+ * sections and shop links stay as they are. One Sonnet call per short guide,
+ * about $0.015 each.
+ */
+export async function expandGuides(site: { id: string; doc: SiteDoc }, clientId: string | null): Promise<number> {
+  const doc = site.doc;
+  let expanded = 0;
+  const pages = [...doc.pages];
+  for (let i = 0; i < pages.length; i++) {
+    const p = pages[i];
+    if (p.source !== "analysis" || !p.slug.startsWith("guides/") || words(p.sections) >= 600) continue;
+    const current = p.sections
+      .map((s) => {
+        const x = s as unknown as Record<string, unknown>;
+        if (s.type === "hero") return `# ${x.heading}\n${x.subheading ?? ""}`;
+        if (s.type === "story") return `## ${x.heading}\n${x.body}`;
+        if (s.type === "steps" || s.type === "features") return `## ${x.heading}\n${((x.items as { title: string; body: string }[]) ?? []).map((it) => `- ${it.title}: ${it.body}`).join("\n")}`;
+        if (s.type === "faq") return `## ${x.heading}\n${((x.items as { q: string; a: string }[]) ?? []).map((it) => `Q ${it.q}\nA ${it.a}`).join("\n")}`;
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+    const text = await callClaude({
+      clientId,
+      purpose: "site:expand-guide",
+      maxTokens: 2500,
+      prompt: `This buying guide on ${doc.brand.name}'s website is too short to be useful. Write 2 or 3 NEW sections that add what a buyer still needs, 400-550 words in total. Do not repeat what is already there.
+
+THE GUIDE AS IT IS NOW:
+${current}
+
+Good additions: how to identify or measure the right size/type, common mistakes and how to avoid them, troubleshooting, choosing between options, care and maintenance, more buyer questions.
+
+RULES:
+- Only widely accepted technical facts. Where electricity is involved, say to unplug first and use a qualified electrician for wiring in walls or ceilings
+- Nothing about ${doc.brand.name} itself (no prices, policies, stock, delivery, guarantees)
+- Never mention searches, SEO or competitors. Plain, helpful, no hype
+- Step titles are short phrases without numbers
+
+Return ONLY JSON: { "sections": [ { "type":"story", "heading":"...", "body":"paragraphs separated by blank lines" } | { "type":"steps", "heading":"...", "items":[{ "title":"...", "body":"..." }] } | { "type":"faq", "heading":"...", "items":[{ "q":"...", "a":"..." }] } ] }`,
+    });
+    const add = (parseJson<{ sections?: Record<string, unknown>[] }>(text)?.sections ?? [])
+      .filter((s) => ["story", "steps", "faq"].includes(String(s.type)))
+      .map((s) => (s.type === "steps" ? { ...s, items: ((s.items as { title: string }[]) ?? []).map((it) => ({ ...it, title: String(it.title ?? "").replace(/^\s*(step\s*)?\d+[.):]\s*/i, "") })) } : s)) as unknown as Section[];
+    if (!add.length) continue;
+    // New sections go before the shop links and the closing call to action.
+    const at = p.sections.findIndex((s) => s.type === "links" || s.type === "cta");
+    const sections = at < 0 ? [...p.sections, ...add] : [...p.sections.slice(0, at), ...add, ...p.sections.slice(at)];
+    pages[i] = { ...p, sections };
+    expanded++;
+  }
+  if (expanded) await sql()`UPDATE sites SET doc = ${JSON.stringify({ ...doc, pages })}::jsonb, updated_at = now() WHERE id = ${site.id}`;
+  return expanded;
+}
