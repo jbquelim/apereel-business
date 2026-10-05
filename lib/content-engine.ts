@@ -4,6 +4,7 @@ import { allowance, tierFor, type Client } from "./clients";
 import { fetchAuditResult, fetchCompetitorSet } from "./marketdb";
 import { historyForMany } from "./market-history";
 import { crawlSite } from "./site-crawl";
+import { platformCatalog } from "./platform-catalog";
 import { queueMediaJob, type MediaBrief, type MediaKind } from "./media";
 import { storeImages, storedUrls } from "./image-store";
 
@@ -200,6 +201,13 @@ export async function catalogWithPhotos(domain: string): Promise<Product[]> {
   if (catalog.filter((p) => p.image).length < 5) {
     await crawlSite(domain, 100_000);
     catalog = await loadCatalog(domain);
+  }
+  // Stores that rate-limit page crawls (Shopify's 429s) still publish a product feed.
+  if (catalog.filter((p) => p.image).length < 5) {
+    const feed = await platformCatalog(domain.replace(/^www\./, ""), 60_000).catch(() => null);
+    if (feed && feed.products.length > catalog.length) {
+      catalog = feed.products.map((p) => ({ url: p.url, title: cleanTitle(p.title, domain), price: p.price, currency: p.currency, image: p.image, rating: null }));
+    }
   }
   if (catalog.length === 0) throw new Error(`No products could be read from ${domain}`);
   // Our own copies of the photos we're likely to use (see lib/image-store).
