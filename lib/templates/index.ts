@@ -14,6 +14,9 @@ import * as gridT from "./template-grid";
 import * as atelier from "./signature-atelier";
 import * as heritage from "./custom-heritage";
 import * as arena from "./template-arena";
+import * as chrono from "./signature-chrono";
+import * as calm from "./custom-calm";
+import * as depot from "./template-depot";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -166,6 +169,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "High-energy retail: italic condensed headlines, a promo bar, a slanted hero, a swipeable new-in row, bold category blocks.",
     perPage: 24,
     render: arena.render,
+  },
+  {
+    id: "chrono",
+    name: "Chrono",
+    tier: "grow",
+    reference: "tagheuer.com",
+    summary: "Deep charcoal and precise type, a ring of tick marks around the hero product, numbered collections in a racing strip.",
+    perPage: 24,
+    render: chrono.render,
+  },
+  {
+    id: "calm",
+    name: "Calm",
+    tier: "build",
+    reference: "aloyoga.com",
+    summary: "Airy warm neutrals and big soft corners, a quiet hero with a floating caption, shop-the-edit tiles, three-column grids.",
+    perPage: 24,
+    render: calm.render,
+  },
+  {
+    id: "depot",
+    name: "Depot",
+    tier: "fix",
+    reference: "walmart.com",
+    summary: "Everyday retail: brand-colour header with a big search, a departments grid, deal tiles, a dense five-column grid, a department sidebar.",
+    perPage: 30,
+    render: depot.render,
   },
 ];
 
