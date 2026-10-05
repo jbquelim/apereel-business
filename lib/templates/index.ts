@@ -17,6 +17,9 @@ import * as arena from "./template-arena";
 import * as chrono from "./signature-chrono";
 import * as calm from "./custom-calm";
 import * as depot from "./template-depot";
+import * as officina from "./signature-officina";
+import * as sleek from "./custom-sleek";
+import * as outpost from "./template-outpost";
 
 // The hand-designed template library. Each template is a complete design
 // (home, collection, product, about, contact); a site's data drops into its
@@ -196,6 +199,33 @@ export const TEMPLATES: TemplateMeta[] = [
     summary: "Everyday retail: brand-colour header with a big search, a departments grid, deal tiles, a dense five-column grid, a department sidebar.",
     perPage: 30,
     render: depot.render,
+  },
+  {
+    id: "officina",
+    name: "Officina",
+    tier: "grow",
+    reference: "faema.com",
+    summary: "Warm cream and espresso, polished-metal gradients, the hero product on a lit round pedestal, the story as a timeline.",
+    perPage: 24,
+    render: officina.render,
+  },
+  {
+    id: "sleek",
+    name: "Sleek",
+    tier: "build",
+    reference: "lexus.com",
+    summary: "Black header over a dark hero with a light sweep, a side-scrolling line-up with from-prices, a compare table of featured products.",
+    perPage: 24,
+    render: sleek.render,
+  },
+  {
+    id: "outpost",
+    name: "Outpost",
+    tier: "fix",
+    reference: "basspro.com",
+    summary: "Outdoor outfitter: forest green and canvas, sturdy condensed headings, department tiles, an expert-advice strip linking the site's guides.",
+    perPage: 24,
+    render: outpost.render,
   },
 ];
 
