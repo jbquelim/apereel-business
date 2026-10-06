@@ -24,13 +24,15 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "X-Frame-Options", value: "DENY" },
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
         ],
       },
+      // Customer sites are previewed inside the studio, so apereel.com itself may frame them.
+      { source: "/((?!sites/).*)", headers: [{ key: "X-Frame-Options", value: "DENY" }] },
+      { source: "/sites/:path*", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }] },
     ];
   },
 };
