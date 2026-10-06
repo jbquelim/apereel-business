@@ -1054,6 +1054,7 @@ Rules:
 - If the client has no inventory data, focus on what competitors' depth means for them
 - Category rows are a partial view of a catalog; when CATALOG SIZE is given, it is the authoritative total for that site
 ${CRAWL_GUARDRAIL}
+${PRICE_GUARDRAIL}
 
 Respond with ONLY a JSON array of strings:
 ["insight one", "insight two", "insight three"]`;
@@ -1099,6 +1100,9 @@ Respond with ONLY a JSON array of strings:
 }
 
 // Missing data is a limitation of our crawler, not a fact about the client.
+// A category's top price is often a bulk case or equipment filed under it (Onyx: a $5,738 wholesale case under Coffee).
+const PRICE_GUARDRAIL = `- Never describe the top of a price range as a kind of product ("$5,000 rare lots", "luxury pieces up to $X"): the extreme is often a bulk, wholesale or equipment item. Use averages, or a named product with its price`;
+
 const CRAWL_GUARDRAIL = `- Missing or unmeasured client data means OUR crawler could not read it. NEVER claim or imply the client's site has no catalog, hides its products, is uncrawlable, or is invisible to search because of it
 - Never call a competitor's catalog thin, small or shallow unless an exact CATALOG SIZE figure shows it`;
 
@@ -1149,6 +1153,7 @@ Respond with ONLY valid JSON, no markdown:
 Rules:
 - "strength" must reference data belonging to ${domain} (the client) — never attribute a competitor's numbers to the client
 ${CRAWL_GUARDRAIL}
+${PRICE_GUARDRAIL}
 - The advantage MUST be consistent with how this market actually competes (see "Competitive landscape" above). If customers in this market buy on service, expertise, brand authorization, or experience rather than price, do NOT recommend price-led or discount positioning — choose the strongest DEFENSIBLE position instead, even if a price or count statistic looks bigger
 - Prefer an advantage a competitor cannot easily copy (authorized dealer status, regional dominance, service depth, exclusive lines) over raw catalog size or price, when the data supports one
 - Exactly 3-4 touchpoints, chosen from: Website, Product Pages, Category Navigation, Search & Filtering, Creative, Messaging
@@ -1231,6 +1236,7 @@ ${sections.join("\n\n")}
 Write the single most important takeaway of this audit — the one sentence the CEO should read before anything else. It must be consistent with the identified advantage (do not introduce a different strategy), grounded in the findings, addressed to the client ("Your..."), under 35 words, direct and confident, no hedging.
 
 ${CRAWL_GUARDRAIL}
+${PRICE_GUARDRAIL}
 
 Respond with ONLY the sentence. No quotes, no preamble.`;
 
