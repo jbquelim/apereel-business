@@ -13,6 +13,7 @@ import { upgradeImages } from "./image-upgrade";
 import { imageSize } from "./image-size";
 import { fetchSitemapCatalog } from "./site-fetch";
 import { analysisBrief, siteAnalysis } from "./site-analysis";
+import { dropRangeStats, scrubRanges } from "./site-qa";
 import { rankTemplates } from "./templates";
 
 // The website service, automated: the best template for the business's
@@ -250,7 +251,9 @@ export async function buildSite(client: Client): Promise<SiteRow> {
     upgradeImages(toProducts(catalog, limits.products)),
     fetchSitemapCatalog(client.domain).catch(() => ({ productUrls: [] as string[] })),
   ]);
-  const catalogTotal = Math.max(sitemap.productUrls.length, catalog.length);
+  // Sitemaps list a product once per market (/en-int/…, /fr/…): count each product handle once.
+  const handles = new Set(sitemap.productUrls.map((u) => u.replace(/[?#].*$/, "").replace(/\/$/, "").split("/").pop()));
+  const catalogTotal = Math.max(handles.size, catalog.length);
   // Category names from the audit, or else from the category pages our crawl read.
   let categoryNames = (audit?.industry?.inventoryCategories ?? []).map((c) => c.category);
   if (categoryNames.length === 0 && limits.categories > 0) categoryNames = await crawledCategoryNames(client.domain);
@@ -276,7 +279,7 @@ export async function buildSite(client: Client): Promise<SiteRow> {
     prompt: `You are building a website for a real business with Apereel's "${template.name}" template. Write all the copy.
 
 BUSINESS: ${client.domain}${audit?.industry?.subIndustry ? ` (${audit.industry.subIndustry})` : ""}
-${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${audit.translateAdvantage.strength}\n` : ""}CATALOG: ${catalogTotal.toLocaleString("en-US")} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
+${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${scrubRanges(audit.translateAdvantage.strength)}\n` : ""}CATALOG: ${catalogTotal.toLocaleString("en-US")} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
 ${trust.length ? `VERIFIED CONTACT AND TRADE FACTS (shown in the trust strip): ${trust.map((i) => `${i.title}: ${i.body}`).join("; ")}\n` : "NO VERIFIED CONTACT FACTS: leave out the trust section.\n"}HERO CANDIDATES (slug, product, photo size): ${candidates.map((c) => `${c.p.slug} | ${c.p.title} | ${c.size ? `${c.size.width}px` : "size unknown"}`).join("; ")}
 ${brief ? `${brief}\n` : ""}${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}${benchmark ? `${benchmark}\n` : ""}
 FEATURED PRODUCTS (write a description for each):
@@ -359,7 +362,7 @@ ${RULES}
     brand: { name, tagline: cut(out.brand?.tagline, 90), logo: brand?.logo ?? null, email: brand?.email ?? null, phone: brand?.phone ?? null, address: brand?.address ?? null },
     catalogTotal,
     tokens: { ...brandTokens(template.tokens, accent), heroStyle: heroWide ? template.tokens.heroStyle : "split" },
-    pages,
+    pages: dropRangeStats(pages),
     products,
     categories,
     productAction: b2b ? "enquire" : "link",

@@ -3,6 +3,7 @@ import { neon } from "@neondatabase/serverless";
 import type { Client } from "./clients";
 import type { GrowthReport } from "./growth-report";
 import { triggerStage } from "./growth-trigger";
+import { scrubRanges } from "./site-qa";
 
 // Every website build starts from the full $30 analysis (Growth Plan +
 // Preview) of the business. It runs as an internal order: same pipeline,
@@ -85,5 +86,5 @@ export function analysisBrief(r: GrowthReport | null): string {
       : []),
     ...(p?.homepage ? [`HOMEPAGE DRAFT FROM THE ANALYSIS: "${p.homepage.headline}" / ${p.homepage.subheadline} / proof: ${p.homepage.proofPoints.join("; ")}`] : []),
   ];
-  return lines.join("\n");
+  return scrubRanges(lines.join("\n"));
 }

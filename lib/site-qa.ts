@@ -1,4 +1,4 @@
-import type { SiteDoc } from "./site-types";
+import type { SiteDoc, SitePage } from "./site-types";
 
 // Quality checks on a generated site's rendered pages, run before John sees
 // it. Content only (no browser): internal wording leaking into customer copy,
@@ -86,6 +86,7 @@ export function checkDoc(doc: SiteDoc): QaIssue[] {
   if ((hero?.heading?.length ?? 0) > 70) out.push({ page: "/", check: "hero-length", detail: `hero headline is ${hero!.heading!.length} characters` });
   if (doc.designMatched === false) out.push({ page: "site", check: "design", detail: "no template matched this business's industry; the design was picked by usage only, so check it suits them", level: "note" });
   if (!doc.brand.logo) out.push({ page: "site", check: "logo", detail: "no logo found; the business name is shown as text", level: "note" });
+  const names = [...(doc.categoryGroups ?? []), ...doc.categories].map((c) => c.name.toLowerCase());
   // Prices in the copy (not on product cards) are usually a range's extreme, often a bulk or wholesale item.
   const total = doc.catalogTotal ?? doc.catalogSize ?? doc.products.length;
   for (const page of doc.pages) {
@@ -97,7 +98,7 @@ export function checkDoc(doc: SiteDoc): QaIssue[] {
       if (s.type !== "stats") continue;
       for (const it of s.items) {
         const n = Number(it.value.replace(/[^\d]/g, ""));
-        if (total > 100 && n > 100 && /\b(products?|items?|catalog|shop)\b/i.test(it.label) && Math.abs(n - total) / total > 0.1)
+        if (total > 100 && n > 100 && isTotal(it.label, names) && Math.abs(n - total) / total > 0.1)
           out.push({ page: where, check: "count-mismatch", detail: `stat says "${it.value} ${it.label}", the shop lists ${total.toLocaleString("en-US")}` });
       }
     }
@@ -107,6 +108,30 @@ export function checkDoc(doc: SiteDoc): QaIssue[] {
   return out;
 }
 
+/** A stat counting the whole catalog ("1,614 products across…"), not one category ("532 coffee products"). */
+function isTotal(label: string, categoryNames: string[]): boolean {
+  const l = label.toLowerCase();
+  if (!/\b(products?|items?)\b/.test(l)) return false;
+  return /\b(across|total|all|in (?:the|our) (?:shop|store))\b/.test(l) || !categoryNames.some((n) => n.length > 2 && l.includes(n));
+}
+
+const RANGE = /\$\s?\d[\d,.]*\s*(?:to|-|–|—)\s*\$\s?\d/i;
+
+/** Takes price ranges out of what the writer is given, so they never reach the copy. */
+export function scrubRanges(text: string): string {
+  return text.replace(new RegExp(`(?:from |spans? |ranging from |priced )?${RANGE.source}[\\d,.]*`, "gi"), "across a wide price range");
+}
+
+/** Drops stats that are price ranges ("$3 to $5,738"): a range's top is often a bulk or wholesale item. */
+export function dropRangeStats(pages: SitePage[]): SitePage[] {
+  return pages.map((p) => ({
+    ...p,
+    sections: p.sections
+      .map((s) => (s.type === "stats" ? { ...s, items: s.items.filter((i) => !RANGE.test(i.value) && !/price range|top price|priced (?:up )?to/i.test(i.label)) } : s))
+      .filter((s) => s.type !== "stats" || s.items.length > 0),
+  }));
+}
+
 /**
  * Rewrites a catalog size in the copy when the import found a different
  * number than the build was told ("9,455 parts" → "20,000 parts").
@@ -114,6 +139,6 @@ export function checkDoc(doc: SiteDoc): QaIssue[] {
 export function syncCount<T>(value: T, oldCount: number | undefined, newCount: number): T {
   if (!oldCount || oldCount < 100 || Math.abs(newCount - oldCount) / oldCount <= 0.1) return value;
   // Only a count in prose ("9,455 parts"), never digits inside a URL or a longer number.
-  const from = new RegExp(`(?<![\\w/.,-])${oldCount.toLocaleString("en-US").replace(/,/g, ",?")}(?=\\+?\\s)`, "g");
+  const from = new RegExp(`(?<![\\w/.,-])${oldCount.toLocaleString("en-US").replace(/,/g, ",?")}(?=\\+?(?:\\s|"))`, "g");
   return JSON.parse(JSON.stringify(value).replace(from, newCount.toLocaleString("en-US"))) as T;
 }

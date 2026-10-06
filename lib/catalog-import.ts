@@ -5,7 +5,7 @@ import { upgradeImages } from "./image-upgrade";
 import { platformCatalog, type PlatformCatalog } from "./platform-catalog";
 import type { SiteDoc } from "./site-types";
 import { applyGroups } from "./category-groups";
-import { syncCount } from "./site-qa";
+import { dropRangeStats, syncCount } from "./site-qa";
 
 // Imports a business's whole catalog into a generated site, categorised the
 // way the business itself categorises it. Category pages list their products,
@@ -324,7 +324,7 @@ async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: Platfor
   const was = site.doc.catalogTotal;
   const doc: SiteDoc = {
     ...site.doc,
-    pages: syncCount(site.doc.pages, was, list.length),
+    pages: dropRangeStats(syncCount(site.doc.pages, was, list.length)),
     brand: syncCount(site.doc.brand, was, list.length),
     ...(site.doc.productPromise ? { productPromise: syncCount(site.doc.productPromise, was, list.length) } : {}),
     categories: applyGroups(categories, site.doc.categoryGroups),
