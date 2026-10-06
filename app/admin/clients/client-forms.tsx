@@ -48,12 +48,12 @@ export function NewClientForm() {
   );
 }
 
-export function GenerateButton({ id, label }: { id: string; label: string }) {
+export function GenerateButton({ id, label, body }: { id: string; label: string; body?: object }) {
   const [state, setState] = useState<"idle" | "busy" | "started" | "error">("idle");
   const [msg, setMsg] = useState("");
   async function go() {
     setState("busy");
-    const res = await fetch(`/api/admin/clients/${id}`, { method: "POST" }).catch(() => null);
+    const res = await fetch(`/api/admin/clients/${id}`, { method: "POST", ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) }).catch(() => null);
     const json = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
     setState(json?.ok ? "started" : "error");
     setMsg(json?.error ?? "");

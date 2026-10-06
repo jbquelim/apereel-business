@@ -7,7 +7,9 @@ import { triggerStage } from "./growth-trigger";
 // Every website build starts from the full $30 analysis (Growth Plan +
 // Preview) of the business. It runs as an internal order: same pipeline,
 // never emailed or shown to the customer. A recent analysis of the domain
-// (theirs or ours, under 90 days old) is reused instead of paying again.
+// (theirs or ours, under 90 days old) is reused instead of paying again,
+// unless John asked for a fresh one (clients.analysis_after): older
+// analyses are then ignored and the free audit is re-run too.
 
 function sql() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
@@ -20,13 +22,21 @@ const MAX_WAIT_MIN = 40;
 
 export type AnalysisState = "ready" | "waiting" | "none";
 
+/** When John asked for a fresh analysis of a domain, or null. */
+async function freshSince(domain: string): Promise<string | null> {
+  const rows = (await sql()`SELECT max(analysis_after) AS at FROM clients WHERE domain = ${domain}`) as { at: string | null }[];
+  return rows[0]?.at ?? null;
+}
+
 /** Starts the analysis if there isn't one; says whether the build can go ahead. */
 export async function ensureSiteAnalysis(client: Client, base: string): Promise<AnalysisState> {
+  const since = await freshSince(client.domain);
   const rows = (await sql()`
     SELECT id, status, created_at > now() - make_interval(mins => ${MAX_WAIT_MIN}) AS fresh
     FROM growth_orders
     WHERE domain = ${client.domain} AND tier = 'preview' AND status NOT IN ('pending', 'requested', 'failed')
       AND created_at > now() - interval '90 days'
+      AND (${since}::timestamptz IS NULL OR created_at > ${since}::timestamptz)
     ORDER BY (status = ANY(${DONE})) DESC, created_at DESC LIMIT 1
   `) as { id: string; status: string; fresh: boolean }[];
   const o = rows[0];
@@ -37,8 +47,8 @@ export async function ensureSiteAnalysis(client: Client, base: string): Promise<
   }
   const id = randomUUID();
   await sql()`
-    INSERT INTO growth_orders (id, domain, url, email, name, amount_cents, currency, tier, status, paid_at, internal)
-    VALUES (${id}, ${client.domain}, ${`https://${client.domain}`}, 'john@apereel.com', 'Website build', 0, 'usd', 'preview', 'paid', now(), true)
+    INSERT INTO growth_orders (id, domain, url, email, name, amount_cents, currency, tier, status, paid_at, internal, fresh_audit)
+    VALUES (${id}, ${client.domain}, ${`https://${client.domain}`}, 'john@apereel.com', 'Website build', 0, 'usd', 'preview', 'paid', now(), true, ${since != null})
   `;
   try {
     await triggerStage(base, id, "collect");
@@ -51,9 +61,11 @@ export async function ensureSiteAnalysis(client: Client, base: string): Promise<
 
 /** The latest finished analysis of a domain, for the build to follow. */
 export async function siteAnalysis(domain: string): Promise<GrowthReport | null> {
+  const since = await freshSince(domain);
   const rows = (await sql()`
     SELECT report FROM growth_orders
     WHERE domain = ${domain} AND status = ANY(${DONE}) AND report ? 'plan'
+      AND (${since}::timestamptz IS NULL OR created_at > ${since}::timestamptz)
     ORDER BY (tier = 'preview') DESC, created_at DESC LIMIT 1
   `) as { report: GrowthReport }[];
   return rows[0]?.report ?? null;

@@ -86,11 +86,13 @@ export type GrowthOrder = {
   tier: string;
   /** Run for our own website build; never delivered to the customer. */
   internal: boolean;
+  /** Re-run the free audit rather than reuse the saved one (a fresh analysis John asked for). */
+  fresh_audit: boolean;
 };
 
 export async function getOrder(id: string): Promise<GrowthOrder | null> {
   const rows = (await sql()`
-    SELECT id, domain, url, email, name, status, report, livemode, tier, COALESCE(internal, false) AS internal FROM growth_orders WHERE id = ${id}
+    SELECT id, domain, url, email, name, status, report, livemode, tier, COALESCE(internal, false) AS internal, COALESCE(fresh_audit, false) AS fresh_audit FROM growth_orders WHERE id = ${id}
   `) as GrowthOrder[];
   return rows[0] ?? null;
 }

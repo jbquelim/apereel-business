@@ -116,7 +116,7 @@ async function runAudit(url: string, base: string): Promise<Audit> {
   throw new Error(`Audit failed: ${lastError}`);
 }
 
-export async function collectEvidence(url: string, domain: string, base: string): Promise<GrowthReport> {
+export async function collectEvidence(url: string, domain: string, base: string, opts: { freshAudit?: boolean } = {}): Promise<GrowthReport> {
   // Page audits run alongside the (slower) full audit.
   const pagesPromise = samplePages(url).then((pages) =>
     Promise.all(
@@ -130,7 +130,7 @@ export async function collectEvidence(url: string, domain: string, base: string)
   const saved = await fetchCompetitorSet(domain);
   const earlySpeed = saved ? speedOf(saved) : null;
 
-  const audit = (await fetchAuditResult<Audit>(domain)) ?? (await runAudit(url, base));
+  const audit = (opts.freshAudit ? null : await fetchAuditResult<Audit>(domain)) ?? (await runAudit(url, base));
   const auditCompetitors = audit.industry?.competitors ?? [];
   const sameSet =
     saved && saved.slice(0, 3).map((c) => c.domain).join() === auditCompetitors.slice(0, 3).map((c) => c.domain).join();

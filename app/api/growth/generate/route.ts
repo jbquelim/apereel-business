@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       try {
         const order = await getOrder(orderId);
         if (!order) throw new Error("Order vanished");
-        const report = await collectEvidence(order.url, order.domain, base);
+        const report = await collectEvidence(order.url, order.domain, base, { freshAudit: order.fresh_audit });
         await saveReport(orderId, report, "generating");
         await triggerStage(base, orderId, "crawl");
       } catch (err) {

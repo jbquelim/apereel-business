@@ -388,6 +388,10 @@ await sql`
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS generation_error TEXT`;
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'growth'`;
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS internal BOOLEAN NOT NULL DEFAULT false`;
+// A fresh analysis on request: the order re-runs the free audit instead of reusing the saved one.
+await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS fresh_audit BOOLEAN NOT NULL DEFAULT false`;
+// Analyses of the domain older than this are not reused by its website build.
+await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS analysis_after TIMESTAMPTZ`;
 
 // Service tier prices, edited by John at /admin/pricing. A tier without a
 // row (or with a null price) is unpriced.

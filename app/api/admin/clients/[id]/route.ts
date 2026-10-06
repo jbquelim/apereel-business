@@ -25,8 +25,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!(await claimRun(client.id))) {
     return NextResponse.json({ ok: false, error: "Already running. Give it a few minutes." }, { status: 409 });
   }
+  const body = (await request.json().catch(() => ({}))) as { stage?: string; fresh?: boolean };
+  // A fresh analysis: older analyses and the saved audit of the domain are not reused (lib/site-analysis).
+  if (client.service === "web-development" && body.fresh && process.env.DATABASE_URL) {
+    const { neon } = await import("@neondatabase/serverless");
+    await neon(process.env.DATABASE_URL)`UPDATE clients SET analysis_after = now() WHERE id = ${client.id}`;
+  }
   // Deepen a site's short guides (lib/site-pages expandGuides), then re-check the site.
-  const body = (await request.clone().json().catch(() => ({}))) as { stage?: string };
   if (client.service === "web-development" && body.stage === "guides") {
     after(async () => {
       try {
@@ -42,7 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ ok: true, stage: "guides" });
   }
   // A single later step of a website build (John re-running the analysis pages or the catalog), or the whole run.
-  const { stage } = (await request.json().catch(() => ({}))) as { stage?: string };
+  const { stage } = body;
   const step = client.service === "web-development" && (stage === "pages" || stage === "catalog") ? stage : undefined;
   after(() => runAndContinue(client, step, (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "")));
   return NextResponse.json({ ok: true });

@@ -83,6 +83,9 @@ export default async function ClientsPage() {
                     <td className="py-3 text-right">
                       <a href={`/studio/${c.token}`} className="text-electric underline underline-offset-4">Studio</a>
                       <GenerateButton id={c.id} label={c.status === "requested" ? "Activate (no charge) and run" : c.service === "web-development" ? "Build the site" : "Generate this month"} />
+                      {c.service === "web-development" && c.status === "active" && (
+                        <GenerateButton id={c.id} label="Fresh analysis + rebuild (~$0.50)" body={{ fresh: true }} />
+                      )}
                     </td>
                   </tr>
                 );
