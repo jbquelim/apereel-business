@@ -18,7 +18,9 @@ function sql() {
 export function qaPaths(doc: SiteDoc): string[] {
   const cat = doc.categories.filter((c) => !c.parent).sort(byRank)[0];
   const product = doc.products.find((p) => p.image) ?? doc.products[0];
-  return ["/", "/products", ...(cat ? [`/collections/${cat.slug}`] : []), ...(product ? [`/products/${product.slug}`] : []), "/about", "/contact"];
+  // A services site's addresses are /services (lib/site-render).
+  const shop = doc.kind === "services" ? "/services" : "/products";
+  return ["/", shop, ...(cat ? [`/collections/${cat.slug}`] : []), ...(product ? [`${shop}/${product.slug}`] : []), "/about", "/contact"];
 }
 
 /** Checks a site (optionally in another template) and returns the issues found. */

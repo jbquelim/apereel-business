@@ -58,6 +58,8 @@ export type SiteDoc = {
   catalogTotal?: number;
   /** Products the store's sitemap lists (each once), counted at build time: the release gate checks the import against it. */
   catalogExpected?: number;
+  /** "services": a business with no online catalog; its services are carried as `products` and shown as services (lib/site-services). */
+  kind?: "shop" | "services";
   tokens: SiteTokens;
   pages: SitePage[];
   products: SiteProduct[];

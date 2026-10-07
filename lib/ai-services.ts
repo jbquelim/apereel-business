@@ -51,6 +51,9 @@ export async function runService(client: Client, stage: MonthStage | undefined, 
   // that follows it, then catalog import steps until every product is on the
   // site, then the main categories.
   if (stage === "catalog") {
+    // A services site has no catalog: importing would replace its services with nothing.
+    const svc = await getSiteForClient(client.id);
+    if (svc?.doc.kind === "services") return { summary: "services site: no catalog to import", next: "pages" };
     const site = await getSiteForClient(client.id);
     if (!site) return { summary: "no site to import into", next: null };
     const cap = client.tier === "fix" ? 300 : 20_000;
@@ -88,7 +91,8 @@ export async function runService(client: Client, stage: MonthStage | undefined, 
     if (stage === "analysis") return { summary: `analysis ${state === "ready" ? "ready" : "unavailable, building without it"}`, next: "build" };
   }
   const site = await buildSite(client);
-  // Then the whole catalog, categorised the way the business does it.
+  // Then the whole catalog, categorised the way the business does it; a services site has none to import.
+  if (site.doc.kind === "services") return { summary: `services site built: /sites/${site.slug} (${site.doc.products.length} services)`, next: "pages" };
   return { summary: `site built: /sites/${site.slug}`, next: "catalog" };
 }
 

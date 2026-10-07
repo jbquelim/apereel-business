@@ -25,7 +25,9 @@ export async function writeAnalysisPages(site: { id: string; doc: SiteDoc }, cli
   const doc = site.doc;
   const analysis = await siteAnalysis(client.domain).catch(() => null);
   const gaps = (analysis?.audit.demand?.rows ?? []).filter((r) => r.coverage === "none").map((r) => r.query);
-  const trade = doc.productAction === "enquire" || /wholesale|trade|b2b|distribut|bulk/i.test(JSON.stringify(analysis?.plan ?? "") + gaps.join(" "));
+  const services = doc.kind === "services";
+  // A services business (lib/site-services) has no trade or wholesale side.
+  const trade = !services && (doc.productAction === "enquire" || /wholesale|trade|b2b|distribut|bulk/i.test(JSON.stringify(analysis?.plan ?? "") + gaps.join(" ")));
   const guides = GUIDES[client.tier];
 
   // What links may point at: categories, their filters, the shop, the new pages.
@@ -51,8 +53,7 @@ ${gaps.length ? `BUYER SEARCHES WITH NO PAGE: ${gaps.join("; ")}` : ""}
 
 BUSINESS FACTS YOU MAY STATE (nothing else about the business): ${doc.brand.name}; ${doc.brand.tagline}${doc.catalogSize ? `; ${doc.catalogSize.toLocaleString("en-US")} products online` : ""}${doc.brand.email ? `; email ${doc.brand.email}` : ""}${doc.brand.phone ? `; phone ${doc.brand.phone}` : ""}${doc.brand.address ? `; ${doc.brand.address}` : ""}
 
-SHOP CATEGORIES (slug | name | products | subcategories):
-${catLines.join("\n")}
+${services ? `THIS BUSINESS SELLS SERVICES, NOT PRODUCTS: write advice guides for people hiring it, never "buying guides", "products" or "shop". Link services as /products/<slug>.\nSERVICES (slug | name): ${doc.products.map((p) => `${p.slug} | ${p.title}`).join("; ")}` : `SHOP CATEGORIES (slug | name | products | subcategories):\n${catLines.join("\n")}`}
 ${facetLines.length ? `\nSHOP FILTERS (key: values [products]) — link as /collections/<category-slug>?<key>=<value> or /products?<key>=<value>:\n${facetLines.join("\n")}` : ""}
 
 WRITE:

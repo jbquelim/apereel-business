@@ -317,8 +317,60 @@ export function optimizeImages(html: string, apiOrigin: string): string {
 }
 
 export function renderPath(t: RenderTarget, path: string[], query: URLSearchParams = new URLSearchParams()): RenderResult {
-  const r = renderRaw(t, path, query);
-  return r.kind === "html" ? { ...r, body: optimizeImages(r.body, t.apiOrigin) } : r;
+  if (t.doc.kind !== "services") {
+    const r = renderRaw(t, path, query);
+    return r.kind === "html" ? { ...r, body: optimizeImages(r.body, t.apiOrigin) } : r;
+  }
+  // A services site (lib/site-services): its services are the templates' products, so its
+  // /services addresses are served by the product routes, and the pages say "services".
+  const r = renderRaw(t, path[0] === "services" ? ["products", ...path.slice(1)] : path, query);
+  if (r.kind === "redirect") return { ...r, location: servicePaths(r.location, t) };
+  if (r.kind === "text") return { ...r, body: servicePaths(r.body, t) };
+  return { ...r, body: optimizeImages(serviceWords(servicePaths(r.body, t)), t.apiOrigin) };
+}
+
+const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** /products… → /services… in links, forms, canonical and structured data. */
+function servicePaths(html: string, t: RenderTarget): string {
+  const prefixes = [t.origin, t.base ? t.base : null].filter((x): x is string => !!x).map(reEsc);
+  let out = html;
+  for (const p of prefixes) out = out.replace(new RegExp(`${p}/products(?=[/"'?#<\\s]|$)`, "g"), (m) => m.replace(/\/products$/, "/services"));
+  // On the client's own domain links are root-relative.
+  return out.replace(/((?:href|action)=["'])\/products(?=[/"'?#])/g, "$1/services");
+}
+
+// The templates' shop words, as a services business says them. Visible text and labels only.
+const SERVICE_WORDS: [RegExp, string][] = [
+  // Same length as the shop words, so headers built for "Shop all" still fit on a phone.
+  [/\bShop all\b/g, "Services"], [/\bShop All\b/g, "Services"], [/\bSHOP ALL\b/g, "SERVICES"],
+  [/\bAsk about this product\b/g, "Ask about this service"], [/\bAsk for price\b/g, "Get a quote"],
+  // Boutique phrases in the templates.
+  [/\bShop by (?:category|department)\b/g, "Our services"], [/\b(?:Shop the edit|The edit)\b/g, "Our services"],
+  [/\b(?:Shop now|Shop everything|Browse everything|Explore the (?:range|collection)|Discover the collection|View the collection)\b/g, "See our services"],
+  [/\b(?:Selected|Featured) pieces\b/g, "Our services"], [/\b(?:Best sellers|Most loved|Popular items)\b/g, "Popular services"],
+  [/\b(?:Also in the (?:range|collection)|Related items|From the collection)\b/g, "Other services"], [/\bAbout this item\b/g, "About this service"],
+  [/\bThe (?:collections?|range)\b/g, "Our services"], [/\bAll collections\b/g, "All services"],
+  [/\b(?:Collections|Collection|Range|Browse)\b(?! of)/g, "Services"], [/\bitems\b/g, "services"], [/\bitem\b/g, "service"], [/\bpieces\b/g, "services"],
+  [/\bSearch products\b/g, "Search services"], [/\bAll products\b/g, "All services"],
+  [/\bproducts\b/g, "services"], [/\bProducts\b/g, "Services"], [/\bPRODUCTS\b/g, "SERVICES"],
+  [/\bproduct\b/g, "service"], [/\bProduct\b/g, "Service"], [/\bPRODUCT\b/g, "SERVICE"],
+  [/\bShop\b/g, "Services"], [/\bSHOP\b/g, "SERVICES"],
+];
+const words = (s: string) => SERVICE_WORDS.reduce((acc, [re, to]) => acc.replace(re, to), s);
+
+function serviceWords(html: string): string {
+  // Scripts and styles are left alone; text between tags and a few label attributes are reworded.
+  return html
+    .split(/(<script\b[\s\S]*?<\/script>|<style\b[\s\S]*?<\/style>)/i)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part
+            .replace(/>([^<]+)</g, (_, text: string) => `>${words(text)}<`)
+            .replace(/\b(placeholder|aria-label|title|alt)="([^"]*)"/g, (_, attr: string, v: string) => `${attr}="${words(v)}"`),
+    )
+    .join("");
 }
 
 function renderRaw(t: RenderTarget, path: string[], query: URLSearchParams): RenderResult {

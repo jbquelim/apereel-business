@@ -17,7 +17,9 @@ import type { SiteDoc, SiteProduct } from "../lib/site-types";
 import { renderPath } from "../lib/site-render";
 import { loadCatalogView } from "../lib/site-catalog";
 import { TEMPLATES } from "../lib/templates/index";
-import { checkDoc, checkPage, type QaIssue } from "../lib/site-qa";
+import { checkDoc, checkPage, visibleText, type QaIssue } from "../lib/site-qa";
+import { pagePhotos, pickPhotos, siteLinks } from "../lib/site-services";
+import { crawlList } from "../lib/site-crawl";
 import { qaPaths } from "../lib/site-qa-run";
 import { platformCatalog } from "../lib/platform-catalog";
 
@@ -76,6 +78,49 @@ async function studs(): Promise<Fixture> {
   return { name: "studs (small Shopify)", id: "qa-studs", slug: "studs", doc, fromDb: false };
 }
 
+/**
+ * A services business (no products): Mr. Rooter's own service pages and
+ * photos, read without AI, with plain copy. Its pages must read as services:
+ * no shop wording survives (lib/site-render).
+ */
+async function rooter(): Promise<Fixture> {
+  const base = "https://www.mrrooter.com/";
+  const html = await (await fetch(base, { headers: { "User-Agent": "Mozilla/5.0" } })).text();
+  const links = siteLinks(html, base).filter((l) => /^\/residential-services\/[a-z-]+$/.test(l.path)).slice(0, 9);
+  const urls = links.map((l) => new URL(l.path, base).toString());
+  const pages = await crawlList(urls.map((url) => ({ url, kind: "category" as const })), Date.now() + 60_000);
+  const htmls = await Promise.all(urls.map(async (u) => (await fetch(u, { headers: { "User-Agent": "Mozilla/5.0" } }).catch(() => null))?.text() ?? ""));
+  const photos = pickPhotos(htmls.map((h, i) => pagePhotos(h, urls[i])));
+  const products: SiteProduct[] = links.map((l, i) => {
+    const page = pages.find((p) => p.url.replace(/\/+$/, "").endsWith(l.path));
+    return { slug: l.path.split("/").pop()!, title: l.text, price: null, currency: null, image: photos[i], description: page?.metaDescription && page.metaDescription.length > 60 ? page.metaDescription : `${l.text} from Mr. Rooter Plumbing: licensed local plumbers, upfront quotes and clean, careful work in your home.`, category: null, sourceUrl: new URL(l.path, base).toString(), featured: true };
+  });
+  const doc: SiteDoc = {
+    kind: "services",
+    brand: { name: "Mr. Rooter Plumbing", tagline: "Plumbing, drains and water heaters" },
+    tokens: { palette: { bg: "#ffffff", surface: "#f4f6f8", text: "#111111", muted: "#5b6470", accent: "#c8102e", accentText: "#ffffff", line: "#e3e7eb" }, fontHeading: "Inter", fontBody: "Inter", radius: 10, heroStyle: "split", motion: "subtle", headingCase: "normal" },
+    pages: [
+      { slug: "", title: "Home", metaTitle: "Mr. Rooter Plumbing | Drains, pipes and water heaters", metaDescription: "Plumbing repairs, drain cleaning and water heaters from local plumbers.", sections: [
+        { type: "hero", eyebrow: "Local plumbers", heading: "Plumbing fixed properly, the first time", subheading: "Drains, leaks, water heaters and sewer lines.", ctaLabel: "See our services" },
+        { type: "productGrid", heading: "Our services", products: "featured", limit: 8 },
+        { type: "features", heading: "Why Mr. Rooter", items: [{ title: "Upfront quotes", body: "You know the price before we start." }, { title: "Licensed plumbers", body: "Trained and background-checked." }, { title: "Clean work", body: "We leave your home as we found it." }] },
+        { type: "faq", heading: "Questions", items: [{ q: "Do you handle emergencies?", a: "Call us and we'll tell you when we can be there." }, { q: "Do you quote before starting?", a: "Yes, always." }] },
+        { type: "cta", heading: "Need a plumber?", body: "Tell us what's wrong and where.", ctaLabel: "Get a quote", ctaHref: "/contact" },
+      ] },
+      { slug: "about", title: "About", metaTitle: "About | Mr. Rooter Plumbing", metaDescription: "Local plumbers for homes and businesses.", sections: [{ type: "story", heading: "Plumbers you can count on", body: "We fix plumbing for homes and businesses." }] },
+      { slug: "contact", title: "Contact", metaTitle: "Contact | Mr. Rooter Plumbing", metaDescription: "Get a plumbing quote.", sections: [{ type: "contact", heading: "Get a quote", body: "Tell us what you need done." }] },
+    ],
+    products,
+    categories: [],
+    productAction: "enquire",
+    redirects: {},
+  };
+  return { name: "rooter (services, no products)", id: "qa-rooter", slug: "rooter", doc, fromDb: false };
+}
+
+/** Shop wording that must not appear on a services site. */
+const SHOP_WORDS = /\b(cart|checkout|shop|shopping|products?|add to bag|in stock|out of stock|sku|buy now|collections?|pieces|items?|best sellers|most loved|the edit|the range|browse)\b/i;
+
 /** Runs in the page: what's wrong with the layout at this width. */
 const LAYOUT = `(() => {
   const W = innerWidth, out = [];
@@ -102,7 +147,14 @@ const LAYOUT = `(() => {
   return out.slice(0, 8);
 })()`;
 
-const fixtures = [await dbSite("grandbrass-8fa04e", "grandbrass (large catalog)"), await dbSite("etlin-daniels-b59c3c", "etlin-daniels (sparse)"), await studs()];
+// QA_STORE=rooter (or grandbrass, etlin, studs) checks one store only.
+const STORE_FIXTURES: Record<string, () => Promise<Fixture>> = {
+  grandbrass: () => dbSite("grandbrass-8fa04e", "grandbrass (large catalog)"),
+  etlin: () => dbSite("etlin-daniels-b59c3c", "etlin-daniels (sparse)"),
+  studs,
+  rooter,
+};
+const fixtures = await Promise.all(Object.entries(STORE_FIXTURES).filter(([k]) => !process.env.QA_STORE || k === process.env.QA_STORE).map(([, f]) => f()));
 const browser = await chromium.launch({ executablePath: CHROME });
 const report: { template: string; store: string; issues: QaIssue[] }[] = [];
 
@@ -117,6 +169,12 @@ for (const tpl of TEMPLATES.filter((t) => !only || t.id === only)) {
       const r = renderPath({ catalog, siteId: f.id, doc: f.doc, base: "", origin: `https://example.test`, apiOrigin: "https://www.apereel.com", preview: false, design: tpl.id }, parts, query);
       if (r.kind !== "html") { issues.push({ page: path, check: "render", detail: r.kind }); continue; }
       issues.push(...checkPage(path, r.body, count, (f.doc.categories).map((c) => c.count ?? 0)));
+      if (f.doc.kind === "services") {
+        const text = visibleText(r.body);
+        const hit = text.match(SHOP_WORDS);
+        if (hit) issues.push({ page: path, check: "shop-wording", detail: `"${text.slice(Math.max(0, hit.index! - 40), hit.index! + 40).trim()}"` });
+        if (/href="\/products/.test(r.body)) issues.push({ page: path, check: "shop-links", detail: "links to /products instead of /services" });
+      }
       const imgs = (r.body.match(/<img /g) ?? []).length;
       for (const width of [390, 1440]) {
         const page = await browser.newPage({ viewport: { width, height: 900 } });

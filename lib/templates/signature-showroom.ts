@@ -30,6 +30,8 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .hd{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line)}
 .hd .w{display:flex;align-items:center;gap:32px;height:80px}
 .logo{font:800 22px var(--f);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex:none}.logo img{max-height:44px;width:auto}
+/* A long business name shown as text wraps on a phone instead of pushing the menu off screen. */
+@media(max-width:600px){.logo{flex:0 1 auto;min-width:0;font-size:clamp(14px,4.2vw,20px);line-height:1.15;letter-spacing:.03em}}
 .hd nav{display:flex;gap:28px;flex:1;white-space:nowrap;overflow:hidden;font:600 14.5px var(--f)}.hd nav a{text-decoration:none}.hd nav a:hover{color:var(--muted)}
 .hd .btn{height:44px;padding:0 20px;font-size:12px}
 .burger{display:none;margin-left:auto;cursor:pointer;font:700 14px var(--f)}#nav{display:none}.drawer{display:none;position:fixed;inset:80px 0 0;z-index:29;background:#fff;overflow:auto;padding:16px clamp(18px,4.5vw,72px)}#nav:checked~.drawer{display:block}.drawer a{display:block;padding:15px 0;border-bottom:1px solid var(--line);font:300 26px var(--f);text-decoration:none}

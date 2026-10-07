@@ -27,6 +27,8 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .hd{position:sticky;top:0;z-index:30;background:rgba(13,14,16,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .hd .w{display:flex;align-items:center;gap:30px;height:72px}
 .logo{font:700 22px var(--fd);letter-spacing:.18em;text-transform:uppercase;text-decoration:none;flex:none}.logo img{max-height:40px;width:auto}
+/* A long business name shown as text wraps on a phone instead of pushing the menu off screen. */
+@media(max-width:600px){.logo{flex:0 1 auto;min-width:0;font-size:clamp(14px,4.2vw,20px);line-height:1.15;letter-spacing:.03em}}
 .hd nav{display:flex;gap:26px;flex:1;white-space:nowrap;overflow:hidden;font:600 13px var(--fd);letter-spacing:.18em;text-transform:uppercase}.hd nav a{text-decoration:none;color:var(--muted)}.hd nav a:hover{color:var(--ink)}
 .hd form{display:flex;align-items:center;border:1px solid var(--line);height:40px;padding:0 4px 0 12px}.hd form input{border:0;background:none;outline:none;color:var(--ink);font:inherit;font-size:14px;width:160px}.hd form button{border:0;background:none;color:var(--accent);cursor:pointer;font:600 12px var(--fd);letter-spacing:.14em;text-transform:uppercase}
 .burger{display:none;margin-left:auto;cursor:pointer;font:600 13px var(--fd);letter-spacing:.18em;text-transform:uppercase}#nav{display:none}

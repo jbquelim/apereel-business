@@ -31,6 +31,8 @@ img,video{display:block;max-width:100%}a{color:inherit}
 .hd.scrolled{border-color:var(--line)}
 .hd .w{display:flex;align-items:center;gap:28px;height:78px}
 .logo{font:700 22px var(--f);letter-spacing:-.02em;text-decoration:none;flex:none}.logo img{max-height:42px;width:auto}
+/* A long business name shown as text wraps on a phone instead of pushing the menu off screen. */
+@media(max-width:600px){.logo{flex:0 1 auto;min-width:0;font-size:clamp(14px,4.2vw,20px);line-height:1.15;letter-spacing:.03em}}
 .hd nav{display:flex;gap:24px;font:500 15px var(--f);flex:1;white-space:nowrap}.hd nav a{text-decoration:none;opacity:.8}.hd nav a:hover{opacity:1}
 .hd form{display:flex;align-items:center;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 4px 4px 16px;width:min(300px,30vw)}
 .hd form input{border:0;outline:none;background:none;font:inherit;font-size:14.5px;flex:1;min-width:0}.hd form button{border:0;background:var(--ink);color:#fff;border-radius:999px;height:34px;padding:0 14px;font:600 13px var(--f);cursor:pointer}

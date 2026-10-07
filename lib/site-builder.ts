@@ -13,6 +13,7 @@ import { upgradeImages } from "./image-upgrade";
 import { imageSize } from "./image-size";
 import { fetchSitemapCatalog } from "./site-fetch";
 import { analysisBrief, siteAnalysis } from "./site-analysis";
+import { readServices } from "./site-services";
 import { dropRangeStats, scrubRanges } from "./site-qa";
 import { rankTemplates } from "./templates";
 
@@ -246,8 +247,15 @@ type CopyReply = {
 export async function buildSite(client: Client): Promise<SiteRow> {
   const tier = client.tier;
   const limits = LIMITS[tier];
-  const catalog = await catalogWithPhotos(client.domain);
+  // A business with no online catalog gets a services site (below), not a failed build.
+  const catalog = await catalogWithPhotos(client.domain).catch((err: unknown) => {
+    if (err instanceof Error && /No products could be read/.test(err.message)) return [] as Product[];
+    throw err;
+  });
   const audit = await fetchAuditResult<AuditLike>(client.domain);
+  // Its services, read from its own pages (lib/site-services), carried as the site's products.
+  const services = catalog.length ? null : await readServices(client.domain, client.id, audit?.industry?.offering ?? "");
+  if (services && !services.length) throw new Error(`Neither products nor services could be read from ${client.domain}`);
   const industryTexts = [
     [audit?.industry?.subIndustry, audit?.industry?.industry].filter(Boolean).join(" "),
     audit?.industry?.offering ?? "",
@@ -259,7 +267,7 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   // Their brand, full-size photos and the true catalog size, read in parallel.
   const [brand, products, sitemap] = await Promise.all([
     extractBrand(client.domain).catch(() => null),
-    upgradeImages(toProducts(catalog, limits.products)),
+    services ? Promise.resolve(services) : upgradeImages(toProducts(catalog, limits.products)),
     fetchSitemapCatalog(client.domain).catch(() => ({ productUrls: [] as string[] })),
   ]);
   // Sitemaps list a product once per market (/en-int/…, /fr/…): count each product handle once.
@@ -268,13 +276,14 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   const catalogExpected = handles.size;
   // Category names from the audit, or else from the category pages our crawl read.
   let categoryNames = (audit?.industry?.inventoryCategories ?? []).map((c) => c.category);
-  if (categoryNames.length === 0 && limits.categories > 0) categoryNames = await crawledCategoryNames(client.domain);
-  const categories = assignCategories(products, categoryNames, limits.categories);
-  const featured = products.filter((p) => p.image).slice(0, limits.featured);
+  if (!services && categoryNames.length === 0 && limits.categories > 0) categoryNames = await crawledCategoryNames(client.domain);
+  const categories = services ? [] : assignCategories(products, categoryNames, limits.categories);
+  // Every service is shown; products need a photo to be featured.
+  const featured = services ? products : products.filter((p) => p.image).slice(0, limits.featured);
   featured.forEach((p) => (p.featured = true));
   // Hero candidates with their real pixel sizes: the AI picks the product that
   // best represents the business, and small photos are never stretched.
-  const candidates = await Promise.all(featured.slice(0, 12).map(async (p) => ({ p, size: p.image ? await imageSize(p.image) : null })));
+  const candidates = await Promise.all(featured.filter((p) => p.image).slice(0, 12).map(async (p) => ({ p, size: p.image ? await imageSize(p.image) : null })));
   const trust = brand ? trustItems(brand, b2b) : [];
   const gaps = (audit?.demand?.rows ?? []).filter((r) => r.coverage === "none").map((r) => r.query);
   const rich = tier !== "fix";
@@ -297,7 +306,7 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   ${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${scrubRanges(audit.translateAdvantage.strength)}\n` : ""}CATALOG: ${catalogTotal.toLocaleString("en-US")} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
   ${trust.length ? `VERIFIED CONTACT AND TRADE FACTS (shown in the trust strip): ${trust.map((i) => `${i.title}: ${i.body}`).join("; ")}\n` : "NO VERIFIED CONTACT FACTS: leave out the trust section.\n"}HERO CANDIDATES (slug, product, photo size): ${candidates.map((c) => `${c.p.slug} | ${c.p.title} | ${c.size ? `${c.size.width}px` : "size unknown"}`).join("; ")}
   ${brief ? `${brief}\n` : ""}${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}${benchmark ? `${benchmark}\n` : ""}
-  FEATURED PRODUCTS (write a description for each):
+  ${services ? `THIS BUSINESS SELLS SERVICES, NOT PRODUCTS. The items below are its services, read from its own site. The site is about hiring them: calls, quotes and bookings. Never write "products", "shop", "cart", "buy" or prices; productGrid shows the services, and its heading names them as services. Do not include categoryGrid.\n` : ""}${services ? "SERVICES" : "FEATURED PRODUCTS"} (write a description for each):
   ${featured.map((p) => `- ${p.slug}: ${p.title}${p.price != null ? ` (${p.currency ?? "$"}${p.price})` : ""}`).join("\n")}
 
   HOME PAGE: choose 6 to 9 sections from this library and put them in the order that best sells THIS business to ITS buyers: ${HOME_LIBRARY[tier].join(", ")}. Start with hero and end with cta; include productGrid; include categoryGrid only if categories are listed; stats only with numbers given above.
@@ -375,7 +384,8 @@ export async function buildSite(client: Client): Promise<SiteRow> {
     pages: dropRangeStats(pages),
     products,
     categories,
-    productAction: b2b ? "enquire" : "link",
+    productAction: services || b2b ? "enquire" : "link",
+    ...(services ? { kind: "services" as const } : {}),
     redirects: await redirectsFrom(client.domain, products, categories),
     ...(rich && Array.isArray(out.productPromise) ? { productPromise: out.productPromise.map((x) => cut(x, 80)).filter(Boolean).slice(0, 3) } : {}),
   };

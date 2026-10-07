@@ -99,7 +99,7 @@ export function leadForm(t: RenderTarget, page: string, label: string, quote: bo
 <label><span>Name</span><input name="name" required autocomplete="name"></label>
 <label><span>Email</span><input name="email" type="email" required autocomplete="email"></label>
 <label><span>Phone (optional)</span><input name="phone" autocomplete="tel"></label>
-<label class="full"><span>${quote ? "What do you need? Part numbers, quantities, deadlines" : "How can we help?"}</span><textarea name="message" rows="5" required></textarea></label>
+<label class="full"><span>${t.doc.kind === "services" ? "What do you need done, where, and when?" : quote ? "What do you need? Part numbers, quantities, deadlines" : "How can we help?"}</span><textarea name="message" rows="5" required></textarea></label>
 <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
 <button type="submit">${esc(label)}</button></form>`;
 }
@@ -121,20 +121,24 @@ export function productAction(t: RenderTarget, p: SiteProduct, url: string, cls:
 export function productJsonLd(t: RenderTarget, p: SiteProduct, url: string, catName: string | null) {
   const crumbs = [
     { "@type": "ListItem", position: 1, name: "Home", item: `${t.origin}/` },
-    { "@type": "ListItem", position: 2, name: "Products", item: `${t.origin}/products` },
+    { "@type": "ListItem", position: 2, name: t.doc.kind === "services" ? "Services" : "Products", item: `${t.origin}/products` },
     ...(catName ? [{ "@type": "ListItem", position: 3, name: catName, item: `${t.origin}/collections/${p.category}` }] : []),
     { "@type": "ListItem", position: catName ? 4 : 3, name: p.title, item: url },
   ];
   return [
     {
       "@context": "https://schema.org",
-      "@type": "Product",
-      name: p.title,
-      description: p.description,
-      url,
-      ...(p.image ? { image: [p.image] } : {}),
-      brand: { "@type": "Brand", name: t.doc.brand.name },
-      ...(p.price != null ? { offers: { "@type": "Offer", price: p.price, priceCurrency: p.currency || "USD", url } } : {}),
+      ...(t.doc.kind === "services"
+        ? { "@type": "Service", name: p.title, description: p.description, url, ...(p.image ? { image: [p.image] } : {}), provider: { "@type": "LocalBusiness", name: t.doc.brand.name } }
+        : {
+            "@type": "Product",
+            name: p.title,
+            description: p.description,
+            url,
+            ...(p.image ? { image: [p.image] } : {}),
+            brand: { "@type": "Brand", name: t.doc.brand.name },
+            ...(p.price != null ? { offers: { "@type": "Offer", price: p.price, priceCurrency: p.currency || "USD", url } } : {}),
+          }),
     },
     { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: crumbs },
   ];

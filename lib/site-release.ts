@@ -61,7 +61,7 @@ export function isReleased(build: BuildState | null | undefined): boolean {
 }
 
 // Which step repairs which problem.
-const COPY_CHECKS = new Set(["internal-wording", "placeholder", "count-mismatch", "price-claim", "headings", "meta", "hero-length", "hero"]);
+const COPY_CHECKS = new Set(["services", "internal-wording", "placeholder", "count-mismatch", "price-claim", "headings", "meta", "hero-length", "hero"]);
 const CATALOG_CHECKS = new Set(["catalog-incomplete"]);
 
 /** Checks a finished build: catalog completeness plus the site checks (lib/site-qa). */
@@ -76,11 +76,14 @@ export async function checkRelease(client: Client): Promise<QaIssue[]> {
   // The store's sitemap is counted independently of the import (a reader bug can't hide in both).
   const cap = client.tier === "fix" ? 300 : 20_000;
   const expected = Math.min(doc.catalogExpected ?? 0, cap);
-  if (expected >= 20 && n < expected * 0.9) {
+  // A services site (no online catalog) is checked on its services instead (lib/site-services).
+  if (doc.kind === "services") {
+    if (doc.products.length < 3) issues.push({ page: "site", check: "services", detail: `only ${doc.products.length} services were found on the business's own site` });
+  } else if (expected >= 20 && n < expected * 0.9) {
     issues.push({ page: "site", check: "catalog-incomplete", detail: `${n.toLocaleString("en-US")} products imported; the store's sitemap lists ${expected.toLocaleString("en-US")}` });
   }
   // Products were found while building (the featured ones) but the shop came out empty.
-  if (n === 0 && doc.products.length > 0) {
+  if (doc.kind !== "services" && n === 0 && doc.products.length > 0) {
     issues.push({ page: "site", check: "catalog-incomplete", detail: `the shop is empty: no products were imported (${doc.products.length} were found while building)` });
   }
   if (n > 50 && uncategorised / n > 0.15) {
