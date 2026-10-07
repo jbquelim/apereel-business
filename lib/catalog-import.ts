@@ -346,7 +346,8 @@ async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: Platfor
 export async function importCatalogStep(site: { id: string; doc: SiteDoc }, domain: string, budgetMs = 210_000, maxProducts = 20_000): Promise<{ remaining: number; products: number; categories: number }> {
   const deadline = Date.now() + budgetMs;
   // Stores on Shopify, WooCommerce or BigCommerce: their own catalog feed, in one go.
-  const platform = await platformCatalog(domain, budgetMs - 40_000).catch(() => null);
+  // A feed that can only be read in part throws (IncompleteCatalog): the step is retried, then John is told.
+  const platform = await platformCatalog(domain, budgetMs - 40_000, maxProducts);
   if (platform) return { remaining: 0, ...(await assemblePlatform(site, platform, maxProducts)) };
   const { productUrls, categoryUrls } = await fetchSitemapCatalog(domain);
   const productSet = new Set(productUrls.map(norm));
