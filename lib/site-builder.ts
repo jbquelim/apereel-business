@@ -232,6 +232,17 @@ async function competitorBenchmark(domain: string): Promise<string> {
 }
 
 /** Builds (or rebuilds) the client's site. */
+/** What the copywriting call returns. */
+type CopyReply = {
+  heroProduct?: string;
+  brand?: { name?: string; tagline?: string };
+  pages?: Record<string, { navLabel?: string; metaTitle?: string; metaDescription?: string; sections?: Section[] }>;
+  categories?: Record<string, string>;
+  products?: Record<string, string>;
+  specs?: Record<string, { label?: string; value?: string }[]>;
+  productPromise?: string[];
+};
+
 export async function buildSite(client: Client): Promise<SiteRow> {
   const tier = client.tier;
   const limits = LIMITS[tier];
@@ -272,53 +283,50 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   const brief = analysisBrief(analysis);
   const rewrites = new Map((analysis?.preview?.productRewrites ?? []).map((r) => [r.url.replace(/[?#].*$/, "").replace(/\/$/, ""), r]));
 
-  const text = await callClaude({
-    clientId: client.id,
-    purpose: "site:build",
-    maxTokens: 12000,
-    prompt: `You are building a website for a real business with Apereel's "${template.name}" template. Write all the copy.
+  // One retry when the reply isn't usable JSON (a stray character now and then): a whole build shouldn't fail on it.
+  let out: CopyReply | null = null;
+  for (let attempt = 0; attempt < 2 && !out?.pages?.home?.sections?.length; attempt++) {
+    const text = await callClaude({
+      clientId: client.id,
+      purpose: "site:build",
+      maxTokens: 12000,
+      prompt: `You are building a website for a real business with Apereel's "${template.name}" template. Write all the copy.
 
-BUSINESS: ${client.domain}${audit?.industry?.subIndustry ? ` (${audit.industry.subIndustry})` : ""}
-${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${scrubRanges(audit.translateAdvantage.strength)}\n` : ""}CATALOG: ${catalogTotal.toLocaleString("en-US")} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
-${trust.length ? `VERIFIED CONTACT AND TRADE FACTS (shown in the trust strip): ${trust.map((i) => `${i.title}: ${i.body}`).join("; ")}\n` : "NO VERIFIED CONTACT FACTS: leave out the trust section.\n"}HERO CANDIDATES (slug, product, photo size): ${candidates.map((c) => `${c.p.slug} | ${c.p.title} | ${c.size ? `${c.size.width}px` : "size unknown"}`).join("; ")}
-${brief ? `${brief}\n` : ""}${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}${benchmark ? `${benchmark}\n` : ""}
-FEATURED PRODUCTS (write a description for each):
-${featured.map((p) => `- ${p.slug}: ${p.title}${p.price != null ? ` (${p.currency ?? "$"}${p.price})` : ""}`).join("\n")}
+  BUSINESS: ${client.domain}${audit?.industry?.subIndustry ? ` (${audit.industry.subIndustry})` : ""}
+  ${audit?.industry?.offering ? `WHAT IT SELLS: ${audit.industry.offering}\n` : ""}${audit?.industry?.businessModel ? `SELLS TO: ${audit.industry.businessModel}\n` : ""}${audit?.translateAdvantage?.strength ? `ITS ADVANTAGE (lead with this): ${scrubRanges(audit.translateAdvantage.strength)}\n` : ""}CATALOG: ${catalogTotal.toLocaleString("en-US")} products${categories.length ? `; categories: ${categories.map((c) => c.name).join(", ")}` : ""}
+  ${trust.length ? `VERIFIED CONTACT AND TRADE FACTS (shown in the trust strip): ${trust.map((i) => `${i.title}: ${i.body}`).join("; ")}\n` : "NO VERIFIED CONTACT FACTS: leave out the trust section.\n"}HERO CANDIDATES (slug, product, photo size): ${candidates.map((c) => `${c.p.slug} | ${c.p.title} | ${c.size ? `${c.size.width}px` : "size unknown"}`).join("; ")}
+  ${brief ? `${brief}\n` : ""}${gaps.length ? `SEARCHES BUYERS MAKE THAT THE OLD SITE HAD NO PAGE FOR (answer them in the FAQ and copy): ${gaps.join("; ")}\n` : ""}${benchmark ? `${benchmark}\n` : ""}
+  FEATURED PRODUCTS (write a description for each):
+  ${featured.map((p) => `- ${p.slug}: ${p.title}${p.price != null ? ` (${p.currency ?? "$"}${p.price})` : ""}`).join("\n")}
 
-HOME PAGE: choose 6 to 9 sections from this library and put them in the order that best sells THIS business to ITS buyers: ${HOME_LIBRARY[tier].join(", ")}. Start with hero and end with cta; include productGrid; include categoryGrid only if categories are listed; stats only with numbers given above.
-OTHER PAGES AND THEIR SECTIONS, in order:
-${skeleton(template).split("\n").filter((l) => !l.startsWith("home:")).join("\n")}
+  HOME PAGE: choose 6 to 9 sections from this library and put them in the order that best sells THIS business to ITS buyers: ${HOME_LIBRARY[tier].join(", ")}. Start with hero and end with cta; include productGrid; include categoryGrid only if categories are listed; stats only with numbers given above.
+  OTHER PAGES AND THEIR SECTIONS, in order:
+  ${skeleton(template).split("\n").filter((l) => !l.startsWith("home:")).join("\n")}
 
-${SECTION_SHAPES}
+  ${SECTION_SHAPES}
 
-Return ONLY JSON:
-{
-  "brand": { "name": "the business's name as customers know it", "tagline": "max 70 chars" },
-  "heroProduct": "the slug of the hero candidate that best represents the business (its signature product, not a commodity or accessory; prefer larger photos)",
-  "pages": {
-    "home": { "metaTitle": "max 60 chars", "metaDescription": "max 155 chars", "sections": [ ...the sections you chose, in your order... ] },
-    "about": { "navLabel": "About", "metaTitle": "...", "metaDescription": "...", "sections": [...] },
-    "contact": { "navLabel": "Contact", "metaTitle": "...", "metaDescription": "...", "sections": [...] }
-  },
-  "categories": { ${categories.length ? categories.map((c) => `"${c.slug}": "one sentence describing this category"`).join(", ") : ""} },
-  "products": { "<slug>": "${rich ? "3-4 sentence description: what it is, what it's for, who it suits; facts from the product name only" : "2-3 sentence description, facts from the product name only"}" }${rich ? `,
-  "specs": { "<slug>": [{ "label": "e.g. Wattage", "value": "e.g. 75W" }] },
-  "productPromise": ["3 short reasons to buy from this business, from its advantage above, max 60 chars each"]` : ""}
-}
+  Return ONLY JSON:
+  {
+    "brand": { "name": "the business's name as customers know it", "tagline": "max 70 chars" },
+    "heroProduct": "the slug of the hero candidate that best represents the business (its signature product, not a commodity or accessory; prefer larger photos)",
+    "pages": {
+      "home": { "metaTitle": "max 60 chars", "metaDescription": "max 155 chars", "sections": [ ...the sections you chose, in your order... ] },
+      "about": { "navLabel": "About", "metaTitle": "...", "metaDescription": "...", "sections": [...] },
+      "contact": { "navLabel": "Contact", "metaTitle": "...", "metaDescription": "...", "sections": [...] }
+    },
+    "categories": { ${categories.length ? categories.map((c) => `"${c.slug}": "one sentence describing this category"`).join(", ") : ""} },
+    "products": { "<slug>": "${rich ? "3-4 sentence description: what it is, what it's for, who it suits; facts from the product name only" : "2-3 sentence description, facts from the product name only"}" }${rich ? `,
+    "specs": { "<slug>": [{ "label": "e.g. Wattage", "value": "e.g. 75W" }] },
+    "productPromise": ["3 short reasons to buy from this business, from its advantage above, max 60 chars each"]` : ""}
+  }
 
-${RULES}
-- Titles and descriptions are unique per page and written for the searches buyers make.
-- Never claim reviews, ratings, awards, certifications, years in business or delivery times unless given above.`,
-  });
-  const out = parseJson<{
-    heroProduct?: string;
-    brand?: { name?: string; tagline?: string };
-    pages?: Record<string, { navLabel?: string; metaTitle?: string; metaDescription?: string; sections?: Section[] }>;
-    categories?: Record<string, string>;
-    products?: Record<string, string>;
-    specs?: Record<string, { label?: string; value?: string }[]>;
-    productPromise?: string[];
-  }>(text);
+  ${RULES}
+  - Titles and descriptions are unique per page and written for the searches buyers make.
+  - Never claim reviews, ratings, awards, certifications, years in business or delivery times unless given above.`,
+    });
+    const parsed = parseJson<CopyReply>(text);
+    out = parsed;
+  }
   if (!out?.pages?.home?.sections?.length) throw new Error("The site copy came back incomplete");
 
   const name = cut(out.brand?.name, 60) || client.domain;
