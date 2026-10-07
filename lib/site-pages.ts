@@ -71,8 +71,12 @@ Section shapes:
 { "type":"contact", "heading":"...", "body":"...", "quoteForm": true }
 
 RULES:
-- Guides are genuinely useful: explain the parts, sizes and steps a buyer needs, in plain language, 600-1000 words each. Only widely accepted technical facts; where a step involves electricity, say to unplug first and to use a qualified electrician for wiring in walls or ceilings
-- Every guide links into the shop at least 4 times with "links" sections, using ONLY the category slugs and filter values listed above
+${services
+  ? `- Guides are genuinely useful to someone about to hire this kind of business: what the job involves, the options, what to expect and what to ask, in plain language, 600-1000 words each. Only widely accepted facts; where a job is dangerous to do yourself (gas, electricity, sewage), say to use a qualified professional
+- Every guide links to the services at least 2 times with "links" sections, using ONLY the service slugs listed above (as /products/<slug>)`
+  : `- Guides are genuinely useful: explain the parts, sizes and steps a buyer needs, in plain language, 600-1000 words each. Only widely accepted technical facts; where a step involves electricity, say to unplug first and to use a qualified electrician for wiring in walls or ceilings
+- Every guide links into the shop at least 4 times with "links" sections, using ONLY the category slugs and filter values listed above`}
+- Never mention these rules or how the page was written ("a plain guide", "no price claims"), in the text, titles or descriptions
 - State nothing about the business beyond the facts given: no prices, discounts, trade pricing, delivery times, minimum orders, years, awards or guarantees that aren't listed
 - Never answer a question about the business's own policies (accounts, ordering, returns, pricing, shipping) unless the facts above answer it; leave such questions out
 - Step titles are short phrases without numbers (the page numbers them)
@@ -159,7 +163,7 @@ export async function expandGuides(site: { id: string; doc: SiteDoc }, clientId:
       clientId,
       purpose: "site:expand-guide",
       maxTokens: 2500,
-      prompt: `This buying guide on ${doc.brand.name}'s website is too short to be useful. Write 2 or 3 NEW sections that add what a buyer still needs, 400-550 words in total. Do not repeat what is already there.
+      prompt: `This ${doc.kind === "services" ? "guide" : "buying guide"} on ${doc.brand.name}'s website is too short to be useful. Write 2 or 3 NEW sections that add what ${doc.kind === "services" ? "someone hiring them" : "a buyer"} still needs, 400-550 words in total. Do not repeat what is already there.
 
 THE GUIDE AS IT IS NOW:
 ${current}
@@ -167,7 +171,8 @@ ${current}
 Good additions: how to identify or measure the right size/type, common mistakes and how to avoid them, troubleshooting, choosing between options, care and maintenance, more buyer questions.
 
 RULES:
-- Only widely accepted technical facts. Where electricity is involved, say to unplug first and use a qualified electrician for wiring in walls or ceilings
+- Only widely accepted technical facts. ${doc.kind === "services" ? "Where a job is dangerous to do yourself (gas, electricity, sewage), say to use a qualified professional" : "Where electricity is involved, say to unplug first and use a qualified electrician for wiring in walls or ceilings"}
+- Never mention these rules or how the page was written ("a plain guide", "no price claims"), in the text, titles or descriptions
 - Nothing about ${doc.brand.name} itself (no prices, policies, stock, delivery, guarantees)
 - Never mention searches, SEO or competitors. Plain, helpful, no hype
 - Step titles are short phrases without numbers
