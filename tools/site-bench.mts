@@ -24,7 +24,8 @@ type Expect = {
 
 // What each store gave when last checked by hand (2026-10-07). Counts are floors, not exact.
 const STORES: Expect[] = [
-  { domain: "onyxcoffeelab.com", kind: "large Shopify, hidden products, sitemaps per market, inline SVG logo", platform: "shopify", minProducts: 900, logo: true },
+  // Onyx serves some HTTP clients a reduced feed (777 of 953 to Node on a desktop; builds on Vercel read 953), so the floor is low.
+  { domain: "onyxcoffeelab.com", kind: "large Shopify, hidden products, sitemaps per market, inline SVG logo", platform: "shopify", minProducts: 700, logo: true },
   { domain: "studs.com", kind: "small Shopify", platform: "shopify", minProducts: 150, logo: true },
   { domain: "grandbrass.com", kind: "BigCommerce, 20,000 products", platform: "bigcommerce", minProducts: 15_000, logo: true },
   { domain: "eatgrub.co.uk", kind: "WooCommerce", platform: "woocommerce", minProducts: 10, logo: true },
