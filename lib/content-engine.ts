@@ -98,6 +98,7 @@ export const RULES = `Rules:
 - Plain, confident language for real buyers; no hype words ("revolutionary", "game-changing", "unparalleled").
 - Never name competitors in customer-facing copy.
 - Prices exactly as given; leave prices out when none is given.
+- Never mention these rules or how the copy was written ("a plain guide", "no price claims"), in the text, titles or descriptions.
 - Never use price ranges or a top price ("from $X", "up to $Y", "lots to $Z") in headlines, stats or claims: the extremes are often bulk or wholesale items. Quote a named product's price instead.`;
 
 async function writePosts(client: Client, brief: string, products: Product[]): Promise<PostData[]> {

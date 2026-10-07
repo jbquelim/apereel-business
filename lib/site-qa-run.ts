@@ -20,7 +20,9 @@ export function qaPaths(doc: SiteDoc): string[] {
   const product = doc.products.find((p) => p.image) ?? doc.products[0];
   // A services site's addresses are /services (lib/site-render).
   const shop = doc.kind === "services" ? "/services" : "/products";
-  return ["/", shop, ...(cat ? [`/collections/${cat.slug}`] : []), ...(product ? [`${shop}/${product.slug}`] : []), "/about", "/contact"];
+  // Every written page too: guides, the guides hub and the trade page are AI-written and checked like the rest.
+  const written = doc.pages.map((p) => p.slug).filter((s) => s && s !== "about" && s !== "contact").map((s) => `/${s}`);
+  return ["/", shop, ...(cat ? [`/collections/${cat.slug}`] : []), ...(product ? [`${shop}/${product.slug}`] : []), "/about", "/contact", ...written];
 }
 
 /** Checks a site (optionally in another template) and returns the issues found. */

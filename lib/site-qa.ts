@@ -10,7 +10,8 @@ import type { SiteDoc, SitePage } from "./site-types";
 export type QaIssue = { page: string; check: string; detail: string; level?: "fix" | "note" };
 
 /** Words from our analysis that must never reach a shopper. */
-const INTERNAL = /\b(average price|highest[- ]value|revenue|margins?|our analysis|the analysis|growth plan|priorit(?:y|ies|ised|ized)|competitors?|lever|SEO|conversion rate|search volume|crawl(?:er|ed)?|apereel)\b/i;
+// Includes the AI repeating its own instructions ("a plain guide, no price claims").
+const INTERNAL = /\b(no price claims?|price claims?|no claims|as instructed|the brief|average price|highest[- ]value|revenue|margins?|our analysis|the analysis|growth plan|priorit(?:y|ies|ised|ized)|competitors?|lever|SEO|conversion rate|search volume|crawl(?:er|ed)?|apereel)\b/i;
 const PLACEHOLDER = /\b(lorem ipsum|TODO|TBD|undefined|null|NaN|\[object Object\])\b|\{\{|\}\}|\.\.\.\s*$/;
 const COUNT = /\b(\d{1,3}(?:,\d{3})+|\d{3,})\+?\s+(?:products|parts|items|pieces|SKUs|lamp and chandelier parts|[a-z]+ parts)\b/gi;
 
@@ -48,11 +49,14 @@ export function checkPage(page: string, html: string, catalogCount: number, cate
   const text = visibleText(html);
   const add = (check: string, detail: string) => out.push({ page, check, detail });
 
-  const internal = text.match(new RegExp(INTERNAL.source, "gi"));
-  if (internal) {
+  // The title and meta description too: they're what search results show.
+  const head = [html.match(/<title>([^<]*)<\/title>/)?.[1], html.match(/<meta name="description" content="([^"]*)"/)?.[1]].filter(Boolean).join(" ¶ ");
+  for (const source of [text, head]) {
+    const internal = source.match(new RegExp(INTERNAL.source, "gi"));
+    if (!internal) continue;
     for (const w of [...new Set(internal.map((x) => x.toLowerCase()))]) {
-      const at = text.toLowerCase().indexOf(w);
-      add("internal-wording", `"${text.slice(Math.max(0, at - 50), at + w.length + 40).trim()}"`);
+      const at = source.toLowerCase().indexOf(w);
+      add("internal-wording", `${source === head ? "in the title or description: " : ""}"${source.slice(Math.max(0, at - 50), at + w.length + 40).trim()}"`);
     }
   }
   const ph = text.match(PLACEHOLDER);
