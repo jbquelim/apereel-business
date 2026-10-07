@@ -5,6 +5,7 @@ import { claimRun, releaseRun, runAndContinue } from "@/lib/ai-services";
 import { getSiteForClient } from "@/lib/site-builder";
 import { expandGuides } from "@/lib/site-pages";
 import { runSiteQa } from "@/lib/site-qa-run";
+import { approveRelease } from "@/lib/site-release";
 
 // Runs a client's service now: this month's content or ads, or the website
 // build. Runs after the response (crawl if needed, then AI): a few minutes.
@@ -22,6 +23,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     client.status = "active";
   }
   if (client.status !== "active") return NextResponse.json({ ok: false, error: "This client's plan has ended." }, { status: 409 });
+  // John releases a held site by hand (lib/site-release): no run.
+  const peek = (await request.clone().json().catch(() => ({}))) as { approve?: boolean };
+  if (client.service === "web-development" && peek.approve) {
+    await approveRelease(client, (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, ""));
+    return NextResponse.json({ ok: true, released: true });
+  }
   if (!(await claimRun(client.id))) {
     return NextResponse.json({ ok: false, error: "Already running. Give it a few minutes." }, { status: 409 });
   }

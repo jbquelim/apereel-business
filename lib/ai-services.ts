@@ -7,7 +7,8 @@ import { importCatalogStep } from "./catalog-import";
 import { kickMediaWorker } from "./media";
 import { ensureSiteAnalysis } from "./site-analysis";
 import { groupCategories } from "./category-groups";
-import { runSiteQa } from "./site-qa-run";
+import { MAX_ATTEMPTS, getBuild, releaseGate, setBuild } from "./site-release";
+import { notifyJohn } from "./notify";
 import { buildFacets } from "./facets";
 import { expandGuides, writeAnalysisPages } from "./site-pages";
 
@@ -65,12 +66,15 @@ export async function runService(client: Client, stage: MonthStage | undefined, 
     if (!site) return { summary: "no site", next: null };
     if (site.doc.catalogSize) await buildFacets(site).catch((err) => console.error("Facets:", err instanceof Error ? err.message : err));
     const withFacets = (await getSiteForClient(client.id)) ?? site;
-    const pages = await writeAnalysisPages(withFacets, client).catch((err) => (console.error("Analysis pages:", err instanceof Error ? err.message : err), 0));
+    // A catalog repair keeps the analysis pages already written (a copy repair rebuilt them away).
+    const kept = withFacets.doc.pages.some((p) => p.source === "analysis") && !!(await getBuild(client.id))?.repairs?.length;
+    const pages = kept ? 0 : await writeAnalysisPages(withFacets, client).catch((err) => (console.error("Analysis pages:", err instanceof Error ? err.message : err), 0));
     // Guides that came out short get more depth (about $0.015 each).
     const written = await getSiteForClient(client.id);
     if (pages && written) await expandGuides(written, client.id).catch((err) => console.error("Expand guides:", err instanceof Error ? err.message : err));
-    const qa = await runSiteQa(site.id).catch((err) => (console.error("Site QA:", err instanceof Error ? err.message : err), null));
-    return { summary: `${pages} pages from the analysis${qa ? `, ${qa.length} QA issues` : ""}`, next: null };
+    // The release gate: released to the client, repaired once, or held for John (lib/site-release).
+    const gate = await releaseGate(client, base);
+    return { summary: `${pages} pages from the analysis; ${gate.summary}`, next: gate.next };
   }
   if (stage !== "build") {
     // Waits up to ~3.5 minutes per step for the analysis, then hands on to a fresh step.
@@ -89,13 +93,14 @@ export async function runService(client: Client, stage: MonthStage | undefined, 
 }
 
 /** Starts the next step in a fresh function call (internal, CRON_SECRET). */
-export async function startStep(base: string, clientId: string, stage: MonthStage) {
-  await fetch(`${base}/api/ai-services/run`, {
+export async function startStep(base: string, clientId: string, stage: MonthStage): Promise<boolean> {
+  const res = await fetch(`${base}/api/ai-services/run`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-internal-secret": process.env.CRON_SECRET ?? "" },
     body: JSON.stringify({ clientId, stage }),
     signal: AbortSignal.timeout(10_000),
-  }).catch((err) => console.error("Next step did not start:", err instanceof Error ? err.message : err));
+  }).catch((err) => (console.error("Next step did not start:", err instanceof Error ? err.message : err), null));
+  return !!res?.ok;
 }
 
 /** Active monthly clients (content, ads) with nothing generated this month yet. */
@@ -112,18 +117,41 @@ export async function clientsDueThisMonth(limit: number): Promise<Client[]> {
 
 /** Runs a step, then starts the next one or ends the run (lock released, renders started). */
 export async function runAndContinue(client: Client, step: MonthStage | undefined, base: string) {
+  const website = client.service === "web-development";
+  // A website build records each step (lib/site-release); a new run starts its repairs afresh.
+  const stageName: MonthStage = step ?? "analysis";
+  if (website) await setBuild(client.id, step ? { status: "building", stage: stageName } : { status: "building", stage: stageName, attempts: 0, repairs: [], issues: [], error: null }).catch(() => null);
   let next: MonthStage | null = null;
   try {
     const r = await runService(client, step, base);
     next = r.next;
     console.log(`AI service for ${client.domain}${step ? ` (${step})` : ""}: ${r.summary}`);
+    if (website) await setBuild(client.id, { attempts: 0, error: null }).catch(() => null);
   } catch (err) {
-    console.error(`AI service failed for ${client.domain}${step ? ` (${step})` : ""}:`, err instanceof Error ? err.message : err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`AI service failed for ${client.domain}${step ? ` (${step})` : ""}:`, message);
+    if (website) {
+      // Retried (a fresh call), then reported: a website build never stops silently.
+      const build = await getBuild(client.id).catch(() => null);
+      const attempts = (build?.stage === stageName ? build.attempts ?? 0 : 0) + 1;
+      if (attempts < MAX_ATTEMPTS) {
+        await setBuild(client.id, { stage: stageName, attempts, error: message });
+        await new Promise((r) => setTimeout(r, 15_000));
+        next = stageName;
+      } else {
+        await setBuild(client.id, { status: "failed", stage: stageName, attempts, error: message });
+        await notifyJohn(`Website build failed: ${client.domain}`, `The "${stageName}" step failed ${attempts} times. Last error: ${message}\n\nThe client sees "being finished". Fix the cause, then run "Build the site" on ${base}/admin/clients`);
+      }
+    }
   }
   if (next) {
     // Long builds outlast the 15-minute lock; each step renews it.
     if (process.env.DATABASE_URL) await neon(process.env.DATABASE_URL)`UPDATE clients SET running_since = now() WHERE id = ${client.id}`;
-    return startStep(base, client.id, next);
+    if (await startStep(base, client.id, next)) return;
+    if (website) {
+      await setBuild(client.id, { status: "failed", stage: next, error: "the next step could not be started" }).catch(() => null);
+      await notifyJohn(`Website build stopped: ${client.domain}`, `The "${next}" step could not be started. Run "Build the site" again on ${base}/admin/clients`);
+    }
   }
   await releaseRun(client.id);
   await kickMediaWorker(base);

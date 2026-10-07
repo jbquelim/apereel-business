@@ -392,6 +392,8 @@ await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS internal BOOLEAN NO
 await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS fresh_audit BOOLEAN NOT NULL DEFAULT false`;
 // Analyses of the domain older than this are not reused by its website build.
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS analysis_after TIMESTAMPTZ`;
+// A website build's progress and release state (lib/site-release): building, ready, held or failed.
+await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS build JSONB`;
 
 // Service tier prices, edited by John at /admin/pricing. A tier without a
 // row (or with a null price) is unpriced.

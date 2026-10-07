@@ -89,9 +89,11 @@ export function checkDoc(doc: SiteDoc): QaIssue[] {
   const names = [...(doc.categoryGroups ?? []), ...doc.categories].map((c) => c.name.toLowerCase());
   // Prices in the copy (not on product cards) are usually a range's extreme, often a bulk or wholesale item.
   const total = doc.catalogTotal ?? doc.catalogSize ?? doc.products.length;
+  const known = new Set(doc.products.map((p) => p.price).filter((n): n is number => n != null).map(Number));
   for (const page of doc.pages) {
     const where = page.slug === "" ? "/" : `/${page.slug}`;
-    const prices = new Set(JSON.stringify(page.sections.filter((s) => !/product/i.test(s.type))).match(/\$\d{1,3}(?:,\d{3})+(?:\.\d\d)?|\$\d+(?:\.\d\d)?/g) ?? []);
+    // A featured product's own price is fine ("Kenya AA, $7"); anything else needs a look.
+    const prices = new Set((JSON.stringify(page.sections.filter((s) => !/product/i.test(s.type))).match(/\$\d{1,3}(?:,\d{3})+(?:\.\d\d)?|\$\d+(?:\.\d\d)?/g) ?? []).filter((m) => !known.has(Number(m.replace(/[$,]/g, "")))));
     if (prices.size) out.push({ page: where, check: "price-claim", detail: `copy quotes ${[...prices].slice(0, 4).join(", ")}; check each is a real product's price, not a bulk or wholesale outlier` });
     // A stat's number and label render apart, so the page text check can't pair them.
     for (const s of page.sections) {

@@ -56,6 +56,8 @@ export type SiteDoc = {
   design?: string;
   /** Products in the business's whole catalog (the site may show fewer while it's imported). */
   catalogTotal?: number;
+  /** Products the store's sitemap lists (each once), counted at build time: the release gate checks the import against it. */
+  catalogExpected?: number;
   tokens: SiteTokens;
   pages: SitePage[];
   products: SiteProduct[];

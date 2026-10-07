@@ -7,6 +7,7 @@ import { connectDomain } from "@/lib/vercel-domains";
 import { portalUrl } from "@/lib/billing";
 import { ensureAccount, onboardingUrl } from "@/lib/connect";
 import { setProductAction } from "@/lib/site-builder";
+import { isReleased } from "@/lib/site-release";
 
 // The client's studio actions: ask for a change (uses one request from the
 // monthly allowance) or mark an item approved. The token is the only key.
@@ -50,6 +51,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   // Website actions.
   if (b.action?.startsWith("site-")) {
     if (client.service !== "web-development") return NextResponse.json({ ok: false, error: "Not a website plan" }, { status: 400 });
+    // Nothing can be changed or published until the site has passed its checks (lib/site-release).
+    if (!isReleased(client.build) && b.action !== "site-unpublish") {
+      return NextResponse.json({ ok: false, error: "Your site is still being finished. We'll email you as soon as it's ready." }, { status: 409 });
+    }
     if (b.action === "site-revise") {
       const instruction = typeof b.instruction === "string" ? b.instruction.trim() : "";
       if (instruction.length < 3) return NextResponse.json({ ok: false, error: "Say what you'd like changed." }, { status: 400 });

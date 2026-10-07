@@ -161,7 +161,9 @@ async function servicePaid(session: Stripe.Checkout.Session, base: string, livem
           text: [
             client.name ? `Hi ${client.name.split(/\s+/)[0]},` : "Hi,",
             "",
-            `Thank you. We're building your ${SERVICE_NAME[client.service].toLowerCase()} for ${client.domain} now from your own products; the first batch is ready in a few minutes.`,
+            client.service === "web-development"
+              ? `Thank you. We're building your new website for ${client.domain} now from your own products, and we check every page before you see it. We'll email you as soon as it's ready, usually within the hour.`
+              : `Thank you. We're building your ${SERVICE_NAME[client.service].toLowerCase()} for ${client.domain} now from your own products; the first batch is ready in a few minutes.`,
             "",
             `Your studio (keep this link private): ${studio}`,
             "",

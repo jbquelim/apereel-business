@@ -7,6 +7,7 @@ import { NewClientForm, GenerateButton, DesignSelect } from "./client-forms";
 import { TEMPLATES } from "@/lib/templates";
 import { MediaNudger } from "@/components/media-nudger";
 import { pendingMediaJobs } from "@/lib/media";
+import { failStaleBuilds } from "@/lib/site-release";
 
 export const metadata: Metadata = { title: "AI service clients", robots: { index: false, follow: false } };
 
@@ -18,6 +19,8 @@ const SERVICE_NAME: Record<string, string> = {
 
 export default async function ClientsPage() {
   if (!(await isAdmin())) redirect("/admin/login");
+  // Builds that stopped without reporting show as failed (and John is emailed once).
+  await failStaleBuilds(process.env.NEXT_PUBLIC_SITE_URL || "https://www.apereel.com").catch(() => 0);
   const clients = await listClients();
   return (
     <main id="main" className="bg-navy pt-10">
@@ -77,6 +80,11 @@ export default async function ClientsPage() {
                       ) : (
                         c.items
                       )}
+                      {c.service === "web-development" && c.build && (
+                        <span className={`block text-[11px] ${c.build.status === "ready" ? "text-muted" : "text-signal"}`}>
+                          {c.build.status === "ready" ? `Released to client${c.build.approved ? " (by you)" : ""}` : c.build.status === "building" ? `Building: ${c.build.stage}${c.build.attempts ? ` (try ${c.build.attempts + 1})` : ""}` : c.build.status === "held" ? "Held: not released to the client" : `Failed at ${c.build.stage}: ${c.build.error ?? ""}`}
+                        </span>
+                      )}
                       {c.running_since && <span className="block text-[11px] text-muted">Running since {new Date(c.running_since).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>}
                     </td>
                     <td className="py-3 pr-4 font-mono text-ink/85">${c.cost.toFixed(2)}</td>
@@ -85,6 +93,9 @@ export default async function ClientsPage() {
                       <GenerateButton id={c.id} label={c.status === "requested" ? "Activate (no charge) and run" : c.service === "web-development" ? "Build the site" : "Generate this month"} />
                       {c.service === "web-development" && c.status === "active" && (
                         <GenerateButton id={c.id} label="Fresh analysis + rebuild (~$0.50)" body={{ fresh: true }} />
+                      )}
+                      {c.service === "web-development" && (c.build?.status === "held" || c.build?.status === "failed") && c.site_slug && (
+                        <GenerateButton id={c.id} label="Release to client" body={{ approve: true }} />
                       )}
                     </td>
                   </tr>

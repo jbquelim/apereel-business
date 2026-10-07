@@ -21,6 +21,8 @@ export type Client = {
   status: string;
   period_start: string;
   created_at: string;
+  /** Website builds: progress and release state (lib/site-release). */
+  build?: import("./site-release").BuildState | null;
 };
 
 function sql() {

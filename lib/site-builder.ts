@@ -265,6 +265,7 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   // Sitemaps list a product once per market (/en-int/…, /fr/…): count each product handle once.
   const handles = new Set(sitemap.productUrls.map((u) => u.replace(/[?#].*$/, "").replace(/\/$/, "").split("/").pop()));
   const catalogTotal = Math.max(handles.size, catalog.length);
+  const catalogExpected = handles.size;
   // Category names from the audit, or else from the category pages our crawl read.
   let categoryNames = (audit?.industry?.inventoryCategories ?? []).map((c) => c.category);
   if (categoryNames.length === 0 && limits.categories > 0) categoryNames = await crawledCategoryNames(client.domain);
@@ -369,6 +370,7 @@ export async function buildSite(client: Client): Promise<SiteRow> {
   const doc: SiteDoc = {
     brand: { name, tagline: cut(out.brand?.tagline, 90), logo: brand?.logo ?? null, email: brand?.email ?? null, phone: brand?.phone ?? null, address: brand?.address ?? null },
     catalogTotal,
+    ...(catalogExpected ? { catalogExpected } : {}),
     tokens: { ...brandTokens(template.tokens, accent), heroStyle: heroWide ? template.tokens.heroStyle : "split" },
     pages: dropRangeStats(pages),
     products,

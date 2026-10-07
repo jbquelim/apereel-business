@@ -8,6 +8,7 @@ import { getSiteForClient } from "@/lib/site-builder";
 import { StudioItems } from "./studio-items";
 import { WebsiteStudio } from "./website-studio";
 import { designChoices } from "@/lib/site-design";
+import { isReleased } from "@/lib/site-release";
 import { BillingButton } from "./billing-button";
 import { refreshPaymentsStatus } from "@/lib/connect";
 import { MediaNudger } from "@/components/media-nudger";
@@ -31,7 +32,8 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
 
   let body: React.ReactNode;
   if (client.service === "web-development") {
-    const site = await getSiteForClient(client.id);
+    // Until it passes its checks the client sees "being finished", never a half-built site (lib/site-release).
+    const site = isReleased(client.build) ? await getSiteForClient(client.id) : null;
     // Back from Stripe onboarding (or still pending): re-check the account.
     if (site?.stripe_account_id && site.payments_status !== "active") {
       site.payments_status = await refreshPaymentsStatus(site.id, site.stripe_account_id);
@@ -59,7 +61,10 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
         leads={leads}
       />
     ) : (
-      <p className="mt-12 text-[15px] text-muted">Your site is being built. Check back in a few minutes.</p>
+      <div className="mt-12 max-w-[560px]">
+        <p className="text-[17px] text-ink">Your website is being finished.</p>
+        <p className="mt-3 text-[15px] text-muted">We build it from your own products and check every page before you see it. We&apos;ll email you at {client.email} as soon as it&apos;s ready, usually within the hour.</p>
+      </div>
     );
   } else {
     const items = await listContent(client.id);

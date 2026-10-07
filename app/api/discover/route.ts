@@ -3,6 +3,7 @@ import { neon } from "@neondatabase/serverless";
 import { triggerStage } from "@/lib/growth-trigger";
 import { refreshTrackedStores } from "@/lib/tracked-refresh";
 import { clientsDueThisMonth } from "@/lib/ai-services";
+import { failStaleBuilds } from "@/lib/site-release";
 import { processMediaJobs } from "@/lib/media";
 
 // Snowball discovery: drain the crawl queue by running the audit pipeline in
@@ -66,6 +67,9 @@ export async function GET(request: Request) {
       console.error("Growth Plan restart failed:", o.id, err instanceof Error ? err.message : err),
     );
   }
+
+  // Website builds that stopped without reporting are flagged to John (lib/site-release).
+  await failStaleBuilds(base).catch((err) => console.error("Stale builds:", err instanceof Error ? err.message : err));
 
   // AI services: start this month's content and ads for clients who don't
   // have them yet (each in its own function), and render queued video.
