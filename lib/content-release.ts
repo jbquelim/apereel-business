@@ -6,6 +6,7 @@ import { checkItem, fixItem, type ItemIssue, type QaItem } from "./content-qa";
 import { qaContext } from "./content-context";
 import { setBuild, getBuild } from "./site-release";
 import { emailClient, notifyJohn } from "./notify";
+import { drawable } from "./ad-brand";
 
 // The release gate for a month of content or ads (the website gate's twin,
 // lib/site-release). When the month's items are made: fixes that need no
@@ -86,16 +87,24 @@ export async function releaseMonth(client: Client, base: string): Promise<string
       await sql()`UPDATE content_items SET data = ${JSON.stringify(fixed)}::jsonb, updated_at = now() WHERE id = ${it.id}`;
     }
   }
-  // 2. Checks; one repair for what fails.
-  let failing = items.map((item) => ({ item, issues: checkItem(item, ctx) })).filter((x) => x.issues.length);
+  // Every image item's photo must load and draw (an ad without its photo is broken; a repair can't fix that).
+  const photos = new Map<number, boolean>();
+  for (const it of items) {
+    const frames = it.kind === "carousel" ? ((it.data as { frames?: { image?: string | null }[] }).frames ?? []).map((f) => f.image ?? null) : [it.image];
+    if (!["ad", "post", "carousel"].includes(it.kind)) continue;
+    photos.set(it.id, (await Promise.all(frames.map((u) => drawable(u, 400)))).every(Boolean) && frames.length > 0);
+  }
+  const check = (item: Row) => [...checkItem(item, ctx), ...(photos.get(item.id) === false ? [{ check: "photo", field: "image", detail: "the product photo can't be loaded" }] : [])];
+  // 2. Checks; one repair for what fails (photos aside).
+  let failing = items.map((item) => ({ item, issues: check(item) })).filter((x) => x.issues.length);
   if (failing.length) {
-    const fixed = await repair(client, failing, ctx.facts);
+    const fixed = await repair(client, failing.filter((f) => f.issues.some((x) => x.check !== "photo")), ctx.facts);
     for (const [id, data] of fixed) {
       const it = items.find((x) => x.id === id)!;
       it.data = syncCounts(fixItem(data), ctx.catalogTotal);
       await sql()`UPDATE content_items SET data = ${JSON.stringify(it.data)}::jsonb, updated_at = now() WHERE id = ${id}`;
     }
-    failing = items.map((item) => ({ item, issues: checkItem(item, ctx) })).filter((x) => x.issues.length);
+    failing = items.map((item) => ({ item, issues: check(item) })).filter((x) => x.issues.length);
   }
   // 3. What still fails is held for John; the rest is released.
   for (const { item } of failing) await sql()`UPDATE content_items SET status = 'held', updated_at = now() WHERE id = ${item.id}`;
