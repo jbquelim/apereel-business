@@ -331,7 +331,7 @@ ${RULES}
   const pages: SitePage[] = (["home", "about", "contact"] as const).map((key) => {
     const p = out.pages?.[key] ?? {};
     const sections = (p.sections ?? []).filter((s) => s && typeof s === "object" && "type" in s).map((s) => {
-      if (s.type === "hero") return { ...s, image: heroImage, ctaHref: s.ctaHref || "/products" };
+      if (s.type === "hero") return { ...s, image: heroImage, productSlug: hero?.p.slug ?? null, ctaHref: s.ctaHref || "/products" };
       if (s.type === "story") return { ...s, image: storyImage };
       if (s.type === "trust") return { type: "trust" as const, items: trust };
       if (s.type === "contact") return { ...s, quoteForm: b2b || tier === "grow" };

@@ -169,7 +169,7 @@ function home(t: RenderTarget, s: Slots): string {
   const large = s.editorial.filter((u) => isLarge(u));
   const heroCover = s.hero.video ?? large[0] ?? null;
   const top = s.categories.filter((c) => !c.parent && c.count > 0).sort(byRank);
-  const lead = s.featured.find((p) => p.image);
+  const lead = s.hero.product;
   const panel = s.hero.video
     ? `<video src="${esc(s.hero.video)}" autoplay muted loop playsinline></video>`
     : heroCover

@@ -5,7 +5,7 @@ import { upgradeImages } from "./image-upgrade";
 import { platformCatalog, type PlatformCatalog } from "./platform-catalog";
 import type { SiteDoc } from "./site-types";
 import { applyGroups } from "./category-groups";
-import { dropRangeStats, syncCount } from "./site-qa";
+import { dropRangeStats, syncCategoryCounts, syncCount } from "./site-qa";
 
 // Imports a business's whole catalog into a generated site, categorised the
 // way the business itself categorises it. Category pages list their products,
@@ -229,9 +229,11 @@ async function assemble(site: { id: string; doc: SiteDoc }, domain: string): Pro
     .sort((a, b) => (a.parent ? 1 : 0) - (b.parent ? 1 : 0) || b.count - a.count);
 
   const featured = rows.filter((r) => r.featured);
+  const shopCategories = applyGroups(categories, site.doc.categoryGroups);
   const doc: SiteDoc = {
     ...site.doc,
-    categories: applyGroups(categories, site.doc.categoryGroups),
+    pages: syncCategoryCounts(site.doc.pages, shopCategories),
+    categories: shopCategories,
     // The document keeps only what the home page needs; the catalog lives in site_products.
     products: (featured.length ? featured : rows.filter((r) => r.image).slice(0, 24)).map((r) => ({
       slug: r.slug, title: r.title, price: r.price, currency: r.currency, image: r.image, description: r.description,
@@ -321,13 +323,14 @@ async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: Platfor
     });
   const featured = list.filter((r) => r.featured);
   // The copy was written before the import; its product count follows what the shop lists.
+  const shopCategories = applyGroups(categories, site.doc.categoryGroups);
   const was = site.doc.catalogTotal;
   const doc: SiteDoc = {
     ...site.doc,
-    pages: dropRangeStats(syncCount(site.doc.pages, was, list.length)),
+    pages: syncCategoryCounts(dropRangeStats(syncCount(site.doc.pages, was, list.length)), shopCategories),
     brand: syncCount(site.doc.brand, was, list.length),
     ...(site.doc.productPromise ? { productPromise: syncCount(site.doc.productPromise, was, list.length) } : {}),
-    categories: applyGroups(categories, site.doc.categoryGroups),
+    categories: shopCategories,
     products: (featured.length ? featured : list.filter((r) => r.image).slice(0, 24)).map((r) => ({
       slug: r.slug, title: r.title, price: r.price, currency: r.currency, image: r.image, description: r.description,
       category: r.category, sourceUrl: r.source_url, featured: true, ...(r.specs ? { specs: r.specs } : {}),

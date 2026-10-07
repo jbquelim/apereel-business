@@ -21,7 +21,8 @@ type Of<T extends Section["type"]> = Extract<Section, { type: T }>;
 export type Slots = {
   doc: SiteDoc;
   brand: SiteDoc["brand"];
-  hero: { eyebrow: string; heading: string; sub: string; cta: string; image: string | null; video: string | null };
+  /** `product` is the one in the hero photo (null when unknown): label the photo with it, never another. */
+  hero: { eyebrow: string; heading: string; sub: string; cta: string; image: string | null; video: string | null; product: SiteProduct | null };
   highlights: { title: string; body: string }[];
   stats: { value: string; label: string }[];
   story: { heading: string; body: string; image: string | null } | null;
@@ -65,6 +66,7 @@ export function slots(doc: SiteDoc): Slots {
       cta: hero?.ctaLabel ?? "Discover the collection",
       image: hero?.image ?? featured[0]?.image ?? null,
       video: hero?.video ?? null,
+      product: (hero?.productSlug ? doc.products.find((p) => p.slug === hero.productSlug) : null) ?? (hero?.image ? doc.products.find((p) => p.image === hero.image) : null) ?? (hero?.image ? null : featured.find((p) => p.image)) ?? null,
     },
     highlights: (first(all, "features")?.items ?? []).slice(0, 3),
     stats: first(all, "stats")?.items ?? [],

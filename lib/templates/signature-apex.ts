@@ -141,7 +141,7 @@ function home(t: RenderTarget, s: Slots): string {
   const large = s.editorial.filter((u) => isLarge(u));
   const cover = s.hero.video ?? large[0] ?? null;
   const top = s.categories.filter((c) => !c.parent && c.count > 0 && c.image).sort(byRank);
-  const lead = s.featured.find((p) => p.image);
+  const lead = s.hero.product ?? s.featured.find((p) => p.image);
   const hero = cover
     ? `<section class="hero"><div class="bg">${s.hero.video ? `<video src="${esc(s.hero.video)}" autoplay muted loop playsinline></video>` : img(cover, s.hero.heading, "", true)}</div><div class="w txt" data-r>${s.hero.eyebrow ? `<p class="tag">${esc(s.hero.eyebrow)}</p>` : ""}<h1 class="display">${esc(s.hero.heading)}</h1>${s.hero.sub ? `<p class="lead">${esc(s.hero.sub)}</p>` : ""}<div class="acts"><a class="btn" href="${href(t, "/products")}">${esc(s.hero.cta)}</a><a class="btn ghost" href="${href(t, "/contact")}">Contact</a></div></div><span class="scroll">Scroll</span></section>`
     : `<section class="hero plain"><div class="w grid"><div data-r>${s.hero.eyebrow ? `<p class="tag">${esc(s.hero.eyebrow)}</p>` : ""}<h1 class="display">${esc(s.hero.heading)}</h1>${s.hero.sub ? `<p class="lead">${esc(s.hero.sub)}</p>` : ""}<div class="acts"><a class="btn" href="${href(t, "/products")}">${esc(s.hero.cta)}</a><a class="btn ghost" href="${href(t, "/contact")}">Contact</a></div></div>${lead || s.hero.image ? `<div class="frame">${img(s.hero.image ?? lead?.image, s.hero.heading, "", true)}</div>` : ""}</div></section>`;

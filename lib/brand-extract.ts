@@ -87,16 +87,51 @@ function accentFrom(css: string): string | null {
   return top && top[1] >= 2 ? top[0] : null;
 }
 
+/** An <img>'s real address: lazy-loading attributes first (src is often a placeholder then). */
+function imgSrc(tag: string): string | null {
+  for (const attr of ["data-src", "data-lazy-src", "nitro-lazy-src", "lazy-src", "src"]) {
+    const v = tag.match(new RegExp(`\\s${attr}=["']([^"']+)["']`, "i"))?.[1];
+    if (v && !/^data:/.test(v)) return v;
+  }
+  return null;
+}
+
+/**
+ * A logo drawn inline (an <svg> in the header's logo or home link), as a data
+ * URL. Only a self-contained drawing with visible colour: no scripts or
+ * outside references, and not white-only (it would vanish on a light header).
+ */
+function inlineSvgLogo(header: string): string | null {
+  const link = header.match(/<a\b[^>]*(?:class=["'][^"']*logo[^"']*["']|href=["']\/["'])[^>]*>([\s\S]*?)<\/a>/i)?.[1];
+  const svg = link?.match(/<svg\b[\s\S]*?<\/svg>/i)?.[0];
+  if (!svg || svg.length > 60_000 || /<script|<foreignObject|(?:xlink:)?href=["']https?:/i.test(svg)) return null;
+  const paints = [...svg.matchAll(/(?:fill|stroke)=["']([^"']+)["']/gi)].map((m) => m[1].toLowerCase());
+  const visible = paints.filter((c) => !/^(none|transparent|#fff(?:fff)?|white|url\()/.test(c));
+  if (!visible.length && !/currentColor/i.test(svg)) return null;
+  const withNs = /xmlns=/.test(svg) ? svg : svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  return `data:image/svg+xml;base64,${Buffer.from(withNs).toString("base64")}`;
+}
+
 function logoFrom(html: string, base: string): string | null {
+  // The header first: logos further down are often press or partner logos.
+  const header = html.match(/<header\b[\s\S]*?<\/header>/i)?.[0] ?? "";
+  for (const m of header.matchAll(/<img\b[^>]*>/gi)) {
+    if (!/logo/i.test(m[0])) continue;
+    const src = imgSrc(m[0]);
+    if (src) return abs(src, base);
+  }
+  const drawn = inlineSvgLogo(header);
+  if (drawn) return drawn;
   const head = html.slice(0, 60_000);
   for (const m of head.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0];
     if (!/logo/i.test(tag)) continue;
-    const src = tag.match(/\s(?:data-src|src)=["']([^"']+)["']/i)?.[1];
-    if (src && !/^data:/.test(src)) return abs(src, base);
+    const src = imgSrc(tag);
+    if (src) return abs(src, base);
   }
   const ld = html.match(/"logo"\s*:\s*(?:\{[^}]*"url"\s*:\s*)?"([^"]+)"/i)?.[1];
-  return ld ? abs(ld, base) : null;
+  // Only an image address: "logo":"on" is a theme setting, not a logo.
+  return ld && /^(?:https?:)?\/\/|^\/|\.(?:png|jpe?g|svg|webp|gif|avif)(?:\?|$)/i.test(ld) ? abs(ld, base) : null;
 }
 
 function addressFrom(html: string): string | null {

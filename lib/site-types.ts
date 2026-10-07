@@ -16,7 +16,7 @@ export type SiteTokens = {
 };
 
 export type Section =
-  | { type: "hero"; eyebrow?: string; heading: string; subheading?: string; ctaLabel?: string; ctaHref?: string; image?: string | null; video?: string | null }
+  | { type: "hero"; eyebrow?: string; heading: string; subheading?: string; ctaLabel?: string; ctaHref?: string; image?: string | null; video?: string | null; /** The product in the hero photo, for its label. */ productSlug?: string | null }
   | { type: "features"; heading: string; items: { title: string; body: string }[] }
   | { type: "productGrid"; heading: string; products: string[] | "featured"; limit?: number }
   | { type: "categoryGrid"; heading: string; categories: string[] }

@@ -117,6 +117,41 @@ function isTotal(label: string, categoryNames: string[]): boolean {
 
 const RANGE = /\$\s?\d[\d,.]*\s*(?:to|-|–|—)\s*\$\s?\d/i;
 
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Category names with their shop counts (the larger when two share a name), longest first. */
+function categoryCounts(categories: { name: string; count?: number; parent?: string | null }[]): [string, number][] {
+  const best = new Map<string, number>();
+  for (const c of categories) {
+    const n = c.name.toLowerCase().replace(/s$/, "");
+    if (n.length > 2 && (c.count ?? 0) > (best.get(n) ?? 0)) best.set(n, c.count ?? 0);
+  }
+  return [...best].sort((a, b) => b[0].length - a[0].length);
+}
+
+/**
+ * Sets a category's count in the copy to what the shop lists ("532 coffees" →
+ * "196 coffees" when the Coffee category holds 196): the writer only had the
+ * audit's estimate.
+ */
+export function syncCategoryCounts(pages: SitePage[], categories: { name: string; count?: number; parent?: string | null }[]): SitePage[] {
+  let json = JSON.stringify(pages);
+  for (const [name, count] of categoryCounts(categories)) {
+    if (count < 1) continue;
+    const re = new RegExp(`(?<![\\w$.,])(\\d{1,3}(?:,\\d{3})+|\\d+)(\\+?)((?:-product)?\\s+${esc(name)}(?:s|es)?\\b)`, "gi");
+    json = json.replace(re, (all, num: string, plus: string, rest: string) => {
+      const n = Number(num.replace(/,/g, ""));
+      return n > 10 && Math.abs(n - count) / count > 0.1 ? `${count.toLocaleString("en-US")}${rest}` : all;
+    });
+    // A stat counting one category: "532" / "coffee products".
+    json = json.replace(new RegExp(`\\{"label":"([^"]*\\b${esc(name)}(?:s|es)?\\b[^"]*)","value":"(\\d{1,3}(?:,\\d{3})+|\\d+)\\+?"\\}`, "gi"), (all, label: string, value: string) => {
+      const n = Number(value.replace(/,/g, ""));
+      return /\b(across|total|all)\b/i.test(label) || n <= 10 || Math.abs(n - count) / count <= 0.1 ? all : `{"label":"${label}","value":"${count.toLocaleString("en-US")}"}`;
+    });
+  }
+  return JSON.parse(json) as SitePage[];
+}
+
 /** Takes price ranges out of what the writer is given, so they never reach the copy. */
 export function scrubRanges(text: string): string {
   return text.replace(new RegExp(`(?:from |spans? |ranging from |priced )?${RANGE.source}[\\d,.]*`, "gi"), "across a wide price range");

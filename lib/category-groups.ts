@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import type { SiteDoc } from "./site-types";
 import { callClaude, parseJson } from "./ai";
 import { analysisBrief, siteAnalysis } from "./site-analysis";
+import { syncCategoryCounts } from "./site-qa";
 
 // Main categories: a store with dozens of top-level categories gets a few
 // flagship groups above them (highest-value first, per the analysis), so
@@ -13,6 +14,8 @@ type Category = SiteDoc["categories"][number];
 type Group = NonNullable<SiteDoc["categoryGroups"]>[number];
 
 const MIN_TOP_LEVEL = 9;
+/** Regroup when a re-import leaves this many top-level categories outside every group. */
+const REGROUP_LOOSE = 5;
 
 function sql() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
@@ -57,14 +60,17 @@ const slugify = (s: string) => s.toLowerCase().replace(/&/g, " and ").replace(/[
  */
 export async function groupCategories(site: { id: string; doc: SiteDoc }, domain: string, clientId: string | null): Promise<number> {
   const doc = site.doc;
-  if (doc.categoryGroups?.length) return doc.categoryGroups.length;
-  const top = doc.categories.filter((c) => !c.parent);
+  // A catalog that grew (Onyx: 248 → 953 products) brings categories the groups never saw: group again.
+  const loose = doc.categories.filter((c) => !c.parent && c.rank == null).length;
+  if (doc.categoryGroups?.length && loose < REGROUP_LOOSE) return doc.categoryGroups.length;
+  const cats = applyGroups(doc.categories, undefined);
+  const top = cats.filter((c) => !c.parent);
   if (top.length < MIN_TOP_LEVEL) return 0;
 
   // Average price per top-level category (its whole subtree), for revenue weight.
   const rootOf = new Map<string, string>();
-  const parentOf = new Map(doc.categories.map((c) => [c.slug, c.parent ?? null]));
-  for (const c of doc.categories) {
+  const parentOf = new Map(cats.map((c) => [c.slug, c.parent ?? null]));
+  for (const c of cats) {
     let r = c.slug;
     for (let i = 0; i < 10 && parentOf.get(r); i++) r = parentOf.get(r)!;
     rootOf.set(c.slug, r);
@@ -104,7 +110,7 @@ Return ONLY JSON: [{ "name": "...", "description": "...", "members": ["slug", ..
   });
   const raw = parseJson<{ name?: string; description?: string; members?: string[] }[]>(text);
   if (!Array.isArray(raw)) throw new Error("Category groups: no JSON");
-  const taken = new Set(doc.categories.map((c) => c.slug));
+  const taken = new Set(cats.map((c) => c.slug));
   const groups: Group[] = [];
   for (const g of raw) {
     const name = (g.name ?? "").trim().slice(0, 40);
@@ -116,7 +122,9 @@ Return ONLY JSON: [{ "name": "...", "description": "...", "members": ["slug", ..
     groups.push({ slug, name, description: (g.description ?? "").trim().slice(0, 160), members });
   }
   if (groups.length < 2) throw new Error("Category groups: too few groups");
-  const next: SiteDoc = { ...doc, categoryGroups: groups, categories: applyGroups(doc.categories, groups) };
+  const categories = applyGroups(cats, groups);
+  // Counts in the copy follow the new groups.
+  const next: SiteDoc = { ...doc, categoryGroups: groups, categories, pages: syncCategoryCounts(doc.pages, categories) };
   await sql()`UPDATE sites SET doc = ${JSON.stringify(next)}::jsonb, updated_at = now() WHERE id = ${site.id}`;
   return groups.length;
 }
