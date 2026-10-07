@@ -70,14 +70,15 @@ await Promise.all(
     if (s.minProducts != null && products < s.minProducts) problems.push(`feed gave ${products} products, expected at least ${s.minProducts}`);
     // A feed well short of the store's own sitemap is how the Shopify paging bug showed (248 of 952).
     if (read && listed >= 20 && products < listed * 0.9) problems.push(`feed gave ${products} products but the sitemap lists ${listed}`);
-    // No feed: the build crawls product pages, so a sample of them must read (title and price).
+    // No feed: the build crawls product pages, so a sample of them must read.
     let crawl = "";
     if (!read && listed > 0) {
       const sample = sitemap.productUrls.filter((_, i) => i % Math.max(1, Math.floor(sitemap.productUrls.length / 6)) === 0).slice(0, 6);
       const pages = await crawlList(sample.map((url) => ({ url, kind: "product" as const })), Date.now() + 60_000);
-      const good = pages.filter((p) => !p.blocked && p.title && p.price != null).length;
+      // A title is enough: quote-only businesses (Etlin-Daniels, a distributor) show no prices.
+      const good = pages.filter((p) => !p.blocked && p.title).length;
       crawl = ` · crawl: ${good} of ${sample.length} product pages read`;
-      if (good < Math.ceil(sample.length * 0.6)) problems.push(`only ${good} of ${sample.length} sample product pages read (title and price): the shop would come out empty`);
+      if (good < Math.ceil(sample.length * 0.6)) problems.push(`only ${good} of ${sample.length} sample product pages read: the shop would come out empty`);
     }
     if (s.logo && !brand?.logo) problems.push("no logo found");
     if (brand?.logo && !/^data:image\/svg|^https?:\/\/.+/.test(brand.logo)) problems.push(`logo isn't an address: ${brand.logo.slice(0, 60)}`);

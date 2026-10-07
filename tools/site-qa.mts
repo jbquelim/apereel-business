@@ -119,7 +119,7 @@ async function rooter(): Promise<Fixture> {
 }
 
 /** Shop wording that must not appear on a services site. */
-const SHOP_WORDS = /\b(cart|checkout|shop|shopping|products?|add to bag|in stock|out of stock|sku|buy now|collections?|pieces|items?|best sellers|most loved|the edit|the range|browse)\b/i;
+const SHOP_WORDS = /\b(cart|checkout|shop|shopping|products?|add to bag|in stock|out of stock|sku|buy now|collections?|pieces|items?|best sellers|most loved|the edit|the range|browse|price on request|also like|more like this)\b/i;
 
 /** Runs in the page: what's wrong with the layout at this width. */
 const LAYOUT = `(() => {

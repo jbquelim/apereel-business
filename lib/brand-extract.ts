@@ -113,22 +113,30 @@ function inlineSvgLogo(header: string): string | null {
 }
 
 function logoFrom(html: string, base: string): string | null {
-  // The header first: logos further down are often press or partner logos.
-  const header = html.match(/<header\b[\s\S]*?<\/header>/i)?.[0] ?? "";
-  for (const m of header.matchAll(/<img\b[^>]*>/gi)) {
-    if (!/logo/i.test(m[0])) continue;
-    const src = imgSrc(m[0]);
-    if (src) return abs(src, base);
-  }
-  const drawn = inlineSvgLogo(header);
-  if (drawn) return drawn;
-  const head = html.slice(0, 60_000);
-  for (const m of head.matchAll(/<img\b[^>]*>/gi)) {
+  const page = html.slice(0, 1_500_000);
+  const headerAt = page.search(/<header\b/i);
+  const headerEnd = headerAt >= 0 ? page.indexOf("</header>", headerAt) : -1;
+  const header = headerAt >= 0 && headerEnd > 0 ? page.slice(headerAt, headerEnd) : "";
+  // The business's name as letters ("mrrooter", "onyxcoffeelab"), to tell its logo from a parent brand's or the press's.
+  const stem = new URL(base).hostname.replace(/^www\./, "").split(".")[0].replace(/[^a-z]/gi, "").toLowerCase();
+  const scored: { src: string; score: number; named: boolean }[] = [];
+  for (const m of page.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0];
     if (!/logo/i.test(tag)) continue;
     const src = imgSrc(tag);
-    if (src) return abs(src, base);
+    if (!src) continue;
+    const inHeader = !!header && m.index! >= headerAt && m.index! < headerEnd;
+    const named = `${tag.match(/\salt=["']([^"']*)/i)?.[1] ?? ""} ${src}`.toLowerCase().replace(/[^a-z]/g, "").includes(stem);
+    if (!inHeader && !named) continue; // press, partner and parent-brand logos further down
+    // A white logo is made for a dark header: on a light page it disappears.
+    const white = /white|light|inverse|reverse|knockout|negative/i.test(src);
+    scored.push({ src, named, score: (inHeader ? 2 : 0) + (named ? 3 : 0) + (/colou?r/i.test(src) ? 1 : 0) - (white ? 4 : 0) });
   }
+  const best = [...scored].sort((a, b) => b.score - a.score)[0];
+  if (best?.named && best.score >= 3) return abs(best.src, base);
+  const drawn = inlineSvgLogo(header);
+  if (drawn) return drawn;
+  if (best && best.score >= 0) return abs(best.src, base);
   const ld = html.match(/"logo"\s*:\s*(?:\{[^}]*"url"\s*:\s*)?"([^"]+)"/i)?.[1];
   // Only an image address: "logo":"on" is a theme setting, not a logo.
   return ld && /^(?:https?:)?\/\/|^\/|\.(?:png|jpe?g|svg|webp|gif|avif)(?:\?|$)/i.test(ld) ? abs(ld, base) : null;
