@@ -243,7 +243,7 @@ function listing(t: RenderTarget, s: Slots, categorySlug: string | null, query: 
         .join("")}</div>`
     : '<div style="height:26px"></div>';
   const body = `<section class="lh"><div class="w">${crumbs}<h1 class="display">${esc(title)}</h1>${st.cat?.description && !st.q ? `<p class="lead">${esc(st.cat.description)}</p>` : ""}
-<form class="search" role="search" method="get" action="${t.base}${st.path}"><input name="q" value="${esc(st.q)}" placeholder="Search ${st.cat ? esc(st.cat.name.toLowerCase()) : "by name or part number"}" aria-label="Search"><button class="pill dark" type="submit">Search</button></form>
+<form class="search" role="search" method="get" action="${t.base}${st.path}"><input name="q" value="${esc(st.q)}" placeholder="Search ${st.cat ? esc(st.cat.name.toLowerCase()) : "products"}" aria-label="Search"><button class="pill dark" type="submit">Search</button></form>
 ${chips}</div></section>
 ${catCards ? `<section class="w">${catCards}</section>` : ""}
 <div class="w"><p class="count" style="margin:0 0 22px">${st.total.toLocaleString("en-US")} ${st.q ? "matches" : st.cat ? `products in ${esc(shortName(st.cat.name).toLowerCase())}` : "products"}</p></div>
