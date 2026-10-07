@@ -30,6 +30,8 @@ export type BuildState = {
   notified?: boolean;
   /** John released a held site by hand. */
   approved?: boolean;
+  /** Content and ads: the month this state is for ("2026-10"). */
+  batch?: string;
   at?: string;
 };
 
@@ -174,11 +176,11 @@ export async function approveRelease(client: Client, base: string) {
 export async function failStaleBuilds(base: string): Promise<number> {
   const stale = (await sql()`
     UPDATE clients SET build = build || jsonb_build_object('status', 'failed', 'error', 'no progress for 25 minutes (a step stopped without reporting)', 'at', now())
-    WHERE service = 'web-development' AND build->>'status' = 'building' AND (build->>'at')::timestamptz < now() - interval '25 minutes'
+    WHERE build->>'status' = 'building' AND (build->>'at')::timestamptz < now() - interval '25 minutes'
     RETURNING domain, build->>'stage' AS stage
   `) as { domain: string; stage: string }[];
   for (const s of stale) {
-    await notifyJohn(`Website build stopped: ${s.domain}`, `The build for ${s.domain} made no progress for 25 minutes (last step: ${s.stage}). The client sees "being finished". Run "Build the site" again on ${base}/admin/clients`);
+    await notifyJohn(`Run stopped: ${s.domain}`, `The run for ${s.domain} made no progress for 25 minutes (last step: ${s.stage}). The client sees "being finished". Run it again on ${base}/admin/clients`);
   }
   return stale.length;
 }

@@ -67,19 +67,26 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
       </div>
     );
   } else {
-    const items = await listContent(client.id);
-    const batch = items[0]?.batch ?? null;
+    // Only a released month is shown (lib/content-release); held items never are. A month still being
+    // made or checked stays hidden, and last month's stays up meanwhile.
+    const items = (await listContent(client.id)).filter((i) => i.status !== "held");
+    const batches = [...new Set(items.map((i) => i.batch))];
+    const preparing = !!client.build?.batch && client.build.batch === batches[0] && client.build.status !== "ready";
+    const batch = (preparing ? batches[1] : batches[0]) ?? null;
     const current = items.filter((i) => i.batch === batch);
     const jobs = await jobsForItems(current.map((i) => i.id));
     body = current.length ? (
+      <>
+      {preparing && <p className="mt-10 text-[15px] text-muted">This month&apos;s batch is being made and checked. We&apos;ll email you when it&apos;s ready; last month&apos;s is below.</p>}
       <StudioItems
         token={token}
         items={current}
         left={left.left}
         media={Object.fromEntries([...jobs].map(([id, list]) => [id, list.map((j) => ({ status: j.status, url: j.output_url, aspect: j.brief.aspect }))]))}
       />
+      </>
     ) : (
-      <p className="mt-12 text-[15px] text-muted">This month&apos;s batch is being prepared. Check back in a few minutes.</p>
+      <p className="mt-12 text-[15px] text-muted">This month&apos;s batch is being made and checked before you see it. We&apos;ll email you at {client.email} as soon as it&apos;s ready.</p>
     );
   }
 

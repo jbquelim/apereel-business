@@ -78,7 +78,22 @@ export default async function ClientsPage() {
                           </>
                         ) : "Not built"
                       ) : (
-                        c.items
+                        <>
+                          {c.items}
+                          {c.build?.batch && (
+                            <span className={`block text-[11px] ${c.build.status === "ready" && !c.held ? "text-muted" : "text-signal"}`}>
+                              {c.build.status === "ready" ? `${c.build.batch} released${c.held ? `, ${c.held} held for you` : ""}` : c.build.status === "building" ? `${c.build.batch}: making ${c.build.stage}${c.build.attempts ? ` (try ${c.build.attempts + 1})` : ""}` : `${c.build.batch} failed at ${c.build.stage}: ${c.build.error ?? ""}`}
+                            </span>
+                          )}
+                          {!!c.build?.issues?.length && (
+                            <details className="mt-1 text-[11px]">
+                              <summary className="cursor-pointer text-signal">What was held</summary>
+                              <ul className="mt-1 max-w-[340px] space-y-1 whitespace-normal font-sans text-ink/80">
+                                {c.build.issues.map((q, i) => <li key={i}><span className="font-mono text-muted">{q.page} · {q.check}</span> {q.detail}</li>)}
+                              </ul>
+                            </details>
+                          )}
+                        </>
                       )}
                       {c.service === "web-development" && c.build && (
                         <span className={`block text-[11px] ${c.build.status === "ready" ? "text-muted" : "text-signal"}`}>
@@ -93,6 +108,9 @@ export default async function ClientsPage() {
                       <GenerateButton id={c.id} label={c.status === "requested" ? "Activate (no charge) and run" : c.service === "web-development" ? "Build the site" : "Generate this month"} />
                       {c.service === "web-development" && c.status === "active" && (
                         <GenerateButton id={c.id} label="Fresh analysis + rebuild (~$0.50)" body={{ fresh: true }} />
+                      )}
+                      {c.service !== "web-development" && c.held > 0 && (
+                        <GenerateButton id={c.id} label={`Release ${c.held} held item${c.held > 1 ? "s" : ""}`} body={{ releaseHeld: true }} />
                       )}
                       {c.service === "web-development" && (c.build?.status === "held" || c.build?.status === "failed") && c.site_slug && (
                         <GenerateButton id={c.id} label="Release to client" body={{ approve: true }} />

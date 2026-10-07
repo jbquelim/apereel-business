@@ -43,9 +43,10 @@ export async function createClient(c: { domain: string; name: string | null; ema
   return rows[0];
 }
 
-export async function listClients(): Promise<(Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null })[]> {
+export async function listClients(): Promise<(Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null; held: number })[]> {
   return (await sql()`
     SELECT c.*, (SELECT slug FROM sites s WHERE s.client_id = c.id) AS site_slug,
+      (SELECT count(*)::int FROM content_items h WHERE h.client_id = c.id AND h.status = 'held') AS held,
       (SELECT qa FROM sites s WHERE s.client_id = c.id) AS site_qa,
       (SELECT id FROM sites s WHERE s.client_id = c.id) AS site_id,
       (SELECT doc->>'design' FROM sites s WHERE s.client_id = c.id) AS site_design,
@@ -54,7 +55,7 @@ export async function listClients(): Promise<(Client & { used: number; items: nu
       (SELECT count(*)::int FROM content_items i WHERE i.client_id = c.id) AS items,
       (SELECT COALESCE(sum(cost_usd), 0)::float FROM ai_requests r WHERE r.client_id = c.id) AS cost
     FROM clients c ORDER BY c.created_at DESC
-  `) as (Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null })[];
+  `) as (Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null; held: number })[];
 }
 
 export async function getClient(id: string): Promise<Client | null> {

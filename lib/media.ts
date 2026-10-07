@@ -1,3 +1,4 @@
+import { notifyJohn } from "./notify";
 import { neon } from "@neondatabase/serverless";
 import { put } from "@vercel/blob";
 import { imageSize } from "./image-size";
@@ -196,10 +197,10 @@ export async function processMediaJobs(budgetMs: number): Promise<{ submitted: n
           // Not the job's fault: back in the queue, paused until credit is topped up.
           await sql()`UPDATE media_jobs SET status = 'queued', provider_request_id = NULL, error = ${`Waiting for Higgsfield credit: ${reason}`.slice(0, 500)}, updated_at = now() WHERE id = ${job.id}`;
         } else {
-          await sql()`UPDATE media_jobs SET status = 'failed', error = ${`Higgsfield: ${reason}`.slice(0, 500)}, updated_at = now() WHERE id = ${job.id}`;
+          await failOrRetry(job, `Higgsfield: ${reason}`);
         }
       } else if (Date.now() - new Date(job.submitted_at).getTime() > 6 * 3_600_000) {
-        await sql()`UPDATE media_jobs SET status = 'failed', error = ${`Higgsfield still "${status}" after 6 hours`}, updated_at = now() WHERE id = ${job.id}`;
+        await failOrRetry(job, `Higgsfield still "${status}" after 6 hours`);
       }
     } catch (err) {
       console.error("Media status check failed:", job.id, err instanceof Error ? err.message : err);
@@ -267,4 +268,16 @@ async function attach(job: MediaJob, url: string) {
     if (story) story.image = url;
   }
   await sql()`UPDATE sites SET doc = ${JSON.stringify(doc)}::jsonb, updated_at = now() WHERE id = ${job.site_id}`;
+}
+
+/** A render that failed is tried once more; a second failure is reported to John (the client sees "we'll look into it"). */
+async function failOrRetry(job: { id: number; client_id: string | null; kind: string }, reason: string) {
+  const rows = (await sql()`
+    UPDATE media_jobs SET status = CASE WHEN retries < 1 THEN 'queued' ELSE 'failed' END, retries = retries + 1,
+      provider_request_id = NULL, error = ${reason.slice(0, 500)}, updated_at = now()
+    WHERE id = ${job.id} RETURNING status
+  `) as { status: string }[];
+  if (rows[0]?.status !== "failed") return;
+  const who = job.client_id ? ((await sql()`SELECT domain FROM clients WHERE id = ${job.client_id}`) as { domain: string }[])[0]?.domain : null;
+  await notifyJohn(`Render failed twice: ${who ?? "a site"}`, `Media job ${job.id} (${job.kind}${who ? ` for ${who}` : ""}) failed twice. Last error: ${reason}`);
 }

@@ -394,6 +394,8 @@ await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS fresh_audit BOOLEAN
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS analysis_after TIMESTAMPTZ`;
 // A website build's progress and release state (lib/site-release): building, ready, held or failed.
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS build JSONB`;
+// A failed render is tried once more before John is told (lib/media).
+await sql`ALTER TABLE media_jobs ADD COLUMN IF NOT EXISTS retries INT NOT NULL DEFAULT 0`;
 
 // Service tier prices, edited by John at /admin/pricing. A tier without a
 // row (or with a null price) is unpriced.

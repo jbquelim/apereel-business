@@ -11,8 +11,8 @@ export type QaIssue = { page: string; check: string; detail: string; level?: "fi
 
 /** Words from our analysis that must never reach a shopper. */
 // Includes the AI repeating its own instructions ("a plain guide, no price claims").
-const INTERNAL = /\b(no price claims?|price claims?|no claims|as instructed|the brief|average price|highest[- ]value|revenue|margins?|our analysis|the analysis|growth plan|priorit(?:y|ies|ised|ized)|competitors?|lever|SEO|conversion rate|search volume|crawl(?:er|ed)?|apereel)\b/i;
-const PLACEHOLDER = /\b(lorem ipsum|TODO|TBD|undefined|null|NaN|\[object Object\])\b|\{\{|\}\}|\.\.\.\s*$/;
+export const INTERNAL = /\b(no price claims?|price claims?|no claims|as instructed|the brief|average price|highest[- ]value|revenue|margins?|our analysis|the analysis|growth plan|priorit(?:y|ies|ised|ized)|competitors?|lever|SEO|conversion rate|search volume|crawl(?:er|ed)?|apereel)\b/i;
+export const PLACEHOLDER = /\b(lorem ipsum|TODO|TBD|undefined|null|NaN|\[object Object\])\b|\{\{|\}\}|\.\.\.\s*$/;
 const COUNT = /\b(\d{1,3}(?:,\d{3})+|\d{3,})\+?\s+(?:products|parts|items|pieces|SKUs|lamp and chandelier parts|[a-z]+ parts)\b/gi;
 
 /** Visible text of an HTML page (no scripts, styles, tags or the preview bar). */

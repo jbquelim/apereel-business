@@ -9,6 +9,7 @@ import { ensureSiteAnalysis } from "./site-analysis";
 import { groupCategories } from "./category-groups";
 import { MAX_ATTEMPTS, getBuild, releaseGate, setBuild } from "./site-release";
 import { notifyJohn } from "./notify";
+import { releaseMonth } from "./content-release";
 import { buildFacets } from "./facets";
 import { expandGuides, writeAnalysisPages } from "./site-pages";
 
@@ -39,13 +40,16 @@ export async function releaseRun(clientId: string) {
  * function call so every step gets the full time limit.
  */
 export async function runService(client: Client, stage: MonthStage | undefined, base: string): Promise<{ summary: string; next: MonthStage | null }> {
+  // Content and ads: the month's items, then the release gate (lib/content-release): checked, repaired or held, then released.
   if (client.service === "premium-creative") {
     const step = stage ?? "posts";
-    return { summary: await generateMonth(client, step), next: NEXT_STAGE[step] };
+    const summary = await generateMonth(client, step);
+    const next = NEXT_STAGE[step];
+    return next ? { summary, next } : { summary: `${summary}; ${await releaseMonth(client, base)}`, next: null };
   }
   if (client.service === "advertising") {
     const r = await generateAdsMonth(client);
-    return { summary: `${r.statics} static ads, ${r.carousels} carousels, ${r.animated} animated, ${r.videos} video ads`, next: null };
+    return { summary: `${r.statics} static ads, ${r.carousels} carousels, ${r.animated} animated, ${r.videos} video ads; ${await releaseMonth(client, base)}`, next: null };
   }
   // Website: the $30 analysis first (internal, never sent), then the build
   // that follows it, then catalog import steps until every product is on the
@@ -115,27 +119,29 @@ export async function clientsDueThisMonth(limit: number): Promise<Client[]> {
     SELECT c.* FROM clients c
     WHERE c.status = 'active' AND c.service IN ('premium-creative', 'advertising')
       AND NOT EXISTS (SELECT 1 FROM content_items i WHERE i.client_id = c.id AND i.batch = ${batch})
+      -- A month that failed and was reported to John is his to re-run, not the cron's.
+      AND NOT (coalesce(c.build->>'batch', '') = ${batch} AND c.build->>'status' = 'failed')
     ORDER BY c.created_at LIMIT ${limit}
   `) as Client[];
 }
 
 /** Runs a step, then starts the next one or ends the run (lock released, renders started). */
 export async function runAndContinue(client: Client, step: MonthStage | undefined, base: string) {
-  const website = client.service === "web-development";
-  // A website build records each step (lib/site-release); a new run starts its repairs afresh.
-  const stageName: MonthStage = step ?? "analysis";
-  if (website) await setBuild(client.id, step ? { status: "building", stage: stageName } : { status: "building", stage: stageName, attempts: 0, repairs: [], issues: [], error: null }).catch(() => null);
+  // Every run records each step (lib/site-release); a new run starts afresh. Content and ads note the month too.
+  const stageName: MonthStage = step ?? (client.service === "web-development" ? "analysis" : client.service === "advertising" ? "ads" : "posts");
+  const batch = client.service === "web-development" ? {} : { batch: new Date().toISOString().slice(0, 7) };
+  await setBuild(client.id, step ? { status: "building", stage: stageName, ...batch } : { status: "building", stage: stageName, attempts: 0, repairs: [], issues: [], error: null, ...batch }).catch(() => null);
   let next: MonthStage | null = null;
   try {
     const r = await runService(client, step, base);
     next = r.next;
     console.log(`AI service for ${client.domain}${step ? ` (${step})` : ""}: ${r.summary}`);
-    if (website) await setBuild(client.id, { attempts: 0, error: null }).catch(() => null);
+    await setBuild(client.id, { attempts: 0, error: null }).catch(() => null);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`AI service failed for ${client.domain}${step ? ` (${step})` : ""}:`, message);
-    if (website) {
-      // Retried (a fresh call), then reported: a website build never stops silently.
+    {
+      // Retried (a fresh call), then reported: a run never stops silently.
       const build = await getBuild(client.id).catch(() => null);
       const attempts = (build?.stage === stageName ? build.attempts ?? 0 : 0) + 1;
       if (attempts < MAX_ATTEMPTS) {
@@ -144,7 +150,7 @@ export async function runAndContinue(client: Client, step: MonthStage | undefine
         next = stageName;
       } else {
         await setBuild(client.id, { status: "failed", stage: stageName, attempts, error: message });
-        await notifyJohn(`Website build failed: ${client.domain}`, `The "${stageName}" step failed ${attempts} times. Last error: ${message}\n\nThe client sees "being finished". Fix the cause, then run "Build the site" on ${base}/admin/clients`);
+        await notifyJohn(`${client.service === "web-development" ? "Website build" : client.service === "advertising" ? "Ads month" : "Content month"} failed: ${client.domain}`, `The "${stageName}" step failed ${attempts} times. Last error: ${message}\n\nThe client sees "being finished". Fix the cause, then run it again on ${base}/admin/clients`);
       }
     }
   }
@@ -152,9 +158,9 @@ export async function runAndContinue(client: Client, step: MonthStage | undefine
     // Long builds outlast the 15-minute lock; each step renews it.
     if (process.env.DATABASE_URL) await neon(process.env.DATABASE_URL)`UPDATE clients SET running_since = now() WHERE id = ${client.id}`;
     if (await startStep(base, client.id, next)) return;
-    if (website) {
+    {
       await setBuild(client.id, { status: "failed", stage: next, error: "the next step could not be started" }).catch(() => null);
-      await notifyJohn(`Website build stopped: ${client.domain}`, `The "${next}" step could not be started. Run "Build the site" again on ${base}/admin/clients`);
+      await notifyJohn(`Run stopped: ${client.domain}`, `The "${next}" step could not be started. Run it again on ${base}/admin/clients`);
     }
   }
   await releaseRun(client.id);

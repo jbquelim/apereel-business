@@ -1,3 +1,5 @@
+import { fit } from "./content-qa";
+import { catalogTotalFor } from "./content-context";
 import { neon } from "@neondatabase/serverless";
 import { callClaude, parseJson } from "./ai";
 import type { Client } from "./clients";
@@ -45,9 +47,12 @@ const VOLUME: Record<string, { statics: number; carousels: number; animated: num
   grow: { statics: 10, carousels: 3, animated: 2, videos: 2 },
 };
 
-const cut = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+// Platform limits: shortened at a word or sentence boundary, never mid-word (lib/content-qa fit).
+const cut = fit;
 const cuts = (v: unknown, n: number, max: number) => (Array.isArray(v) ? v.map((x) => cut(x, n)).filter(Boolean).slice(0, max) : []);
-const priceOf = (p: Product) => (p.price != null ? `${p.currency && p.currency !== "USD" ? `${p.currency} ` : "$"}${p.price}` : null);
+/** A price as shoppers read it: to the cent ("$3.50", not "$3.5"). */
+const priceOf = (p: Product) =>
+  p.price != null ? `${p.currency && p.currency !== "USD" ? `${p.currency} ` : "$"}${p.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null;
 
 const AD_RULES = `${RULES}
 - Platform limits are strict: Google headlines max 30 characters, descriptions max 90; Meta primary text max 125, headline max 40; TikTok text max 100.
@@ -128,7 +133,7 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
   const have = await countBatch(client.id, batch);
   const catalog = await catalogWithPhotos(client.domain);
   const audit = await fetchAuditResult<AuditLike>(client.domain);
-  const brief = marketBrief(client.domain, audit);
+  const brief = marketBrief(client.domain, audit, await catalogTotalFor(client.domain).catch(() => null));
   const competitors = audit?.industry?.competitors?.length
     ? `WHAT COMPETITORS LEAD WITH (for contrast only): ${audit.industry.competitors.map((c) => c.strength).join("; ")}`
     : "";

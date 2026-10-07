@@ -7,6 +7,8 @@ import { crawlSite } from "./site-crawl";
 import { platformCatalog } from "./platform-catalog";
 import { queueMediaJob, type MediaBrief, type MediaKind } from "./media";
 import { storeImages, storedUrls } from "./image-store";
+import { fixItem } from "./content-qa";
+import { catalogTotalFor } from "./content-context";
 
 // The content service, automated: the client's own products (from our crawl,
 // saved in page_snapshots) plus what we know of their market (the saved
@@ -79,9 +81,11 @@ export type AuditLike = {
   demand?: { rows: { query: string; coverage: string | null }[] };
 };
 
-export function marketBrief(domain: string, audit: AuditLike | null): string {
+export function marketBrief(domain: string, audit: AuditLike | null, catalogTotal?: number | null): string {
   const a = audit;
   return [
+    // The store's real size: older audits quote a smaller count, and only this one may be stated.
+    catalogTotal && `CATALOG SIZE: ${catalogTotal.toLocaleString("en-US")} products (the only catalog total you may state)`,
     `BUSINESS: ${domain}${a?.industry?.subIndustry ? ` (${a.industry.subIndustry})` : ""}`,
     a?.industry?.offering && `WHAT IT SELLS: ${a.industry.offering}`,
     a?.industry?.businessModel && `SELLS TO: ${a.industry.businessModel}`,
@@ -274,8 +278,8 @@ ${RULES}
 }
 
 /** Generates this month's content for a client. Crawls first when we have no recent product data. */
-export type MonthStage = "posts" | "long" | "media" | "analysis" | "build" | "catalog" | "pages";
-export const NEXT_STAGE: Record<MonthStage, MonthStage | null> = { posts: "long", long: "media", media: null, analysis: null, build: null, catalog: null, pages: null };
+export type MonthStage = "posts" | "long" | "media" | "ads" | "analysis" | "build" | "catalog" | "pages";
+export const NEXT_STAGE: Record<MonthStage, MonthStage | null> = { posts: "long", long: "media", media: null, ads: null, analysis: null, build: null, catalog: null, pages: null };
 
 async function countItems(clientId: string, batch: string): Promise<Record<string, number>> {
   const rows = (await sql()`SELECT kind, count(*)::int AS n FROM content_items WHERE client_id = ${clientId} AND batch = ${batch} GROUP BY kind`) as { kind: string; n: number }[];
@@ -294,7 +298,7 @@ export async function generateMonth(client: Client, stage: MonthStage = "posts")
   const have = await countItems(client.id, batch);
   const catalog = await catalogWithPhotos(client.domain);
   const audit = await fetchAuditResult<AuditLike>(client.domain);
-  const brief = marketBrief(client.domain, audit);
+  const brief = marketBrief(client.domain, audit, await catalogTotalFor(client.domain).catch(() => null));
 
   if (stage === "posts") {
     const missing = volume.posts - (have.post ?? 0);
@@ -436,7 +440,7 @@ export async function reviseItem(client: Client, itemId: number, instruction: st
   if (left <= 0) return { ok: false, error: `You've used all ${tierFor(client)?.requests ?? 0} change requests this month.` };
   const item = ((await sql()`
     SELECT id, batch, kind, platform, product_url, image, data, history, status, updated_at
-    FROM content_items WHERE id = ${itemId} AND client_id = ${client.id}
+    FROM content_items WHERE id = ${itemId} AND client_id = ${client.id} AND status <> 'held'
   `) as ContentItem[])[0];
   if (!item) return { ok: false, error: "That item wasn't found." };
 
@@ -456,8 +460,16 @@ Apply the change and return ONLY the updated JSON with the same fields. Change o
 ${RULES}`,
   });
   const updated = parseJson<Record<string, unknown>>(text);
-  if (!updated || Array.isArray(updated)) return { ok: false, error: "The change couldn't be applied. Please try again in different words." };
-  const merged = { ...(item.data as object), ...updated };
+  if (!updated || Array.isArray(updated)) {
+    // A change that couldn't be applied doesn't use one of the client's requests.
+    await sql()`
+      UPDATE ai_requests SET counts_toward_allowance = false
+      WHERE id = (SELECT id FROM ai_requests WHERE client_id = ${client.id} AND purpose = ${`content:revise:${item.kind}`} ORDER BY created_at DESC LIMIT 1)
+    `;
+    return { ok: false, error: "The change couldn't be applied, and it didn't use a request. Please try again in different words." };
+  }
+  // The same fixes as the month's release (prices to the cent, the store's real catalog size).
+  const merged = fixItem({ ...(item.data as object), ...updated });
   const rows = (await sql()`
     UPDATE content_items
     SET data = ${JSON.stringify(merged)}::jsonb,
@@ -472,7 +484,7 @@ ${RULES}`,
 
 export async function setItemStatus(clientId: string, itemId: number, status: "draft" | "approved"): Promise<boolean> {
   const rows = await sql()`
-    UPDATE content_items SET status = ${status}, updated_at = now() WHERE id = ${itemId} AND client_id = ${clientId} RETURNING id
+    UPDATE content_items SET status = ${status}, updated_at = now() WHERE id = ${itemId} AND client_id = ${clientId} AND status <> 'held' RETURNING id
   `;
   return rows.length > 0;
 }
