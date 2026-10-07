@@ -234,7 +234,7 @@ export function readFacts(url: string, kind: PageKind, html: string, status: num
   };
 }
 
-async function crawlList(
+export async function crawlList(
   items: { url: string; kind: PageKind }[],
   deadline: number,
   productSet?: Set<string>,
