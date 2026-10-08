@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import type { Client } from "./clients";
-import { callClaude, parseJson } from "./ai";
+import { callClaude, noteUnreadable, parseJson } from "./ai";
 import { RULES } from "./content-engine";
 import { COUNT, checkItem, fitLimits, fixItem, stripStockClaims, type ItemIssue, type QaItem } from "./content-qa";
 import { qaContext } from "./content-context";
@@ -58,7 +58,7 @@ For a "claim" problem, delete the quoted words wherever they appear (don't rewor
 ${RULES}`,
     }).catch(() => "");
     const replies = parseJson<{ id?: number | string; data?: Record<string, unknown> }[]>(text) ?? [];
-    if (!replies.length) console.error(`Content repair for ${client.domain}: reply unreadable`);
+    if (!replies.length) await noteUnreadable(client.id, "content:repair", text);
     for (const r of replies) {
       const was = chunk.find((c) => c.item.id === Number(r.id))?.item;
       // Its fields over the original's: a reply that leaves a field out keeps that field as it was.

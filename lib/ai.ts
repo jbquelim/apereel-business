@@ -97,9 +97,23 @@ export function parseJson<T>(text: string): T | null {
   } catch {
     // A measurement's inch mark copied into a string ("4" Long Flat Crossbar") ends it early: write it as the inch symbol and try again.
     try {
-      return JSON.parse(m[0].replace(/(\d)"(?=[\s\w\-)/×.])/g, "$1″")) as T;
+      return JSON.parse(m[0].replace(/(\d)"(?=[\s\w\-)/×.]|,\s*[\w(])/g, "$1″")) as T;
     } catch {
       return null;
     }
   }
+}
+
+/**
+ * Keeps a reply that couldn't be read on its request's log entry (start and
+ * end of the text), so the cause can be seen rather than guessed.
+ */
+export async function noteUnreadable(clientId: string | null, purpose: string, text: string) {
+  console.error(`Unreadable reply (${purpose}):`, text.slice(0, 300));
+  if (!process.env.DATABASE_URL || !clientId) return;
+  const { neon } = await import("@neondatabase/serverless");
+  const snippet = `unreadable reply: ${text.slice(0, 1500)} … ${text.slice(-400)}`;
+  await neon(process.env.DATABASE_URL)`
+    UPDATE ai_requests SET error = ${snippet} WHERE id = (SELECT id FROM ai_requests WHERE client_id = ${clientId} AND purpose = ${purpose} ORDER BY created_at DESC LIMIT 1)
+  `.catch(() => null);
 }

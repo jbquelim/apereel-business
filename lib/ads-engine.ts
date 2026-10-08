@@ -1,7 +1,7 @@
 import { fit } from "./content-qa";
 import { catalogTotalFor } from "./content-context";
 import { neon } from "@neondatabase/serverless";
-import { callClaude, parseJson } from "./ai";
+import { callClaude, noteUnreadable, parseJson } from "./ai";
 import type { Client } from "./clients";
 import { fetchAuditResult } from "./marketdb";
 import {
@@ -78,6 +78,7 @@ ${AD_RULES}
 - Say what competitors don't: lean on the business's advantage, never name a competitor.`,
   });
   const raw = parseJson<StaticAd[]>(text) ?? [];
+  if (!raw.length) await noteUnreadable(client.id, "ads:static", text);
   return raw.slice(0, products.length).map((a, i) => {
     const p = products.find((x) => x.title === a.productTitle) ?? products[i];
     return {
@@ -110,6 +111,7 @@ Return ONLY a JSON array, one object per carousel:
 ${AD_RULES}`,
   });
   const raw = parseJson<CarouselAd[]>(text) ?? [];
+  if (!raw.length) await noteUnreadable(client.id, "ads:carousel", text);
   return raw.slice(0, groups.length).map((c, i) => ({
     title: cut(c.title, 80),
     frames: groups[i].map((p, j) => {
