@@ -95,6 +95,11 @@ export function parseJson<T>(text: string): T | null {
   try {
     return JSON.parse(m[0]) as T;
   } catch {
-    return null;
+    // A measurement's inch mark copied into a string ("4" Long Flat Crossbar") ends it early: write it as the inch symbol and try again.
+    try {
+      return JSON.parse(m[0].replace(/(\d)"(?=[\s\w\-)/×.])/g, "$1″")) as T;
+    } catch {
+      return null;
+    }
   }
 }

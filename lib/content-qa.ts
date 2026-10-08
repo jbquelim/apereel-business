@@ -159,3 +159,20 @@ export function fitLimits<T>(data: T): T {
   };
   return walk(data, "") as T;
 }
+
+/**
+ * Removes "in stock" (the commonest unsupported claim, and one the AI repair
+ * keeps): cut from a sentence, and a list entry built on it ("In Stock at
+ * Grand Brass") dropped. Only when the business's facts don't say it.
+ */
+export function stripStockClaims<T>(data: T, facts: string): T {
+  if (/\bin stock\b/i.test(facts)) return data;
+  const clean = (s: string) => s.replace(/\s*[,–-]?\s*\b(?:all |always |ready |now )?in stock\b(?: (?:now|today))?/gi, "").replace(/\s+([.,!?])/g, "$1").replace(/\s{2,}/g, " ").replace(/^[\s,;:–-]+/, "").replace(/^[a-z]/, (c) => c.toUpperCase()).trim();
+  const walk = (v: unknown): unknown => {
+    if (typeof v === "string") return clean(v);
+    if (Array.isArray(v)) return v.filter((x) => !(typeof x === "string" && /^\s*(?:all |now )?in stock\b/i.test(x))).map(walk);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    return v;
+  };
+  return walk(data) as T;
+}

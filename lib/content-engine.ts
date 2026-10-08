@@ -49,7 +49,8 @@ function cleanTitle(t: string, domain: string): string {
   const parts = t.split(/\s+[|–—]\s+|\s+-\s+/);
   const brand = domain.replace(/^www\./, "").split(".")[0].replace(/[^a-z0-9]/gi, "").toLowerCase();
   if (parts.length > 1 && parts[parts.length - 1].replace(/[^a-z0-9]/gi, "").toLowerCase().includes(brand)) parts.pop();
-  return parts.join(" – ").trim();
+  // Inch marks as the inch symbol: a plain " in a name breaks the JSON the writers reply in (281 of Etlin-Daniels' names).
+  return parts.join(" – ").replace(/(\d)\s?"/g, "$1″").replace(/"/g, "″").trim();
 }
 
 /** The client's products from our most recent crawl of each page. */

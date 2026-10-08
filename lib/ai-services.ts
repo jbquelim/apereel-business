@@ -106,9 +106,10 @@ export async function startStep(base: string, clientId: string, stage: MonthStag
     method: "POST",
     headers: { "content-type": "application/json", "x-internal-secret": process.env.CRON_SECRET ?? "" },
     body: JSON.stringify({ clientId, stage }),
-    signal: AbortSignal.timeout(10_000),
-  }).catch((err) => (console.error("Next step did not start:", err instanceof Error ? err.message : err), null));
-  return !!res?.ok;
+    signal: AbortSignal.timeout(25_000),
+  }).catch((err) => (console.error("Next step slow to start:", err instanceof Error ? err.message : err), "unknown" as const));
+  // A slow start may still have started (Grand Brass's did): only a refusal counts as not started; the watchdog catches the rest.
+  return res === "unknown" || res.ok;
 }
 
 /** Active monthly clients (content, ads) with nothing generated this month yet. */

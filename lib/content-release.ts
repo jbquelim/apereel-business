@@ -2,7 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import type { Client } from "./clients";
 import { callClaude, parseJson } from "./ai";
 import { RULES } from "./content-engine";
-import { COUNT, checkItem, fitLimits, fixItem, type ItemIssue, type QaItem } from "./content-qa";
+import { COUNT, checkItem, fitLimits, fixItem, stripStockClaims, type ItemIssue, type QaItem } from "./content-qa";
 import { qaContext } from "./content-context";
 import { setBuild, getBuild } from "./site-release";
 import { emailClient, notifyJohn } from "./notify";
@@ -53,7 +53,7 @@ ${facts.slice(0, 6000)}
 ITEMS:
 ${chunk.map(({ item, issues }) => `ID ${item.id} (${item.kind})\nPROBLEMS: ${issues.map((x) => `${x.check}${x.field ? ` in ${x.field}` : ""}: ${x.detail}`).join("; ")}\nJSON: ${JSON.stringify(item.data)}`).join("\n\n")}
 
-Remove a claim you can't support rather than rewording it. Return ONLY JSON: [{ "id": <id>, "data": { ...the full fixed item... } }]
+For a "claim" problem, delete the quoted words wherever they appear (don't reword them into a similar claim). Return ONLY JSON: [{ "id": <id>, "data": { ...the full fixed item... } }]
 
 ${RULES}`,
     }).catch(() => "");
@@ -83,7 +83,7 @@ export async function releaseMonth(client: Client, base: string): Promise<string
   }
   // 1. Fixes that need no judgement.
   for (const it of items) {
-    const fixed = fitLimits(syncCounts(fixItem(it.data), ctx.catalogTotal));
+    const fixed = fitLimits(stripStockClaims(syncCounts(fixItem(it.data), ctx.catalogTotal), ctx.facts));
     if (JSON.stringify(fixed) !== JSON.stringify(it.data)) {
       it.data = fixed;
       await sql()`UPDATE content_items SET data = ${JSON.stringify(fixed)}::jsonb, updated_at = now() WHERE id = ${it.id}`;
@@ -103,7 +103,7 @@ export async function releaseMonth(client: Client, base: string): Promise<string
     const fixed = await repair(client, failing.filter((f) => f.issues.some((x) => x.check !== "photo")), ctx.facts);
     for (const [id, data] of fixed) {
       const it = items.find((x) => x.id === id)!;
-      it.data = fitLimits(syncCounts(fixItem(data), ctx.catalogTotal));
+      it.data = fitLimits(stripStockClaims(syncCounts(fixItem(data), ctx.catalogTotal), ctx.facts));
       await sql()`UPDATE content_items SET data = ${JSON.stringify(it.data)}::jsonb, updated_at = now() WHERE id = ${id}`;
     }
     failing = items.map((item) => ({ item, issues: check(item) })).filter((x) => x.issues.length);
