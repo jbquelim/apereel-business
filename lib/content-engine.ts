@@ -5,6 +5,7 @@ import { fetchAuditResult, fetchCompetitorSet } from "./marketdb";
 import { historyForMany } from "./market-history";
 import { crawlSite } from "./site-crawl";
 import { platformCatalog } from "./platform-catalog";
+import { uploadedCatalog } from "./catalog-upload";
 import { queueMediaJob, type MediaBrief, type MediaKind } from "./media";
 import { storeImages, storedUrls } from "./image-store";
 import { fixItem } from "./content-qa";
@@ -208,6 +209,11 @@ const save = saveItem;
 /** Products with fresh photos: re-reads the site when we have none yet. */
 export async function catalogWithPhotos(domain: string): Promise<Product[]> {
   let catalog = await loadCatalog(domain);
+  // A product file the client uploaded is their catalog (their site can't be read): it comes first.
+  const upload = await uploadedCatalog(domain).catch(() => null);
+  if (upload && upload.products.length > catalog.length) {
+    catalog = upload.products.map((p) => ({ url: p.url, title: cleanTitle(p.title, domain), price: p.price, currency: p.currency, image: p.image, rating: null }));
+  }
   if (catalog.filter((p) => p.image).length < 5) {
     await crawlSite(domain, 100_000);
     catalog = await loadCatalog(domain);

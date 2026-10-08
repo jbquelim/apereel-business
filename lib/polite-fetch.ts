@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { site } from "./site";
 
 // Every request our crawlers make to a business's site goes through here, so
 // we read sites the way they ask to be read:
@@ -15,19 +16,22 @@ const hosts = new Map<string, Host>();
 const MAX_PER_HOST = 2;
 const BASE_GAP_MS = 250;
 const MAX_GAP_MS = 4000;
-const CONTACT = "crawler@apereel.com";
+/** Where a site owner can reach us about our crawler (the site's contact address). */
+const CONTACT = site.email;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const bare = (host: string) => host.replace(/^www\./, "").toLowerCase();
 
-let tokens: { at: number; map: Map<string, string> } | null = null;
+let tokens: { at: number; map: Map<string, string>; optouts: Set<string> } | null = null;
 
 /** The crawler token a client gave their firewall, for this host (cached five minutes). */
 async function tokenFor(host: string): Promise<string | null> {
   if (!process.env.DATABASE_URL) return null;
   if (!tokens || Date.now() - tokens.at > 300_000) {
-    const rows = (await neon(process.env.DATABASE_URL)`SELECT domain, crawl_token FROM clients WHERE crawl_token IS NOT NULL`.catch(() => [])) as { domain: string; crawl_token: string }[];
-    tokens = { at: Date.now(), map: new Map(rows.map((r) => [bare(r.domain), r.crawl_token])) };
+    const sql = neon(process.env.DATABASE_URL);
+    const rows = (await sql`SELECT domain, crawl_token FROM clients WHERE crawl_token IS NOT NULL`.catch(() => [])) as { domain: string; crawl_token: string }[];
+    const out = (await sql`SELECT domain FROM crawl_optouts`.catch(() => [])) as { domain: string }[];
+    tokens = { at: Date.now(), map: new Map(rows.map((r) => [bare(r.domain), r.crawl_token])), optouts: new Set(out.map((r) => bare(r.domain))) };
   }
   const h = bare(host);
   for (const [domain, token] of tokens.map) if (h === domain || h.endsWith(`.${domain}`)) return token;
@@ -64,6 +68,9 @@ export async function politeFetch(url: string, init: RequestInit & { timeoutMs?:
     return null;
   }
   const token = await tokenFor(host);
+  // An owner who asked us to stop (apereel.com/bot) is never read.
+  const h = bare(host);
+  if (tokens && [...tokens.optouts].some((d) => h === d || h.endsWith(`.${d}`))) return null;
   const headers = { From: CONTACT, ...(token ? { "X-Apereel-Verify": token } : {}), ...((init.headers as Record<string, string>) ?? {}) };
   for (let attempt = 0; attempt < 3; attempt++) {
     const s = await turn(host);

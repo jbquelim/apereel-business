@@ -5,6 +5,7 @@ import { upgradeImages } from "./image-upgrade";
 import { platformCatalog, type PlatformCatalog } from "./platform-catalog";
 import type { SiteDoc } from "./site-types";
 import { applyGroups } from "./category-groups";
+import { uploadedCatalog } from "./catalog-upload";
 import { dropRangeStats, syncCategoryCounts, syncCount } from "./site-qa";
 
 // Imports a business's whole catalog into a generated site, categorised the
@@ -346,6 +347,9 @@ async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: Platfor
 export async function importCatalogStep(site: { id: string; doc: SiteDoc }, domain: string, budgetMs = 210_000, maxProducts = 20_000): Promise<{ remaining: number; products: number; categories: number }> {
   const deadline = Date.now() + budgetMs;
   // Stores on Shopify, WooCommerce or BigCommerce: their own catalog feed, in one go.
+  // A product file the client uploaded comes first: it's their own word on their catalog (lib/catalog-upload).
+  const uploaded = await uploadedCatalog(domain);
+  if (uploaded) return { remaining: 0, ...(await assemblePlatform(site, uploaded, maxProducts)) };
   // A feed that can only be read in part throws (IncompleteCatalog): the step is retried, then John is told.
   const platform = await platformCatalog(domain, budgetMs - 40_000, maxProducts);
   if (platform) return { remaining: 0, ...(await assemblePlatform(site, platform, maxProducts)) };

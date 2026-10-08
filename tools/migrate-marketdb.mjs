@@ -396,6 +396,8 @@ await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS analysis_after TIMESTAMPT
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS build JSONB`;
 // A client's private token for their firewall to let our crawler through (lib/polite-fetch, lib/crawl-access).
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS crawl_token TEXT`;
+// Sites whose owners asked us to stop reading them (apereel.com/bot): never fetched (lib/polite-fetch).
+await sql`CREATE TABLE IF NOT EXISTS crawl_optouts (domain TEXT PRIMARY KEY, note TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`;
 // A product file a client uploaded when their site can't be read (lib/catalog-upload).
 await sql`CREATE TABLE IF NOT EXISTS catalog_uploads (domain TEXT PRIMARY KEY, products JSONB NOT NULL, categories JSONB NOT NULL DEFAULT '[]', source TEXT, uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now())`;
 // A failed render is tried once more before John is told (lib/media).

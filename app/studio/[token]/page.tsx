@@ -9,6 +9,8 @@ import { StudioItems } from "./studio-items";
 import { WebsiteStudio } from "./website-studio";
 import { designChoices } from "@/lib/site-design";
 import { isReleased } from "@/lib/site-release";
+import { blockedByFirewall, ensureCrawlToken } from "@/lib/crawl-access";
+import { CatalogAccess } from "./catalog-access";
 import { BillingButton } from "./billing-button";
 import { refreshPaymentsStatus } from "@/lib/connect";
 import { MediaNudger } from "@/components/media-nudger";
@@ -90,6 +92,7 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
     );
   }
 
+  const blocked = client.status === "active" && blockedByFirewall(client.build);
   return (
     <main id="main" className="bg-navy pt-10">
       <section className="mx-auto w-full max-w-[1200px] px-6 py-16 sm:px-8">
@@ -109,6 +112,8 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
           </p>
           {client.stripe_customer_id && <BillingButton token={token} />}
         </div>
+        {/* Their site blocked our crawler: upload a product file or let our crawler through (lib/crawl-access). */}
+        {blocked && <CatalogAccess token={token} crawlToken={await ensureCrawlToken(client)} domain={client.domain} />}
         {body}
         <MediaNudger pending={await pendingMediaJobs().catch(() => 0)} />
       </section>

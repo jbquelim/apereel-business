@@ -32,6 +32,8 @@ export type BuildState = {
   approved?: boolean;
   /** Content and ads: the month this state is for ("2026-10"). */
   batch?: string;
+  /** The client was emailed that their site blocked us (lib/crawl-access), once per run. */
+  askedForCatalog?: boolean;
   at?: string;
 };
 
@@ -142,6 +144,11 @@ export async function releaseGate(client: Client, base: string): Promise<{ next:
   }
 
   await setBuild(client.id, { status: "held", stage: "held", issues: blocking });
+  // Held because their site blocked us: they're asked for their product file or to let our crawler through.
+  if (blocking.some((i) => i.check === "catalog-incomplete")) {
+    const { askForCatalog } = await import("./crawl-access");
+    await askForCatalog(client, base).catch(() => null);
+  }
   await notifyJohn(
     `Website held for review: ${client.domain}`,
     [

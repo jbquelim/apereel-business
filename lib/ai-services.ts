@@ -10,6 +10,7 @@ import { groupCategories } from "./category-groups";
 import { MAX_ATTEMPTS, getBuild, releaseGate, setBuild } from "./site-release";
 import { notifyJohn } from "./notify";
 import { releaseMonth } from "./content-release";
+import { askForCatalog } from "./crawl-access";
 import { buildFacets } from "./facets";
 import { expandGuides, writeAnalysisPages } from "./site-pages";
 
@@ -131,7 +132,7 @@ export async function runAndContinue(client: Client, step: MonthStage | undefine
   // Every run records each step (lib/site-release); a new run starts afresh. Content and ads note the month too.
   const stageName: MonthStage = step ?? (client.service === "web-development" ? "analysis" : client.service === "advertising" ? "ads" : "posts");
   const batch = client.service === "web-development" ? {} : { batch: new Date().toISOString().slice(0, 7) };
-  await setBuild(client.id, step ? { status: "building", stage: stageName, ...batch } : { status: "building", stage: stageName, attempts: 0, repairs: [], issues: [], error: null, ...batch }).catch(() => null);
+  await setBuild(client.id, step ? { status: "building", stage: stageName, ...batch } : { status: "building", stage: stageName, attempts: 0, repairs: [], issues: [], error: null, askedForCatalog: false, ...batch }).catch(() => null);
   let next: MonthStage | null = null;
   try {
     const r = await runService(client, step, base);
@@ -152,6 +153,8 @@ export async function runAndContinue(client: Client, step: MonthStage | undefine
         next = stageName;
       } else {
         await setBuild(client.id, { status: "failed", stage: stageName, attempts, error: message });
+        // Their own site blocked us: they're asked for their product file or to let our crawler through.
+        await askForCatalog(client, base).catch(() => null);
         await notifyJohn(`${client.service === "web-development" ? "Website build" : client.service === "advertising" ? "Ads month" : "Content month"} failed: ${client.domain}`, `The "${stageName}" step failed ${attempts} times. Last error: ${message}\n\nThe client sees "being finished". Fix the cause, then run it again on ${base}/admin/clients`);
       }
     }

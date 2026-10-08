@@ -11,7 +11,7 @@ import { politeFetch } from "./polite-fetch";
 
 export type PlatformCategory = { key: string; name: string; parentKey: string | null; url: string | null };
 export type PlatformProduct = { url: string; title: string; price: number | null; currency: string | null; image: string | null; categoryKeys: string[] };
-export type PlatformCatalog = { platform: "bigcommerce" | "shopify" | "woocommerce"; categories: PlatformCategory[]; products: PlatformProduct[] };
+export type PlatformCatalog = { platform: "bigcommerce" | "shopify" | "woocommerce" | "upload"; categories: PlatformCategory[]; products: PlatformProduct[] };
 
 const CATCH_ALL = /^(all|frontpage|home|sale|new|new-arrivals|best-sellers?|featured|clearance|gift-cards?|shop-all.*|all-products)$/i;
 /** Promotions, not categories ("25% off sitewide", "Black Friday deals"). */
