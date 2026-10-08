@@ -69,6 +69,8 @@ export function checkItem(item: QaItem, ctx: QaContext): ItemIssue[] {
     // Ends on a dangling joiner or a broken word ("know-h"): shortened mid-thought.
     if (limit && (/\b(?:and|or|the|a|an|of|to|for|with|by|in|on)$/i.test(t) || /-[a-z]{1,2}$/i.test(t) || (/\s[a-z]{1,2}$/i.test(t) && !/\s(?:it|us|we|me|go|up|do|so|on|in|to|by|at)$/i.test(t))))
       add("cut-off", f.path, `"…${t.slice(-40)}" ends mid-thought`);
+    // Sentence copy that stops right at its limit on a whole word but no full stop ("…CSA Approved, ready") was cut too.
+    else if (limit && SENTENCE_FIELDS.has(f.key) && t.length >= limit - 15 && !ENDS_CLEAN.test(t)) add("cut-off", f.path, `"…${t.slice(-40)}" ends mid-sentence`);
     if (PLACEHOLDER.test(t)) add("placeholder", f.path, `"${t.slice(0, 80)}"`);
   }
   if (item.kind !== "note") {
@@ -135,6 +137,22 @@ export function fixItem<T>(data: T): T {
   return JSON.parse(JSON.stringify(data).replace(/(\$\d[\d,]*\.\d)(?!\d)/g, "$10")) as T;
 }
 
+/** Fields written as sentences (not headlines or labels): they should end with a full stop, not stop at the limit. */
+const SENTENCE_FIELDS = new Set(["primaryText", "descriptions", "text"]);
+const ENDS_CLEAN = /[.!?…]["')\]]?$/;
+
+/**
+ * Sentence copy that stops within 15 characters of its limit without a full
+ * stop was cut off (by the AI writing to the limit, or by an earlier fit):
+ * ended at its last full sentence when that keeps at least half of it.
+ */
+export function endAtSentence(v: string, n: number): string {
+  const t = v.trim();
+  if (t.length < n - 15 || ENDS_CLEAN.test(t)) return t;
+  const sentence = t.match(/^[\s\S]*[.!?](?=\s)/)?.[0];
+  return sentence && sentence.length >= n * 0.5 ? sentence.trim() : t;
+}
+
 /** Shortens text to fit a limit at a word boundary, ending cleanly (never mid-word). */
 export function fit(v: unknown, n: number): string {
   if (typeof v !== "string") return "";
@@ -149,10 +167,14 @@ export function fit(v: unknown, n: number): string {
   return head.replace(/\s+\S*$/, "").replace(/[,;:—–-]$/, "").trim();
 }
 
-/** Every field with a platform limit shortened to fit it (after a fix made it longer). */
+/** Every field with a platform limit shortened to fit it (after a fix made it longer), and sentence copy ended at a full sentence. */
 export function fitLimits<T>(data: T): T {
   const walk = (v: unknown, key: string): unknown => {
-    if (typeof v === "string") return LIMITS[key] && v.length > LIMITS[key] ? fit(v, LIMITS[key]) : v;
+    if (typeof v === "string") {
+      if (!LIMITS[key]) return v;
+      const fitted = v.length > LIMITS[key] ? fit(v, LIMITS[key]) : v;
+      return SENTENCE_FIELDS.has(key) ? endAtSentence(fitted, LIMITS[key]) : fitted;
+    }
     if (Array.isArray(v)) return v.map((x) => walk(x, key));
     if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x, k)]));
     return v;
