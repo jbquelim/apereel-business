@@ -113,6 +113,9 @@ export default async function ClientsPage() {
                       {c.service !== "web-development" && c.held > 0 && (
                         <GenerateButton id={c.id} label={`Release ${c.held} held item${c.held > 1 ? "s" : ""}`} body={{ releaseHeld: true }} />
                       )}
+                      {c.failed_renders > 0 && (
+                        <GenerateButton id={c.id} label={`Retry ${c.failed_renders} failed render${c.failed_renders > 1 ? "s" : ""} (Higgsfield credit, ~$1 each)`} body={{ retryRenders: true }} />
+                      )}
                       {blockedByFirewall(c.build) && (
                         <>
                           <span className="mt-1 block text-[11px] text-signal">

@@ -2,6 +2,7 @@ import { notifyJohn } from "./notify";
 import { neon } from "@neondatabase/serverless";
 import { put } from "@vercel/blob";
 import { imageSize } from "./image-size";
+import { storeImages, storedUrls } from "./image-store";
 
 // Video and visuals for every service, rendered with Higgsfield (the same
 // platform as Apereel's Higgsfield studio): Seedance 2.5 for video (content
@@ -222,6 +223,18 @@ export async function processMediaJobs(budgetMs: number): Promise<{ submitted: n
   `) as MediaJob[];
   for (const job of queued) {
     if (Date.now() - started > budgetMs) break;
+    // Higgsfield gets our own copy of each photo (lib/image-store): a business's server
+    // often answers Higgsfield's fetch with a bot check, which fails the render.
+    const originals = job.brief.images.filter(Boolean);
+    if (originals.length) {
+      await storeImages(originals, 30_000).catch(() => 0);
+      const copies = await storedUrls(originals).catch(() => new Map<string, string>());
+      const images = originals.map((u) => copies.get(u) ?? u);
+      if (images.some((u, i) => u !== originals[i])) {
+        job.brief = { ...job.brief, images };
+        await sql()`UPDATE media_jobs SET brief = ${JSON.stringify(job.brief)}::jsonb, updated_at = now() WHERE id = ${job.id}`;
+      }
+    }
     // A photo Higgsfield can't load fails here, before any credit is spent.
     const readable = (await Promise.all(job.brief.images.slice(0, 1).map((u) => imageSize(u)))).every(Boolean);
     if (!readable) {
@@ -242,6 +255,15 @@ export async function processMediaJobs(budgetMs: number): Promise<{ submitted: n
     }
   }
   return { submitted, finished };
+}
+
+/** John re-queues a client's failed renders (after fixing the cause); each costs Higgsfield credit again. Returns how many. */
+export async function retryFailedRenders(clientId: string): Promise<number> {
+  const rows = (await sql()`
+    UPDATE media_jobs SET status = ${mediaProvider() ? "queued" : "waiting_provider"}, retries = 0, provider_request_id = NULL, error = NULL, updated_at = now()
+    WHERE client_id = ${clientId} AND status = 'failed' AND coalesce(error, '') NOT LIKE 'Duplicate run%' RETURNING id
+  `) as { id: number }[];
+  return rows.length;
 }
 
 /** One collection round, at most once a minute across everyone asking (studio and admin pages). */

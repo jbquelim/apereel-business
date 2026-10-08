@@ -188,7 +188,7 @@ function Body({ item, token, media }: { item: ContentItem; token: string; media?
       {pending.length > 0 && (
         <p className="mt-2 inline-flex rounded-full border border-white/15 px-3 py-1 font-mono text-[11px] text-muted">
           {pending.some((m) => m.status === "failed") && done.length === 0
-            ? "Rendering failed; we'll look into it"
+            ? "Video delayed: we're re-making it"
             : `${kind === "visual" ? "Visual" : "Video"} rendering${pending.length > 1 ? ` (${pending.map((m) => m.aspect).join(", ")})` : ""}: usually ready within the hour`}
         </p>
       )}

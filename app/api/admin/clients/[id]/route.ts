@@ -24,7 +24,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   if (client.status !== "active") return NextResponse.json({ ok: false, error: "This client's plan has ended." }, { status: 409 });
   // John releases a held site by hand (lib/site-release): no run.
-  const peek = (await request.clone().json().catch(() => ({}))) as { approve?: boolean; releaseHeld?: boolean; authorize?: boolean };
+  const peek = (await request.clone().json().catch(() => ({}))) as { approve?: boolean; releaseHeld?: boolean; authorize?: boolean; retryRenders?: boolean };
+  // John re-queues failed video and visual renders (lib/media) once the cause is fixed: no AI run, Higgsfield credit only.
+  if (peek.retryRenders) {
+    // Renders fail when Higgsfield can't fetch the business's photo: without our photo storage a retry just pays again.
+    if (!process.env.BLOB_READ_WRITE_TOKEN) return NextResponse.json({ ok: false, error: "Connect a Vercel Blob store to the project first (BLOB_READ_WRITE_TOKEN); renders need our own copies of the photos." }, { status: 409 });
+    const { retryFailedRenders, kickMediaWorker } = await import("@/lib/media");
+    const n = await retryFailedRenders(client.id);
+    if (n) await kickMediaWorker((process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, ""));
+    return NextResponse.json({ ok: true, retried: n });
+  }
   // John records the client's "yes" to us accessing their site on their behalf (lib/crawl-access): no run.
   if (peek.authorize) {
     const { recordAuthorization } = await import("@/lib/clients");

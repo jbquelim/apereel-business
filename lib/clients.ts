@@ -51,10 +51,11 @@ export async function recordAuthorization(clientId: string): Promise<void> {
   await sql()`UPDATE clients SET authorized_at = COALESCE(authorized_at, now()) WHERE id = ${clientId}`;
 }
 
-export async function listClients(): Promise<(Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null; held: number })[]> {
+export async function listClients(): Promise<(Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null; held: number; failed_renders: number })[]> {
   return (await sql()`
     SELECT c.*, (SELECT slug FROM sites s WHERE s.client_id = c.id) AS site_slug,
       (SELECT count(*)::int FROM content_items h WHERE h.client_id = c.id AND h.status = 'held') AS held,
+      (SELECT count(*)::int FROM media_jobs m WHERE m.client_id = c.id AND m.status = 'failed' AND coalesce(m.error, '') NOT LIKE 'Duplicate run%') AS failed_renders,
       (SELECT qa FROM sites s WHERE s.client_id = c.id) AS site_qa,
       (SELECT id FROM sites s WHERE s.client_id = c.id) AS site_id,
       (SELECT doc->>'design' FROM sites s WHERE s.client_id = c.id) AS site_design,
@@ -63,7 +64,7 @@ export async function listClients(): Promise<(Client & { used: number; items: nu
       (SELECT count(*)::int FROM content_items i WHERE i.client_id = c.id) AS items,
       (SELECT COALESCE(sum(cost_usd), 0)::float FROM ai_requests r WHERE r.client_id = c.id) AS cost
     FROM clients c ORDER BY c.created_at DESC
-  `) as (Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null; held: number })[];
+  `) as (Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null; held: number; failed_renders: number })[];
 }
 
 export async function getClient(id: string): Promise<Client | null> {
