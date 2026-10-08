@@ -145,7 +145,8 @@ export async function runAndContinue(client: Client, step: MonthStage | undefine
       // Retried (a fresh call), then reported: a run never stops silently.
       const build = await getBuild(client.id).catch(() => null);
       const attempts = (build?.stage === stageName ? build.attempts ?? 0 : 0) + 1;
-      if (attempts < MAX_ATTEMPTS) {
+      // Content and ads steps are each a paid AI call: tried twice, not three times, before John is told.
+      if (attempts < (client.service === "web-development" ? MAX_ATTEMPTS : 2)) {
         await setBuild(client.id, { stage: stageName, attempts, error: message });
         await new Promise((r) => setTimeout(r, 15_000));
         next = stageName;

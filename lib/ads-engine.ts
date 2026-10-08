@@ -141,10 +141,9 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
   const pool = withPhotos.length >= volume.statics ? withPhotos : catalog;
 
   const featured = pickProducts(pool, volume.statics).slice(have.ad ?? 0);
-  // An unreadable reply is asked for once more, then fails the step (retried, then reported): never a month short of its ads.
-  let statics = featured.length ? await writeStatics(client, brief, featured, competitors) : [];
-  if (featured.length && statics.length < featured.length / 2) statics = await writeStatics(client, brief, featured, competitors);
-  if (featured.length && statics.length === 0) throw new Error(`The static ads for ${client.domain} came back unreadable twice`);
+  // An unreadable reply fails the step (the runner retries it once, then reports it): never a month short of its ads.
+  const statics = featured.length ? await writeStatics(client, brief, featured, competitors) : [];
+  if (featured.length && statics.length === 0) throw new Error(`The static ads for ${client.domain} came back unreadable`);
   for (const ad of statics) {
     const product = featured.find((p) => p.title === ad.productTitle) ?? null;
     await saveItem(client.id, batch, "ad", ad, product, "google · meta · tiktok");
@@ -157,9 +156,8 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
     const g = withPhotos.slice(start, start + 4);
     if (g.length >= 2) groups.push(g);
   }
-  let carousels = await writeCarousels(client, brief, groups);
-  if (groups.length && carousels.length === 0) carousels = await writeCarousels(client, brief, groups);
-  if (groups.length && carousels.length === 0) throw new Error(`The carousels for ${client.domain} came back unreadable twice`);
+  const carousels = await writeCarousels(client, brief, groups);
+  if (groups.length && carousels.length === 0) throw new Error(`The carousels for ${client.domain} came back unreadable`);
   for (const c of carousels) await saveItem(client.id, batch, "carousel", c, null, "meta · tiktok");
 
   const animated = await writeVideoBriefs(client, brief, pickProducts(withPhotos.slice(1), Math.max(0, volume.animated - (have["animated-ad"] ?? 0))), {
