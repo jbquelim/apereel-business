@@ -38,7 +38,8 @@ export async function POST(request: Request) {
   if (!tier || tier.price == null) return NextResponse.json({ ok: false, error: "That tier isn't available." }, { status: 400 });
 
   if (process.env.NEXT_PUBLIC_GROWTH_PLAN !== "on" && !(await isAdmin())) {
-    const client = await createClient({ domain, email, name, service, tier: tierId });
+    // Ordering authorizes us to access their site on their behalf (the form says so): recorded with the client.
+    const client = await createClient({ domain, email, name, service, tier: tierId, authorized: true });
     const { neon } = await import("@neondatabase/serverless");
     await neon(process.env.DATABASE_URL!)`UPDATE clients SET status = 'requested' WHERE id = ${client.id}`;
     if (process.env.RESEND_API_KEY) {

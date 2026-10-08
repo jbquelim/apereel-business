@@ -34,7 +34,9 @@ export function StartForm({ service, tier, site, live }: { service: string; tier
         {state === "busy" ? "One moment…" : live ? "Continue to secure payment" : "Get started"}
       </button>
       {state === "error" && <p role="alert" className="text-[13px] text-signal">{msg}</p>}
-      <p className="text-[12px] text-muted">{live ? "Payment by Stripe. " : ""}We read your site to build everything from your own products.</p>
+      <p className="text-[12px] leading-relaxed text-muted">
+        {live ? "Payment by Stripe. " : ""}We build everything from your own products. By continuing, you authorize Apereel to access your website, hosting and store on your behalf to do this work, and nothing else.
+      </p>
     </form>
   );
 }

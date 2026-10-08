@@ -8,7 +8,7 @@ const field =
 
 export function NewClientForm() {
   const router = useRouter();
-  const [f, setF] = useState({ domain: "", name: "", email: "", service: "premium-creative", tier: "fix" });
+  const [f, setF] = useState({ domain: "", name: "", email: "", service: "premium-creative", tier: "fix", authorized: false });
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -20,7 +20,7 @@ export function NewClientForm() {
     const json = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
     setBusy(false);
     if (!json?.ok) return setMsg(json?.error ?? "Something went wrong.");
-    setF({ ...f, domain: "", name: "", email: "" });
+    setF({ ...f, domain: "", name: "", email: "", authorized: false });
     router.refresh();
   }
 
@@ -40,6 +40,10 @@ export function NewClientForm() {
         <option value="build">Tier 2</option>
         <option value="grow">Tier 3</option>
       </select>
+      <label className="flex items-center gap-2 text-[13px] text-muted sm:col-span-2 lg:col-span-5">
+        <input type="checkbox" checked={f.authorized} onChange={(e) => setF({ ...f, authorized: e.target.checked })} className="h-4 w-4 accent-electric" />
+        They&apos;ve authorized us to access their website, hosting and store on their behalf (by email or in person)
+      </label>
       <button type="submit" disabled={busy} className="press-scale h-11 rounded-full bg-electric px-5 text-[13px] font-semibold text-navy disabled:opacity-50">
         {busy ? "Adding…" : "Add client"}
       </button>
@@ -93,5 +97,49 @@ export function DesignSelect({ siteId, current, options }: { siteId: string; cur
         </optgroup>
       ))}
     </select>
+  );
+}
+
+/** John records a client's "yes" (their reply to our email) to us accessing their site on their behalf. */
+export function AuthorizeButton({ id }: { id: string }) {
+  const router = useRouter();
+  const [state, setState] = useState<"idle" | "busy" | "error">("idle");
+  async function go() {
+    setState("busy");
+    const res = await fetch(`/api/admin/clients/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authorize: true }) }).catch(() => null);
+    const json = (await res?.json().catch(() => null)) as { ok?: boolean } | null;
+    if (json?.ok) return router.refresh();
+    setState("error");
+  }
+  return (
+    <button type="button" onClick={go} disabled={state === "busy"} className="ml-4 text-electric underline underline-offset-4 disabled:text-muted disabled:no-underline">
+      {state === "busy" ? "Recording…" : state === "error" ? "Failed, try again" : "Record their yes"}
+    </button>
+  );
+}
+
+/** John uploads a client's product file on their behalf (their site blocked our reader). */
+export function AdminCatalogUpload({ id }: { id: string }) {
+  const router = useRouter();
+  const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
+  const [msg, setMsg] = useState("");
+  async function upload(file: File) {
+    setState("busy");
+    const body = new FormData();
+    body.set("file", file);
+    const res = await fetch(`/api/admin/clients/${id}/catalog`, { method: "POST", body }).catch(() => null);
+    const json = (await res?.json().catch(() => null)) as { ok?: boolean; products?: number; source?: string; error?: string } | null;
+    setState(json?.ok ? "done" : "error");
+    setMsg(json?.ok ? `${json.products} products (${json.source}); running again` : json?.error ?? "Failed");
+    if (json?.ok) router.refresh();
+  }
+  return (
+    <span className="ml-4 inline-block">
+      <label className="cursor-pointer text-electric underline underline-offset-4">
+        {state === "busy" ? "Reading…" : "Upload their product CSV"}
+        <input type="file" accept=".csv,text/csv" className="hidden" disabled={state === "busy"} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+      </label>
+      {msg && <span className={`block text-[12px] ${state === "error" ? "text-signal" : "text-muted"}`}>{msg}</span>}
+    </span>
   );
 }

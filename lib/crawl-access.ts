@@ -2,10 +2,12 @@ import { randomBytes } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import type { Client } from "./clients";
 
-// Getting a client's catalog when their own site's firewall blocks crawlers:
-// a private token they let through their firewall (our crawler sends it to
-// their site, lib/polite-fetch), or a product file they upload
-// (lib/catalog-upload). Their permission, never a way around the block.
+// Getting a client's catalog when their own site's firewall blocks crawlers.
+// Nothing technical is asked of the client: with their authorization
+// (clients.authorized_at: a term of ordering, or their emailed "yes" that John
+// records in /admin/clients) John sorts it on their behalf, with a product
+// file (lib/catalog-upload) or by letting our crawler's private token through
+// their firewall (lib/polite-fetch). Their permission, never a way around the block.
 
 function sql() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
@@ -36,21 +38,24 @@ export async function askForCatalog(client: Client, base: string): Promise<void>
   const build = await getBuild(client.id);
   if (!blockedByFirewall(build) || build?.askedForCatalog) return;
   await setBuild(client.id, { askedForCatalog: true });
+  // A services business (no products) on content or ads isn't blocked: the service needs products. John decides.
+  const services = ((await sql()`SELECT 1 FROM sites s JOIN clients c ON c.id = s.client_id WHERE c.domain = ${client.domain} AND s.doc->>'kind' = 'services' LIMIT 1`) as unknown[]).length > 0;
+  if (client.service !== "web-development" && services) {
+    const { notifyJohn } = await import("./notify");
+    await notifyJohn(`${client.domain} has no products for ${client.service === "advertising" ? "ads" : "content"}`, `${client.domain} is a services business (its website is a services site). Content and ads are built from products, so nothing was made. Talk to the client about what to feature.`);
+    return;
+  }
   await emailClient(
     client.email,
-    `We need your product list for ${client.domain}`,
+    `One quick yes and we'll finish your ${client.service === "web-development" ? "website" : client.service === "advertising" ? "ads" : "content"}`,
     [
       client.name ? `Hi ${client.name.split(/\s+/)[0]},` : "Hi,",
       "",
-      `Your site's firewall turns away automated visitors, ours included, so we couldn't read your products from ${client.domain}.`,
+      `${client.domain}'s security settings turned away our automatic reader, so we couldn't pull your products in. That's common, and there's nothing for you to fix.`,
       "",
-      "Two ways to fix it, both in your studio (keep this link private):",
-      `${base}/studio/${client.token}`,
+      "Just reply \"yes, go ahead\" and we'll take care of it ourselves. If you happen to know who hosts your site or which platform your store runs on (Shopify, WordPress, GoDaddy…), mention it; if not, we'll work it out.",
       "",
-      "1. Upload your product export (Shopify or WooCommerce: Products → Export), or any spreadsheet of your products.",
-      "2. Or let our crawler through your firewall with the private header shown there.",
-      "",
-      "We carry on as soon as we have it.",
+      `If you already have a product list (your store's export, or a spreadsheet), you can also drop it in your studio and we start straight away: ${base}/studio/${client.token}`,
       "",
       "John Lim",
       "Founder, Apereel",

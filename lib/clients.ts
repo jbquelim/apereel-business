@@ -23,6 +23,8 @@ export type Client = {
   created_at: string;
   /** Website builds: progress and release state (lib/site-release). */
   build?: import("./site-release").BuildState | null;
+  /** When they authorized us to access their website, hosting and store on their behalf (lib/crawl-access). */
+  authorized_at?: string | null;
 };
 
 function sql() {
@@ -34,13 +36,19 @@ export function tierFor(c: Pick<Client, "service" | "tier">) {
   return SERVICE_TIERS.find((s) => s.slug === c.service)?.tiers.find((t) => t.id === c.tier) ?? null;
 }
 
-export async function createClient(c: { domain: string; name: string | null; email: string; service: AiService; tier: TierId }): Promise<Client> {
+/** `authorized`: they authorized us to access their site on their behalf (ordering says so; John ticks it for clients he adds). */
+export async function createClient(c: { domain: string; name: string | null; email: string; service: AiService; tier: TierId; authorized?: boolean }): Promise<Client> {
   const rows = (await sql()`
-    INSERT INTO clients (id, domain, name, email, service, tier, token)
-    VALUES (${randomUUID()}, ${c.domain}, ${c.name}, ${c.email}, ${c.service}, ${c.tier}, ${randomBytes(24).toString("base64url")})
+    INSERT INTO clients (id, domain, name, email, service, tier, token, authorized_at)
+    VALUES (${randomUUID()}, ${c.domain}, ${c.name}, ${c.email}, ${c.service}, ${c.tier}, ${randomBytes(24).toString("base64url")}, ${c.authorized ? new Date().toISOString() : null})
     RETURNING *
   `) as Client[];
   return rows[0];
+}
+
+/** Records the client's authorization (their emailed "yes", or a word with John) for us to access their site on their behalf. */
+export async function recordAuthorization(clientId: string): Promise<void> {
+  await sql()`UPDATE clients SET authorized_at = COALESCE(authorized_at, now()) WHERE id = ${clientId}`;
 }
 
 export async function listClients(): Promise<(Client & { used: number; items: number; cost: number; site_slug: string | null; running_since: string | null; site_qa: { page: string; check: string; detail: string }[] | null; site_id: string | null; site_design: string | null; held: number })[]> {
@@ -94,9 +102,9 @@ export async function createPaidClient(c: {
   subscription: string | null;
 }): Promise<Client | null> {
   const rows = (await sql()`
-    INSERT INTO clients (id, domain, name, email, service, tier, token, stripe_checkout_session, stripe_customer_id, stripe_subscription_id)
+    INSERT INTO clients (id, domain, name, email, service, tier, token, stripe_checkout_session, stripe_customer_id, stripe_subscription_id, authorized_at)
     VALUES (${randomUUID()}, ${c.domain}, ${c.name}, ${c.email}, ${c.service}, ${c.tier}, ${randomBytes(24).toString("base64url")},
-            ${c.checkoutSession}, ${c.customer}, ${c.subscription})
+            ${c.checkoutSession}, ${c.customer}, ${c.subscription}, now())
     ON CONFLICT (stripe_checkout_session) DO NOTHING
     RETURNING *
   `) as Client[];

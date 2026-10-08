@@ -9,7 +9,7 @@ import { StudioItems } from "./studio-items";
 import { WebsiteStudio } from "./website-studio";
 import { designChoices } from "@/lib/site-design";
 import { isReleased } from "@/lib/site-release";
-import { blockedByFirewall, ensureCrawlToken } from "@/lib/crawl-access";
+import { blockedByFirewall } from "@/lib/crawl-access";
 import { CatalogAccess } from "./catalog-access";
 import { BillingButton } from "./billing-button";
 import { refreshPaymentsStatus } from "@/lib/connect";
@@ -113,7 +113,7 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
           {client.stripe_customer_id && <BillingButton token={token} />}
         </div>
         {/* Their site blocked our crawler: upload a product file or let our crawler through (lib/crawl-access). */}
-        {blocked && <CatalogAccess token={token} crawlToken={await ensureCrawlToken(client)} domain={client.domain} />}
+        {blocked && <CatalogAccess token={token} domain={client.domain} />}
         {body}
         <MediaNudger pending={await pendingMediaJobs().catch(() => 0)} />
       </section>

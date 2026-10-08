@@ -24,7 +24,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   if (client.status !== "active") return NextResponse.json({ ok: false, error: "This client's plan has ended." }, { status: 409 });
   // John releases a held site by hand (lib/site-release): no run.
-  const peek = (await request.clone().json().catch(() => ({}))) as { approve?: boolean; releaseHeld?: boolean };
+  const peek = (await request.clone().json().catch(() => ({}))) as { approve?: boolean; releaseHeld?: boolean; authorize?: boolean };
+  // John records the client's "yes" to us accessing their site on their behalf (lib/crawl-access): no run.
+  if (peek.authorize) {
+    const { recordAuthorization } = await import("@/lib/clients");
+    await recordAuthorization(client.id);
+    return NextResponse.json({ ok: true, authorized: true });
+  }
   // John releases content or ads items the gate held (lib/content-release), after reviewing them.
   if (client.service !== "web-development" && peek.releaseHeld && process.env.DATABASE_URL) {
     const { neon } = await import("@neondatabase/serverless");

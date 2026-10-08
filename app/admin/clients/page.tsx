@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin-auth";
 import { listClients, tierFor } from "@/lib/clients";
-import { NewClientForm, GenerateButton, DesignSelect } from "./client-forms";
+import { NewClientForm, GenerateButton, DesignSelect, AdminCatalogUpload, AuthorizeButton } from "./client-forms";
+import { blockedByFirewall } from "@/lib/crawl-access";
 import { TEMPLATES } from "@/lib/templates";
 import { MediaNudger } from "@/components/media-nudger";
 import { pendingMediaJobs } from "@/lib/media";
@@ -111,6 +112,17 @@ export default async function ClientsPage() {
                       )}
                       {c.service !== "web-development" && c.held > 0 && (
                         <GenerateButton id={c.id} label={`Release ${c.held} held item${c.held > 1 ? "s" : ""}`} body={{ releaseHeld: true }} />
+                      )}
+                      {blockedByFirewall(c.build) && (
+                        <>
+                          <span className="mt-1 block text-[11px] text-signal">
+                            Their site turned our reader away.{" "}
+                            {c.authorized_at
+                              ? `Authorized ${new Date(c.authorized_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}: get their product export and upload it here, or allow our crawler in their firewall.`
+                              : "They were emailed to reply “yes”; record it when it comes, then sort it on their behalf."}
+                          </span>
+                          {c.authorized_at ? <AdminCatalogUpload id={c.id} /> : <AuthorizeButton id={c.id} />}
+                        </>
                       )}
                       {c.service === "web-development" && (c.build?.status === "held" || c.build?.status === "failed") && c.site_slug && (
                         <GenerateButton id={c.id} label="Release to client" body={{ approve: true }} />

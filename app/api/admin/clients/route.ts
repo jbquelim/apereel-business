@@ -23,6 +23,7 @@ export async function POST(request: Request) {
   if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return NextResponse.json({ ok: false, error: "Enter a valid website." }, { status: 400 });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ ok: false, error: "Enter a valid email." }, { status: 400 });
   if (!service || !tier) return NextResponse.json({ ok: false, error: "Choose a service and tier." }, { status: 400 });
-  const client = await createClient({ domain, email, name: typeof b.name === "string" && b.name.trim() ? b.name.trim().slice(0, 120) : null, service, tier });
+  // John ticks that the client authorized us to access their site on their behalf (they said so by email or in person).
+  const client = await createClient({ domain, email, name: typeof b.name === "string" && b.name.trim() ? b.name.trim().slice(0, 120) : null, service, tier, authorized: b.authorized === true });
   return NextResponse.json({ ok: true, id: client.id });
 }
