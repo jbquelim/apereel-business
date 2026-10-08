@@ -25,8 +25,12 @@ export type AdDesign = {
   render: (s: AdSlots, k: BrandKit, size: AdSize) => ReactElement;
 };
 
-/** The largest font size (≤ max, ≥ min) at which `text` wraps to at most `lines` lines in `width` px. */
-export function fitSize(text: string, width: number, lines: number, max: number, min: number, charWidth = 0.56): number {
+/**
+ * The largest font size (≤ max, ≥ min) at which `text` wraps to at most `lines`
+ * lines in `width` px, and (when `height` is given) those lines stack within
+ * `height` px at line height `lh`. Upper-case bold type is wider: pass 0.62.
+ */
+export function fitSize(text: string, width: number, lines: number, max: number, min: number, charWidth = 0.56, height = Infinity, lh = 1.05): number {
   const words = text.split(/\s+/).filter(Boolean);
   for (let fs = max; fs > min; fs -= 2) {
     let n = 1;
@@ -38,10 +42,12 @@ export function fitSize(text: string, width: number, lines: number, max: number,
         line = ww;
       } else line += ww;
     }
-    if (n <= lines) return fs;
+    if (n <= lines && n * fs * lh <= height) return fs;
   }
   return min;
 }
+
+const glyph = (k: BrandKit) => (k.upper ? 0.62 : 0.56);
 
 const kind = (z: AdSize) => (z.width > z.height * 1.4 ? "wide" : z.height > z.width * 1.3 ? "tall" : "square");
 const caseOf = (k: BrandKit, t: string) => (k.upper ? t.toUpperCase() : t);
@@ -70,7 +76,8 @@ function Pill({ text, bg, color, size }: { text: string; bg: string; color: stri
 }
 
 function Text({ text, size, color, weight = 700, family = "Heading", lh = 1.05, ls = -0.02 }: { text: string; size: number; color: string; weight?: number; family?: string; lh?: number; ls?: number }) {
-  return <div style={{ display: "flex", fontFamily: family, fontWeight: weight, fontSize: size, lineHeight: lh, letterSpacing: `${ls}em`, color }}>{text}</div>;
+  // flexShrink 0: a text block never shrinks under its neighbours (the type would overlap them).
+  return <div style={{ display: "flex", flexShrink: 0, fontFamily: family, fontWeight: weight, fontSize: size, lineHeight: lh, letterSpacing: `${ls}em`, color }}>{text}</div>;
 }
 
 // 1. Showcase: the product on the brand's tinted card; type below.
@@ -83,13 +90,14 @@ const showcase: AdDesign = {
     const v = kind(z);
     const pad = v === "wide" ? 44 : 64;
     const textW = v === "wide" ? z.width * 0.5 - pad * 2 : z.width - pad * 2;
-    const hs = fitSize(caseOf(k, s.headline), textW, v === "tall" ? 4 : 3, v === "wide" ? 54 : v === "tall" ? 92 : 74, 30);
+    // Below the photo the type gets a fixed height budget; a longer headline is set smaller, never over its subtitle.
+    const hs = fitSize(caseOf(k, s.headline), textW, v === "tall" ? 3 : v === "square" ? 2 : 3, v === "wide" ? 54 : v === "tall" ? 92 : 74, 30, glyph(k), v === "wide" ? Infinity : v === "tall" ? 300 : 150);
     return (
       <div style={{ display: "flex", flexDirection: v === "wide" ? "row" : "column", width: "100%", height: "100%", background: k.bg }}>
-        <div style={{ display: "flex", flex: v === "wide" ? "0 0 50%" : v === "tall" ? "0 0 58%" : "0 0 60%", background: k.surface, margin: v === "wide" ? 24 : 32, marginBottom: v === "wide" ? 24 : 0, borderRadius: k.radius * 2 }}>
+        <div style={{ display: "flex", flex: v === "wide" ? "0 0 50%" : "1 1 0%", minHeight: 0, background: k.surface, margin: v === "wide" ? 24 : 32, marginBottom: v === "wide" ? 24 : 0, borderRadius: k.radius * 2 }}>
           {s.photo && <Photo p={s.photo} fit={s.photo.cutout ? "contain" : "cover"} pad={s.photo.cutout ? 48 : 0} />}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, padding: pad, gap: v === "wide" ? 16 : 22 }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: v === "wide" ? 1 : "0 0 auto", padding: pad, gap: v === "wide" ? 16 : 22 }}>
           <Mark k={k} height={v === "wide" ? 40 : 52} color={k.ink} />
           <Text text={caseOf(k, s.headline)} size={hs} color={k.ink} />
           {s.sub && <Text text={s.sub} size={Math.round(hs * 0.42)} color={k.muted} weight={400} family="Body" lh={1.35} ls={0} />}
@@ -110,10 +118,11 @@ const split: AdDesign = {
     const v = kind(z);
     const pad = v === "wide" ? 48 : 72;
     const panelW = v === "wide" ? z.width * 0.48 : z.width;
-    const hs = fitSize(caseOf(k, s.headline), panelW - pad * 2, v === "tall" ? 5 : 4, v === "wide" ? 56 : v === "tall" ? 100 : 80, 30);
+    // The panel grows with its headline (the photo gives way); the headline's height is capped so the photo keeps room.
+    const hs = fitSize(caseOf(k, s.headline), panelW - pad * 2, v === "tall" ? 4 : v === "square" ? 3 : 4, v === "wide" ? 56 : v === "tall" ? 100 : 80, 30, glyph(k), v === "wide" ? Infinity : v === "tall" ? 420 : 220);
     return (
       <div style={{ display: "flex", flexDirection: v === "wide" ? "row" : "column-reverse", width: "100%", height: "100%", background: k.bg }}>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: v === "wide" ? "0 0 48%" : "0 0 44%", background: k.accent, padding: pad }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: v === "wide" ? "0 0 48%" : "0 0 auto", gap: v === "wide" ? 0 : 28, background: k.accent, padding: pad }}>
           <Mark k={{ ...k, logo: k.logo }} height={v === "wide" ? 36 : 48} color={k.onAccent} />
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <Text text={caseOf(k, s.headline)} size={hs} color={k.onAccent} />
@@ -121,7 +130,7 @@ const split: AdDesign = {
           </div>
           {s.badge || s.cta ? <Pill text={s.badge || s.cta} bg={k.onAccent} color={k.accent} size={v === "wide" ? 24 : 32} /> : <div style={{ display: "flex" }} />}
         </div>
-        <div style={{ display: "flex", flex: 1, background: s.photo?.cutout ? "#ffffff" : k.surface }}>
+        <div style={{ display: "flex", flex: "1 1 0%", minHeight: 0, background: s.photo?.cutout ? "#ffffff" : k.surface }}>
           {s.photo && <Photo p={s.photo} fit={s.photo.cutout ? "contain" : "cover"} pad={s.photo.cutout ? 56 : 0} />}
         </div>
       </div>
