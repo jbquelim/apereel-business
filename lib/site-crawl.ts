@@ -1,4 +1,5 @@
 import { BROWSER_UA, fetchSitemapCatalog, isBlockedPage } from "./site-fetch";
+import { politeFetch } from "./polite-fetch";
 import { readShopifyCatalog } from "./shopify-feed";
 import { recordPageSnapshots } from "./marketdb";
 
@@ -107,14 +108,12 @@ async function fetchPage(url: string): Promise<{ status: number | null; html: st
   for (const ua of [BROWSER_UA, PLAIN_UA]) {
     const started = Date.now();
     try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": ua, Accept: "text/html,*/*" },
-        redirect: "follow",
-        signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
-      });
+      // Polite (lib/polite-fetch): spaced per site, throttling waited out, the client's crawler token sent.
+      const res = await politeFetch(url, { headers: { "User-Agent": ua, Accept: "text/html,*/*" }, timeoutMs: PAGE_TIMEOUT_MS });
       const ms = Date.now() - started;
+      if (!res) return { status: null, html: null, ms: null };
       if (res.ok) return { status: res.status, html: await res.text(), ms };
-      if (![401, 403, 406, 429].includes(res.status) || ua === PLAIN_UA) return { status: res.status, html: null, ms };
+      if (![401, 403, 406].includes(res.status) || ua === PLAIN_UA) return { status: res.status, html: null, ms };
     } catch {
       return { status: null, html: null, ms: null };
     }

@@ -394,6 +394,10 @@ await sql`ALTER TABLE growth_orders ADD COLUMN IF NOT EXISTS fresh_audit BOOLEAN
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS analysis_after TIMESTAMPTZ`;
 // A website build's progress and release state (lib/site-release): building, ready, held or failed.
 await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS build JSONB`;
+// A client's private token for their firewall to let our crawler through (lib/polite-fetch, lib/crawl-access).
+await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS crawl_token TEXT`;
+// A product file a client uploaded when their site can't be read (lib/catalog-upload).
+await sql`CREATE TABLE IF NOT EXISTS catalog_uploads (domain TEXT PRIMARY KEY, products JSONB NOT NULL, categories JSONB NOT NULL DEFAULT '[]', source TEXT, uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now())`;
 // A failed render is tried once more before John is told (lib/media).
 await sql`ALTER TABLE media_jobs ADD COLUMN IF NOT EXISTS retries INT NOT NULL DEFAULT 0`;
 

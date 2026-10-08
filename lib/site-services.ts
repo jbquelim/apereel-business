@@ -1,4 +1,5 @@
 import { callClaude, parseJson } from "./ai";
+import { politeFetch } from "./polite-fetch";
 import { BROWSER_UA, isBlockedPage } from "./site-fetch";
 import { crawlList } from "./site-crawl";
 import type { SiteProduct } from "./site-types";
@@ -15,7 +16,7 @@ const NOT_SERVICE = /\/(?:blog|news|posts?|articles?|careers?|jobs?|privacy|term
 async function homepage(domain: string): Promise<{ html: string; base: string } | null> {
   for (const base of [`https://${domain}/`, `https://www.${domain.replace(/^www\./, "")}/`]) {
     for (const ua of [BROWSER_UA, "Mozilla/5.0"]) {
-      const res = await fetch(base, { headers: { "User-Agent": ua, Accept: "text/html" }, redirect: "follow", signal: AbortSignal.timeout(15_000) }).catch(() => null);
+      const res = await politeFetch(base, { headers: { "User-Agent": ua, Accept: "text/html" }, timeoutMs: 15_000 });
       if (!res?.ok) continue;
       const html = await res.text();
       if (!isBlockedPage(html)) return { html, base: res.url || base };
@@ -71,7 +72,7 @@ export function pickPhotos(pages: string[][]): (string | null)[] {
 
 async function pageHtml(url: string): Promise<string> {
   for (const ua of [BROWSER_UA, "Mozilla/5.0"]) {
-    const res = await fetch(url, { headers: { "User-Agent": ua, Accept: "text/html" }, redirect: "follow", signal: AbortSignal.timeout(15_000) }).catch(() => null);
+    const res = await politeFetch(url, { headers: { "User-Agent": ua, Accept: "text/html" }, timeoutMs: 15_000 });
     if (res?.ok) return res.text();
   }
   return "";

@@ -1,4 +1,5 @@
 import { BROWSER_UA, isBlockedPage } from "./site-fetch";
+import { politeFetch } from "./polite-fetch";
 
 // Reads a business's own brand from its current site so the new site looks
 // like theirs, not like a template: logo, accent colour, phone, email,
@@ -18,12 +19,13 @@ export type Brand = {
 async function get(url: string, ms = 10_000): Promise<string | null> {
   for (const ua of [BROWSER_UA, "Mozilla/5.0"]) {
     try {
-      const res = await fetch(url, { headers: { "User-Agent": ua }, redirect: "follow", signal: AbortSignal.timeout(ms) });
+      const res = await politeFetch(url, { headers: { "User-Agent": ua }, timeoutMs: ms });
+      if (!res) return null;
       if (res.ok) {
         const text = await res.text();
         return isBlockedPage(text) && !url.endsWith(".css") ? null : text;
       }
-      if (![401, 403, 406, 429].includes(res.status)) return null;
+      if (![401, 403, 406].includes(res.status)) return null;
     } catch {
       return null;
     }

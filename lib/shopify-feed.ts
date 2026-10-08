@@ -1,4 +1,5 @@
 import { BROWSER_UA } from "./site-fetch";
+import { politeFetch } from "./polite-fetch";
 
 // Shopify's public product feed (/products.json): exact titles, types and
 // prices without any AI. Shared by the audit and the snapshot refresher.
@@ -21,11 +22,8 @@ export function shopifyMinPrice(p: ShopifyProduct): number | null {
 
 export async function fetchShopifyJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
-      signal: AbortSignal.timeout(6000),
-    });
-    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) return null;
+    const res = await politeFetch(url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" }, timeoutMs: 8000 });
+    if (!res || !res.ok || !(res.headers.get("content-type") ?? "").includes("json")) return null;
     return (await res.json()) as T;
   } catch {
     return null;

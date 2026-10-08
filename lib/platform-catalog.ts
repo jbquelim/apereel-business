@@ -1,4 +1,5 @@
 import { BROWSER_UA } from "./site-fetch";
+import { politeFetch } from "./polite-fetch";
 
 // Reads a store's full catalog from the public feeds its own storefront
 // uses, with the store's real categories:
@@ -20,8 +21,9 @@ const INTERNAL = /\b(test|testing|404|recommendations?|hidden|draft|internal|sta
 
 async function getText(url: string, init?: RequestInit): Promise<{ status: number; text: string } | null> {
   try {
-    const res = await fetch(url, { ...init, headers: { "User-Agent": BROWSER_UA, Accept: "application/json,text/html,*/*", ...(init?.headers ?? {}) }, signal: AbortSignal.timeout(20_000) });
-    return { status: res.status, text: await res.text() };
+    // Polite (lib/polite-fetch): throttling (Shopify's 429s) is waited out there.
+    const res = await politeFetch(url, { ...init, headers: { "User-Agent": BROWSER_UA, Accept: "application/json,text/html,*/*", ...((init?.headers as Record<string, string>) ?? {}) }, timeoutMs: 20_000 });
+    return res ? { status: res.status, text: await res.text() } : null;
   } catch {
     return null;
   }
@@ -33,13 +35,12 @@ async function getText(url: string, init?: RequestInit): Promise<{ status: numbe
  */
 export class IncompleteCatalog extends Error {}
 
-/** JSON from a feed; throttling and server errors are retried twice (Shopify answers 429 under load). */
+/** JSON from a feed; a server error is tried once more (throttling is handled by lib/polite-fetch). */
 async function getJson<T>(url: string, init?: RequestInit): Promise<T | null> {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt) await new Promise((r) => setTimeout(r, attempt * 2000));
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, 2000));
     const r = await getText(url, init);
-    if (r && (r.status === 429 || r.status >= 500)) continue;
-    if (!r) continue;
+    if (!r || r.status >= 500) continue;
     if (r.status >= 400) return null;
     try {
       return JSON.parse(r.text) as T;

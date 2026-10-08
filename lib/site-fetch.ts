@@ -1,3 +1,4 @@
+import { politeFetch } from "./polite-fetch";
 // Shared site fetching: plain-text fetch with a firewall-friendly retry, and
 // sitemap discovery that finds a site's product and category pages.
 
@@ -12,13 +13,10 @@ const PLAIN_UA = "Mozilla/5.0";
 export async function fetchTextDirect(url: string, timeoutMs = 8000): Promise<string | null> {
   for (const ua of [BROWSER_UA, PLAIN_UA]) {
     try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": ua, Accept: "*/*" },
-        redirect: "follow",
-        signal: AbortSignal.timeout(timeoutMs),
-      });
+      const res = await politeFetch(url, { headers: { "User-Agent": ua, Accept: "*/*" }, timeoutMs });
+      if (!res) return null;
       if (res.ok) return await res.text();
-      if (![401, 403, 406, 429].includes(res.status)) return null;
+      if (![401, 403, 406].includes(res.status)) return null;
     } catch {
       return null;
     }
