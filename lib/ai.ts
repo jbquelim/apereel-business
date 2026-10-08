@@ -1,3 +1,4 @@
+import { jsonrepair } from "jsonrepair";
 import { neon } from "@neondatabase/serverless";
 
 // One way to call Claude for the AI services. Every call is logged to
@@ -96,10 +97,16 @@ export function parseJson<T>(text: string): T | null {
     return JSON.parse(m[0]) as T;
   } catch {
     // A measurement's inch mark copied into a string ("4" Long Flat Crossbar") ends it early: write it as the inch symbol and try again.
+    const inches = m[0].replace(/(\d)"(?=[\s\w\-)/×.]|,\s*[\w(])/g, "$1″");
     try {
-      return JSON.parse(m[0].replace(/(\d)"(?=[\s\w\-)/×.]|,\s*[\w(])/g, "$1″")) as T;
+      return JSON.parse(inches) as T;
     } catch {
-      return null;
+      // Anything else a model gets wrong in JSON (a stray quote around a word, a missing comma): repaired structurally.
+      try {
+        return JSON.parse(jsonrepair(inches)) as T;
+      } catch {
+        return null;
+      }
     }
   }
 }
@@ -112,7 +119,13 @@ export async function noteUnreadable(clientId: string | null, purpose: string, t
   console.error(`Unreadable reply (${purpose}):`, text.slice(0, 300));
   if (!process.env.DATABASE_URL || !clientId) return;
   const { neon } = await import("@neondatabase/serverless");
-  const snippet = `unreadable reply: ${text.slice(0, 1500)} … ${text.slice(-400)}`;
+  let why = "";
+  try {
+    JSON.parse(text.match(/[[{][\s\S]*[\]}]/)?.[0] ?? "");
+  } catch (err) {
+    why = err instanceof Error ? err.message : String(err);
+  }
+  const snippet = `unreadable reply (${why}): ${text.slice(0, 30_000)}`;
   await neon(process.env.DATABASE_URL)`
     UPDATE ai_requests SET error = ${snippet} WHERE id = (SELECT id FROM ai_requests WHERE client_id = ${clientId} AND purpose = ${purpose} ORDER BY created_at DESC LIMIT 1)
   `.catch(() => null);
