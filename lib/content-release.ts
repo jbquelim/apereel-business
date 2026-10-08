@@ -2,7 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import type { Client } from "./clients";
 import { callClaude, parseJson } from "./ai";
 import { RULES } from "./content-engine";
-import { checkItem, fixItem, type ItemIssue, type QaItem } from "./content-qa";
+import { COUNT, checkItem, fitLimits, fixItem, type ItemIssue, type QaItem } from "./content-qa";
 import { qaContext } from "./content-context";
 import { setBuild, getBuild } from "./site-release";
 import { emailClient, notifyJohn } from "./notify";
@@ -27,9 +27,9 @@ const MONTH = (batch: string) => new Date(`${batch}-01T12:00:00Z`).toLocaleStrin
 export function syncCounts<T>(data: T, total: number | null): T {
   if (!total) return data;
   return JSON.parse(
-    JSON.stringify(data).replace(/\b(\d{1,3}(?:,\d{3})+|\d{3,})(\+?)(-?\s*(?:products|parts|items|SKUs)\b)/gi, (m, num: string, plus: string, rest: string) => {
+    JSON.stringify(data).replace(COUNT, (m, num: string, rest: string) => {
       const n = Number(num.replace(/,/g, ""));
-      return Math.abs(n - total) / total > 0.1 ? `${total.toLocaleString("en-US")}${plus}${rest}` : m;
+      return Math.abs(n - total) / total > 0.1 ? `${total.toLocaleString("en-US")}${m.slice(num.length, m.length - rest.length)}${rest}` : m;
     }),
   ) as T;
 }
@@ -57,10 +57,12 @@ Remove a claim you can't support rather than rewording it. Return ONLY JSON: [{ 
 
 ${RULES}`,
     }).catch(() => "");
-    for (const r of parseJson<{ id?: number; data?: Record<string, unknown> }[]>(text) ?? []) {
-      const was = chunk.find((c) => c.item.id === r.id)?.item;
-      // Same fields back, or it isn't used.
-      if (was && r.data && Object.keys(was.data).every((k) => k in r.data!)) out.set(was.id, r.data);
+    const replies = parseJson<{ id?: number | string; data?: Record<string, unknown> }[]>(text) ?? [];
+    if (!replies.length) console.error(`Content repair for ${client.domain}: reply unreadable`);
+    for (const r of replies) {
+      const was = chunk.find((c) => c.item.id === Number(r.id))?.item;
+      // Its fields over the original's: a reply that leaves a field out keeps that field as it was.
+      if (was && r.data && typeof r.data === "object") out.set(was.id, { ...was.data, ...r.data });
     }
   }
   return out;
@@ -81,7 +83,7 @@ export async function releaseMonth(client: Client, base: string): Promise<string
   }
   // 1. Fixes that need no judgement.
   for (const it of items) {
-    const fixed = syncCounts(fixItem(it.data), ctx.catalogTotal);
+    const fixed = fitLimits(syncCounts(fixItem(it.data), ctx.catalogTotal));
     if (JSON.stringify(fixed) !== JSON.stringify(it.data)) {
       it.data = fixed;
       await sql()`UPDATE content_items SET data = ${JSON.stringify(fixed)}::jsonb, updated_at = now() WHERE id = ${it.id}`;
@@ -101,13 +103,16 @@ export async function releaseMonth(client: Client, base: string): Promise<string
     const fixed = await repair(client, failing.filter((f) => f.issues.some((x) => x.check !== "photo")), ctx.facts);
     for (const [id, data] of fixed) {
       const it = items.find((x) => x.id === id)!;
-      it.data = syncCounts(fixItem(data), ctx.catalogTotal);
+      it.data = fitLimits(syncCounts(fixItem(data), ctx.catalogTotal));
       await sql()`UPDATE content_items SET data = ${JSON.stringify(it.data)}::jsonb, updated_at = now() WHERE id = ${id}`;
     }
     failing = items.map((item) => ({ item, issues: check(item) })).filter((x) => x.issues.length);
   }
   // 3. What still fails is held for John; the rest is released.
   for (const { item } of failing) await sql()`UPDATE content_items SET status = 'held', updated_at = now() WHERE id = ${item.id}`;
+  // An item held before that passes now is released (a re-run fixed it).
+  const passing = items.filter((it) => it.status === "held" && !failing.some((f) => f.item.id === it.id)).map((it) => it.id);
+  if (passing.length) await sql()`UPDATE content_items SET status = 'draft', updated_at = now() WHERE id = ANY(${passing})`;
   const build = await getBuild(client.id);
   const already = (build as { batch?: string; notified?: boolean } | null)?.batch === batch && build?.notified;
   await setBuild(client.id, { status: "ready", stage: "released", batch, notified: true, issues: failing.flatMap(({ item, issues }) => issues.map((x) => ({ page: `#${item.id} ${item.kind}`, check: x.check, detail: x.detail }))) });

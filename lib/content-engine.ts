@@ -304,7 +304,9 @@ export async function generateMonth(client: Client, stage: MonthStage = "posts")
     const missing = volume.posts - (have.post ?? 0);
     if (missing <= 0) return "posts already made";
     const featured = pickProducts(catalog, volume.posts).slice(volume.posts - missing);
+    // An unreadable reply fails the step (retried, then reported) rather than leaving the month short.
     const posts = await writePosts(client, brief, featured);
+    if (featured.length && posts.length < featured.length / 2) throw new Error(`Only ${posts.length} of ${featured.length} posts for ${client.domain} came back readable`);
     const dates = postingDates(volume.posts).slice(volume.posts - missing);
     for (const [i, post] of posts.entries()) {
       const product = featured.find((p) => p.title === post.productTitle) ?? featured[i] ?? null;

@@ -1,5 +1,7 @@
 import { INTERNAL, PLACEHOLDER } from "./site-qa";
 
+/** A catalog count, with up to three words before the noun ("9,455 lamp and chandelier parts"). */
+export const COUNT = /\b(\d{1,3}(?:,\d{3})+|\d{3,})\+?((?:[\s-]+[a-z&]+){0,3}?[\s-]+(?:products|parts|items|SKUs))\b/gi;
 const RANGE = /\$\s?\d[\d,.]*\s*(?:to|-|–|—)\s*\$\s?\d/i;
 
 // Checks every content and ads item before a client sees it (lib/content-release):
@@ -64,8 +66,9 @@ export function checkItem(item: QaItem, ctx: QaContext): ItemIssue[] {
     const limit = LIMITS[f.key];
     // Over the platform's limit (copy is now shortened at a word boundary, lib/content-qa fit()).
     if (limit && t.length > limit) add("too-long", f.path, `${t.length} characters (limit ${limit})`);
-    // Ends on a dangling joiner: shortened mid-thought.
-    if (limit && /\b(?:and|or|the|a|an|of|to|for|with|by|in|on)$/i.test(t)) add("cut-off", f.path, `"…${t.slice(-40)}" ends mid-thought`);
+    // Ends on a dangling joiner or a broken word ("know-h"): shortened mid-thought.
+    if (limit && (/\b(?:and|or|the|a|an|of|to|for|with|by|in|on)$/i.test(t) || /-[a-z]{1,2}$/i.test(t) || (/\s[a-z]{1,2}$/i.test(t) && !/\s(?:it|us|we|me|go|up|do|so|on|in|to|by|at)$/i.test(t))))
+      add("cut-off", f.path, `"…${t.slice(-40)}" ends mid-thought`);
     if (PLACEHOLDER.test(t)) add("placeholder", f.path, `"${t.slice(0, 80)}"`);
   }
   if (item.kind !== "note") {
@@ -87,7 +90,7 @@ export function checkItem(item: QaItem, ctx: QaContext): ItemIssue[] {
     else if (/\.\d$/.test(m[0])) add("price-format", "", `${m[0]} should read ${m[0]}0`);
   }
   // Catalog counts.
-  for (const m of all.matchAll(/\b(\d{1,3}(?:,\d{3})+|\d{3,})\+?\s+(?:products|parts|items|SKUs)\b/gi)) {
+  for (const m of all.matchAll(COUNT)) {
     const n = Number(m[1].replace(/,/g, ""));
     if (ctx.catalogTotal == null) add("count", "", `"${m[0]}" can't be checked against the store`);
     else if (Math.abs(n - ctx.catalogTotal) / ctx.catalogTotal > 0.1) add("count", "", `"${m[0]}", the store has ${ctx.catalogTotal.toLocaleString("en-US")}`);
@@ -144,4 +147,15 @@ export function fit(v: unknown, n: number): string {
   const clause = head.match(/^[\s\S]*[,;:—–](?=\s)/)?.[0];
   if (clause && clause.length >= n * 0.6) return clause.replace(/[,;:—–]$/, "").trim();
   return head.replace(/\s+\S*$/, "").replace(/[,;:—–-]$/, "").trim();
+}
+
+/** Every field with a platform limit shortened to fit it (after a fix made it longer). */
+export function fitLimits<T>(data: T): T {
+  const walk = (v: unknown, key: string): unknown => {
+    if (typeof v === "string") return LIMITS[key] && v.length > LIMITS[key] ? fit(v, LIMITS[key]) : v;
+    if (Array.isArray(v)) return v.map((x) => walk(x, key));
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x, k)]));
+    return v;
+  };
+  return walk(data, "") as T;
 }

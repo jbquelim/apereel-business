@@ -4,7 +4,7 @@
 //   npx tsx --env-file=.env.local tools/content-qa.mts [domain]
 
 import { neon } from "@neondatabase/serverless";
-import { checkItem, fixItem, type QaItem } from "../lib/content-qa";
+import { checkItem, fitLimits, fixItem, type QaItem } from "../lib/content-qa";
 import { syncCounts } from "../lib/content-release";
 import { qaContext } from "../lib/content-context";
 
@@ -21,7 +21,7 @@ for (const c of clients.filter((x) => !only || x.domain === only)) {
   const items = (await sql`SELECT id, kind, data, product_url, image FROM content_items WHERE client_id = ${c.id} AND batch = ${c.batch} ORDER BY id`) as (QaItem & { id: number })[];
   const flagged = items.map((i) => ({ i, issues: checkItem(i, ctx) })).filter((x) => x.issues.length);
   // What the release gate's automatic fixes leave for the AI repair (lib/content-release).
-  const after = items.map((i) => ({ i, issues: checkItem({ ...i, data: syncCounts(fixItem(i.data), ctx.catalogTotal) }, ctx) })).filter((x) => x.issues.length);
+  const after = items.map((i) => ({ i, issues: checkItem({ ...i, data: fitLimits(syncCounts(fixItem(i.data), ctx.catalogTotal)) }, ctx) })).filter((x) => x.issues.length);
   console.log(`\n${c.domain} · ${c.service} · ${c.tier} · ${c.batch}: ${flagged.length} of ${items.length} items flagged (catalog ${ctx.catalogTotal ?? "unknown"}, ${ctx.products.length} products known)`);
   console.log(`  after automatic fixes: ${after.length} still need the AI repair${after.length ? ` (${[...new Set(after.flatMap((x) => x.issues.map((y) => y.check)))].join(", ")})` : ""}`);
   for (const { i, issues } of flagged.slice(0, 12)) {
