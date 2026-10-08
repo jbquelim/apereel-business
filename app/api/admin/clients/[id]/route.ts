@@ -24,7 +24,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   if (client.status !== "active") return NextResponse.json({ ok: false, error: "This client's plan has ended." }, { status: 409 });
   // John releases a held site by hand (lib/site-release): no run.
-  const peek = (await request.clone().json().catch(() => ({}))) as { approve?: boolean; releaseHeld?: boolean; authorize?: boolean; retryRenders?: boolean };
+  const peek = (await request.clone().json().catch(() => ({}))) as { approve?: boolean; releaseHeld?: boolean; authorize?: boolean; retryRenders?: boolean; recheck?: boolean };
+  // John re-runs this month's release gate (lib/content-release): automatic fixes, one AI repair for what still fails (cents), holds and releases. No new items.
+  if (client.service !== "web-development" && peek.recheck) {
+    if (!(await claimRun(client.id))) return NextResponse.json({ ok: false, error: "Already running. Give it a few minutes." }, { status: 409 });
+    const base = (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
+    after(async () => {
+      try {
+        const { releaseMonth } = await import("@/lib/content-release");
+        console.log(`Re-check for ${client.domain}: ${await releaseMonth(client, base)}`);
+      } catch (err) {
+        console.error(`Re-check failed for ${client.domain}:`, err instanceof Error ? err.message : err);
+      } finally {
+        await releaseRun(client.id);
+      }
+    });
+    return NextResponse.json({ ok: true, recheck: true });
+  }
   // John re-queues failed video and visual renders (lib/media) once the cause is fixed: no AI run, Higgsfield credit only.
   if (peek.retryRenders) {
     // Renders fail when Higgsfield can't fetch the business's photo: without our photo storage a retry just pays again.
