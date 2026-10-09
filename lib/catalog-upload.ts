@@ -59,6 +59,7 @@ export function productsFromCsv(text: string, domain: string): { products: Platf
   const iImage = col("image src", "images", "image", "image url", "image_url", "photo");
   const iUrl = col("url", "permalink", "link", "product url", "product_url");
   const iCat = col("product category", "categories", "category", "collection", "product type", "type");
+  const iTags = col("tags", "product tags");
   const source = iHandle >= 0 && cols.includes("variant price") ? "Shopify export" : cols.includes("regular price") ? "WooCommerce export" : "spreadsheet";
   const base = `https://${domain.replace(/^www\./, "")}`;
   const byKey = new Map<string, PlatformProduct & { category: string }>();
@@ -73,10 +74,15 @@ export function productsFromCsv(text: string, domain: string): { products: Platf
     const image = had?.image || at(r, iImage).split(/,\s*(?=https?:)/)[0] || null;
     const category = (at(r, iCat).split(/,\s*/)[0] ?? "").split(/\s*>\s*/)[0] || had?.category || "";
     const url = at(r, iUrl) || had?.url || (at(r, iHandle) ? `${base}/products/${at(r, iHandle)}` : `${base}/`);
-    byKey.set(key, { url, title, price, currency: null, image, categoryKeys: category ? [`u:${slug(category)}`] : [], category });
+    const tags = (at(r, iTags) || (had?.tags ?? []).join(",")).split(/,\s*/).map((t) => t.trim()).filter(Boolean);
+    byKey.set(key, { url, title, price, currency: null, image, categoryKeys: category ? [`u:${slug(category)}`] : [], category, ...(tags.length ? { tags } : {}) });
   }
   const products = [...byKey.values()].filter((p) => p.title);
-  return { products: products.map(({ url, title, price, currency, image, categoryKeys }) => ({ url, title, price, currency, image, categoryKeys })), categories: [...new Set(products.map((p) => p.category).filter(Boolean))], source };
+  return {
+    products: products.map(({ url, title, price, currency, image, categoryKeys, tags }) => ({ url, title, price, currency, image, categoryKeys, ...(tags ? { tags } : {}) })),
+    categories: [...new Set(products.map((p) => p.category).filter(Boolean))],
+    source,
+  };
 }
 
 export async function saveUpload(domain: string, text: string): Promise<{ products: number; categories: number; source: string }> {

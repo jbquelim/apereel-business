@@ -7,6 +7,7 @@ import type { SiteDoc } from "./site-types";
 import { applyGroups } from "./category-groups";
 import { uploadedCatalog } from "./catalog-upload";
 import { dropRangeStats, syncCategoryCounts, syncCount } from "./site-qa";
+import { CATCH_ALL, categorise } from "./catalog-categorise";
 
 // Imports a business's whole catalog into a generated site, categorised the
 // way the business itself categorises it. Category pages list their products,
@@ -31,8 +32,6 @@ const norm = (u: string) => {
 const lastSegment = (u: string) => decodeURIComponent(new URL(u).pathname.split("/").filter(Boolean).pop() ?? "item");
 const slugify = (s: string) =>
   s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "item";
-const CATCH_ALL = /\b(shop all|all products|all items|catalog|new arrivals?|sale|clearance|featured|best ?sellers?|specials?|gift ?cards?)\b/i;
-
 async function get(url: string): Promise<string | null> {
   for (const ua of [BROWSER_UA, "Mozilla/5.0"]) {
     try {
@@ -246,26 +245,19 @@ async function assemble(site: { id: string; doc: SiteDoc }, domain: string): Pro
   return { products: rows.length, categories: categories.length };
 }
 
-/** Writes a platform catalog onto the site: each product in its deepest real category. */
+/**
+ * Writes a platform catalog onto the site: each product in its deepest real
+ * category, or failing that the one its type, tags or title name
+ * (lib/catalog-categorise).
+ */
 async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: PlatformCatalog, maxProducts: number): Promise<{ products: number; categories: number }> {
-  const byKey = new Map(cat.categories.map((c) => [c.key, c]));
-  const depth = (k: string) => {
-    let d = 0;
-    for (let c = byKey.get(k); c?.parentKey && d < 10; c = byKey.get(c.parentKey)) d++;
-    return d;
-  };
-  const size = new Map<string, number>();
-  for (const p of cat.products) for (const k of p.categoryKeys) size.set(k, (size.get(k) ?? 0) + 1);
-  const usable = (k: string) => {
-    const c = byKey.get(k);
-    return !!c && !CATCH_ALL.test(c.name) && (size.get(k) ?? 0) <= cat.products.length / 3;
-  };
-  const pick = (keys: string[]) =>
-    keys.filter(usable).sort((a, b) => depth(b) - depth(a) || (size.get(a) ?? 0) - (size.get(b) ?? 0))[0] ?? null;
+  const filed = categorise(cat, maxProducts);
+  const byKey = new Map(filed.categories.map((c) => [c.key, c]));
+  const { usable } = filed;
 
   const slugOf = new Map<string, string>();
   const usedCat = new Set<string>();
-  for (const c of cat.categories) {
+  for (const c of filed.categories) {
     let s = slugify(c.url ? lastSegment(c.url) : c.name);
     while (usedCat.has(s)) s = `${s}-${usedCat.size}`;
     usedCat.add(s);
@@ -278,7 +270,7 @@ async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: Platfor
     let slug = prev?.slug ?? slugify(lastSegment(p.url));
     while (used.has(slug)) slug = `${slug}-${i}`;
     used.add(slug);
-    const key = pick(p.categoryKeys);
+    const key = filed.keys[i];
     return {
       site_id: site.id,
       slug,
@@ -315,7 +307,7 @@ async function assemblePlatform(site: { id: string; doc: SiteDoc }, cat: Platfor
     }
   }
   const prevCats = new Map(site.doc.categories.map((c) => [c.slug, c]));
-  const categories = cat.categories
+  const categories = filed.categories
     .filter((c) => (total.get(c.key) ?? 0) > 0 && usable(c.key))
     .map((c) => {
       const slug = slugOf.get(c.key)!;

@@ -10,7 +10,18 @@ import { politeFetch } from "./polite-fetch";
 // when none applies; the crawler is the fallback.
 
 export type PlatformCategory = { key: string; name: string; parentKey: string | null; url: string | null };
-export type PlatformProduct = { url: string; title: string; price: number | null; currency: string | null; image: string | null; categoryKeys: string[] };
+export type PlatformProduct = {
+  url: string;
+  title: string;
+  price: number | null;
+  currency: string | null;
+  image: string | null;
+  categoryKeys: string[];
+  /** The store's product type (Shopify product_type, a CSV's Type): the category when no collection fits (lib/catalog-categorise). */
+  type?: string | null;
+  /** The store's tags, which may name a category. */
+  tags?: string[];
+};
 export type PlatformCatalog = { platform: "bigcommerce" | "shopify" | "woocommerce" | "upload"; categories: PlatformCategory[]; products: PlatformProduct[] };
 
 const CATCH_ALL = /^(all|frontpage|home|sale|new|new-arrivals|best-sellers?|featured|clearance|gift-cards?|shop-all.*|all-products)$/i;
@@ -109,7 +120,9 @@ async function bigcommerce(host: string, deadline: number, max: number): Promise
 }
 
 // ---------- Shopify ----------
-type ShopProduct = { handle: string; title: string; product_type?: string; images?: { src: string }[]; variants?: { price: string }[] };
+type ShopProduct = { handle: string; title: string; product_type?: string; tags?: string[] | string; images?: { src: string }[]; variants?: { price: string }[] };
+/** Collections read per store; a store with more gets its first ones (products in the rest fall back to their type). */
+const MAX_COLLECTIONS = 300;
 
 async function shopify(host: string, deadline: number, max: number): Promise<PlatformCatalog | null> {
   const first = await getJson<{ products: ShopProduct[] }>(`https://${host}/products.json?limit=250&page=1`);
@@ -127,30 +140,43 @@ async function shopify(host: string, deadline: number, max: number): Promise<Pla
   const keys = new Map<string, string[]>();
   const categories: PlatformCategory[] = [];
   // Collections are the store's own categories; membership comes from each collection's feed.
-  const cols = (await getJson<{ collections: { handle: string; title: string }[] }>(`https://${host}/collections.json?limit=250`))?.collections ?? [];
-  for (const c of cols.filter((c) => !CATCH_ALL.test(c.handle) && !PROMO.test(c.handle) && !PROMO.test(c.title) && !INTERNAL.test(c.handle) && !INTERNAL.test(c.title)).slice(0, 80)) {
-    if (Date.now() > deadline) break;
-    let n = 0;
-    for (let page = 1; page <= 10; page++) {
-      const r = await getJson<{ products: { handle: string }[] }>(`https://${host}/collections/${c.handle}/products.json?limit=250&page=${page}`);
-      if (!r?.products?.length) break;
-      for (const p of r.products) if (byHandle.has(p.handle)) {
-        keys.set(p.handle, [...(keys.get(p.handle) ?? []), `c:${c.handle}`]);
-        n++;
-      }
-      if (r.products.length < 200) break;
-    }
-    if (n) categories.push({ key: `c:${c.handle}`, name: c.title, parentKey: null, url: `https://${host}/collections/${c.handle}` });
+  // Every collection with products is read (Onyx has 144; a cap of 80 left 59 unread), two at a time
+  // (lib/polite-fetch allows two requests per host). Product types and tags travel with each
+  // product: lib/catalog-categorise files products that no real collection covers by them.
+  let cols = (await getJson<{ collections: { handle: string; title: string; products_count?: number }[] }>(`https://${host}/collections.json?limit=250`))?.collections ?? [];
+  for (let page = 2; cols.length === 250 * (page - 1) && page <= 4; page++) {
+    const more = (await getJson<{ collections: typeof cols }>(`https://${host}/collections.json?limit=250&page=${page}`))?.collections ?? [];
+    if (!more.length) break;
+    cols = [...cols, ...more];
   }
-  // Product types fill in for products in no collection.
-  for (const p of all) {
-    if (keys.has(p.handle) || !p.product_type) continue;
-    const k = `t:${p.product_type.toLowerCase()}`;
-    if (!categories.some((c) => c.key === k)) categories.push({ key: k, name: p.product_type, parentKey: null, url: null });
-    keys.set(p.handle, [k]);
+  const todo = cols
+    .filter((c) => c.products_count !== 0 && !CATCH_ALL.test(c.handle) && !PROMO.test(c.handle) && !PROMO.test(c.title) && !INTERNAL.test(c.handle) && !INTERNAL.test(c.title))
+    .slice(0, MAX_COLLECTIONS);
+  const members = new Map<string, string[]>();
+  let next = 0;
+  const worker = async () => {
+    while (next < todo.length && Date.now() < deadline) {
+      const c = todo[next++];
+      const found: string[] = [];
+      for (let page = 1; page <= 10; page++) {
+        const r = await getJson<{ products: { handle: string }[] }>(`https://${host}/collections/${c.handle}/products.json?limit=250&page=${page}`);
+        if (!r?.products?.length) break;
+        for (const p of r.products) if (byHandle.has(p.handle)) found.push(p.handle);
+        if (r.products.length < 200) break;
+      }
+      if (found.length) members.set(c.handle, found);
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  for (const c of todo) {
+    const found = members.get(c.handle);
+    if (!found) continue;
+    for (const h of found) keys.set(h, [...(keys.get(h) ?? []), `c:${c.handle}`]);
+    categories.push({ key: `c:${c.handle}`, name: c.title, parentKey: null, url: `https://${host}/collections/${c.handle}` });
   }
   const products = all.map((p) => {
     const prices = (p.variants ?? []).map((v) => Number(v.price)).filter((x) => x > 0);
+    const tags = (Array.isArray(p.tags) ? p.tags : (p.tags ?? "").split(",")).map((t) => t.trim()).filter(Boolean);
     return {
       url: `https://${host}/products/${p.handle}`,
       title: p.title,
@@ -158,6 +184,8 @@ async function shopify(host: string, deadline: number, max: number): Promise<Pla
       currency: null,
       image: p.images?.[0]?.src ?? null,
       categoryKeys: keys.get(p.handle) ?? [],
+      type: p.product_type?.trim() || null,
+      ...(tags.length ? { tags } : {}),
     };
   });
   return products.length ? { platform: "shopify", categories, products } : null;

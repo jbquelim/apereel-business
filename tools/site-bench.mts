@@ -9,6 +9,7 @@
 // their own bench: tools/site-qa.mts.
 
 import { platformCatalog } from "../lib/platform-catalog";
+import { categorise } from "../lib/catalog-categorise";
 import { fetchSitemapCatalog } from "../lib/site-fetch";
 import { extractBrand } from "../lib/brand-extract";
 import { crawlList } from "../lib/site-crawl";
@@ -19,18 +20,21 @@ type Expect = {
   platform: "shopify" | "bigcommerce" | "woocommerce" | null;
   /** At least this many products from the platform feed (null: no feed expected). */
   minProducts: number | null;
+  /** At least this share of the feed's products end up in a category (lib/catalog-categorise). */
+  minCategorised: number | null;
   logo: boolean;
 };
 
 // What each store gave when last checked by hand (2026-10-07). Counts are floors, not exact.
 const STORES: Expect[] = [
   // Onyx serves some HTTP clients a reduced feed (777 of 953 to Node on a desktop; builds on Vercel read 953), so the floor is low.
-  { domain: "onyxcoffeelab.com", kind: "large Shopify, hidden products, sitemaps per market, inline SVG logo", platform: "shopify", minProducts: 700, logo: true },
-  { domain: "studs.com", kind: "small Shopify", platform: "shopify", minProducts: 150, logo: true },
-  { domain: "grandbrass.com", kind: "BigCommerce, 20,000 products", platform: "bigcommerce", minProducts: 15_000, logo: true },
-  { domain: "eatgrub.co.uk", kind: "WooCommerce", platform: "woocommerce", minProducts: 10, logo: true },
-  { domain: "etlin-daniels.com", kind: "WordPress, blocks browser user agents, lazy-loaded logo", platform: null, minProducts: null, logo: true },
-  { domain: "mrrooter.com", kind: "service business, no products", platform: null, minProducts: null, logo: true },
+  // 316 of its archived coffees sit only in catch-all collections and are filed by product type (2026-10-08).
+  { domain: "onyxcoffeelab.com", kind: "large Shopify, hidden products, sitemaps per market, inline SVG logo", platform: "shopify", minProducts: 700, minCategorised: 0.95, logo: true },
+  { domain: "studs.com", kind: "small Shopify", platform: "shopify", minProducts: 150, minCategorised: 0.9, logo: true },
+  { domain: "grandbrass.com", kind: "BigCommerce, 20,000 products", platform: "bigcommerce", minProducts: 15_000, minCategorised: 0.9, logo: true },
+  { domain: "eatgrub.co.uk", kind: "WooCommerce", platform: "woocommerce", minProducts: 10, minCategorised: 0.5, logo: true },
+  { domain: "etlin-daniels.com", kind: "WordPress, blocks browser user agents, lazy-loaded logo", platform: null, minProducts: null, minCategorised: null, logo: true },
+  { domain: "mrrooter.com", kind: "service business, no products", platform: null, minProducts: null, minCategorised: null, logo: true },
 ];
 
 const only = process.argv[2];
@@ -70,6 +74,14 @@ await Promise.all(
     if (s.minProducts != null && products < s.minProducts) problems.push(`feed gave ${products} products, expected at least ${s.minProducts}`);
     // A feed well short of the store's own sitemap is how the Shopify paging bug showed (248 of 952).
     if (read && listed >= 20 && products < listed * 0.9) problems.push(`feed gave ${products} products but the sitemap lists ${listed}`);
+    // Products with no category only show up in search: the share filed is checked the way the import files them.
+    let filed = "";
+    if (read) {
+      const c = categorise(read);
+      const share = products ? (products - c.by.none) / products : 0;
+      filed = ` · categorised: ${(share * 100).toFixed(1)}% (${c.by.category} by category, ${c.by.type} by type, ${c.by.tag} by tag, ${c.by.title} by title, ${c.by.none} none)`;
+      if (s.minCategorised != null && share < s.minCategorised) problems.push(`only ${(share * 100).toFixed(1)}% of products got a category, expected at least ${s.minCategorised * 100}%`);
+    }
     // No feed: the build crawls product pages, so a sample of them must read.
     let crawl = "";
     if (!read && listed > 0) {
@@ -85,7 +97,7 @@ await Promise.all(
     if (problems.length) failed++;
     const logo = brand?.logo ? (brand.logo.startsWith("data:") ? "inline svg" : "image") : "none";
     console.log(`${problems.length ? "FAIL" : "ok  "} ${s.domain} (${s.kind})`);
-    console.log(`     feed: ${read ? `${read.platform}, ${products} products, ${read.categories.length} categories` : "none"} · sitemap: ${listed} products · logo: ${logo} · accent: ${brand?.accent ?? "none"}${crawl} · ${((Date.now() - started) / 1000).toFixed(0)}s`);
+    console.log(`     feed: ${read ? `${read.platform}, ${products} products, ${read.categories.length} categories` : "none"}${filed} · sitemap: ${listed} products · logo: ${logo} · accent: ${brand?.accent ?? "none"}${crawl} · ${((Date.now() - started) / 1000).toFixed(0)}s`);
     for (const p of problems) console.log(`     - ${p}`);
   }),
 );
