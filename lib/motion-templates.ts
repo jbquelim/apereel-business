@@ -274,13 +274,16 @@ export function plainProduct(title: string): string {
   const t = title
     .replace(/\b[A-Z]{1,6}\d[\w./-]*\b|\b\d+[\w./-]*[A-Z]{2,}[\w./-]*\b/g, " ") // SKUs and part numbers
     .replace(/\b(c?ULus?|c?CSAus?|UL|CSA|CE|RoHS)\b( (listed|approved|certified))?/gi, " ")
+    // Fractional sizes first ("1-1/16in", "3/8in"), or the unit rule below eats "16in" and leaves "1-1/".
+    .replace(/\b\d+(-\d+)?(\/\d+)?\s?(in|inch|ips|″)\b\.?/gi, " ")
     .replace(/\b\d+(\.\d+)?\s?(w|v|watts?|volts?|amps?|a|hz|k|awg|in|ips|mm|cm|lbs?)\b\.?/gi, " ")
-    .replace(/\b\d+(-\d+)?(\/\d+)?\s?(in|inch|″)\b\.?/gi, " ")
     .replace(/[–—]|\s[-]\s/g, ", ")
     .replace(/\(.*?\)/g, " ")
     .replace(/[,\s]{2,}/g, ", ")
     .replace(/^[,\s]+|[,\s.]+$/g, "")
-    .toLowerCase();
+    .toLowerCase()
+    // A spec removed from the end can leave its lead-in ("…thickness to", "…lamps, max").
+    .replace(/(?:[,\s]+(?:to|for|with|of|and|or|max|min|up|dia|approx))+$/g, "");
   return `a ${t}`;
 }
 
