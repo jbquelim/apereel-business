@@ -8,6 +8,7 @@ import { platformCatalog } from "./platform-catalog";
 import { uploadedCatalog } from "./catalog-upload";
 import { queueMediaJob, type MediaBrief, type MediaKind } from "./media";
 import { storeImages, storedUrls } from "./image-store";
+import { upgradeImages } from "./image-upgrade";
 import { fixItem } from "./content-qa";
 import { catalogTotalFor } from "./content-context";
 
@@ -226,7 +227,8 @@ export async function catalogWithPhotos(domain: string): Promise<Product[]> {
     }
   }
   if (catalog.length === 0) throw new Error(`No products could be read from ${domain}`);
-  // Our own copies of the photos we're likely to use (see lib/image-store).
+  // The store's full-size photos (lib/image-upgrade), then our own copies of the ones we're likely to use (lib/image-store).
+  catalog = await upgradeImages(catalog).catch(() => catalog);
   const photos = catalog.filter((p) => p.image).slice(0, 80).map((p) => p.image!);
   await storeImages(photos, 60_000).catch((err) => console.error("storeImages failed:", err instanceof Error ? err.message : err));
   const copies = await storedUrls(photos).catch(() => new Map<string, string>());

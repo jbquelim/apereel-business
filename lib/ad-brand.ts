@@ -29,7 +29,15 @@ export type BrandKit = {
   upper: boolean;
 };
 
-export type AdPhoto = { src: string; width: number; height: number; cutout: boolean };
+export type AdPhoto = {
+  src: string;
+  width: number;
+  height: number;
+  /** A product shot on white: can sit on a coloured card. */
+  cutout: boolean;
+  /** A product shot on any one plain backdrop (white, grey, a sweep): nothing else in frame. */
+  plain: boolean;
+};
 
 function sql() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
@@ -71,7 +79,8 @@ export async function drawable(url: string | null, max = 1400): Promise<AdPhoto 
     const corners = [px(0, 0), px(39, 0), px(0, 39), px(39, 39)];
     const light = corners.every((p) => p.every((v) => v > 225));
     const even = corners.every((p) => p.every((v, i) => Math.abs(v - corners[0][i]) < 14));
-    return { src: `data:image/png;base64,${out.data.toString("base64")}`, width: out.info.width, height: out.info.height, cutout: light && even };
+    const plain = even && corners.every((p) => p.every((v) => v > 120));
+    return { src: `data:image/png;base64,${out.data.toString("base64")}`, width: out.info.width, height: out.info.height, cutout: light && even, plain };
   } catch {
     return null;
   }

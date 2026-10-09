@@ -3,6 +3,7 @@ import { neon } from "@neondatabase/serverless";
 import { put } from "@vercel/blob";
 import { imageSize } from "./image-size";
 import { storeImages, storedUrls } from "./image-store";
+import { upgradeImages } from "./image-upgrade";
 
 // Video and visuals for every service, rendered with Higgsfield (the same
 // platform as Apereel's Higgsfield studio): Seedance 2.5 for video (content
@@ -27,6 +28,8 @@ export type MediaBrief = {
   voiceover?: string;
   /** The generation prompt (no text in the render). */
   prompt: string;
+  /** The motion or scene template the brief was built from (lib/motion-templates), when one was. */
+  template?: string;
 };
 
 export type MediaJob = {
@@ -225,7 +228,8 @@ export async function processMediaJobs(budgetMs: number): Promise<{ submitted: n
     if (Date.now() - started > budgetMs) break;
     // Higgsfield gets our own copy of each photo (lib/image-store): a business's server
     // often answers Higgsfield's fetch with a bot check, which fails the render.
-    const originals = job.brief.images.filter(Boolean);
+    // The store's full-size photo, not its thumbnail (lib/image-upgrade): a 386px photo renders soft.
+    const originals = (await upgradeImages(job.brief.images.filter(Boolean).map((image) => ({ image }))).catch(() => job.brief.images.map((image) => ({ image })))).map((i) => i.image!).filter(Boolean);
     if (originals.length) {
       await storeImages(originals, 30_000).catch(() => 0);
       const copies = await storedUrls(originals).catch(() => new Map<string, string>());
@@ -255,6 +259,32 @@ export async function processMediaJobs(budgetMs: number): Promise<{ submitted: n
     }
   }
   return { submitted, finished };
+}
+
+/**
+ * Each template's track record across every render made from it: +1 for an
+ * item the client approved, -2 for one they asked to change, -3 for a render
+ * that failed (lib/motion-templates scoring).
+ */
+export async function templateRecord(): Promise<Record<string, number>> {
+  const rows = (await sql()`
+    SELECT m.brief->>'template' AS template,
+      sum(CASE WHEN i.status = 'approved' THEN 1 ELSE 0 END)::int AS approved,
+      sum(CASE WHEN i.status = 'changed' THEN 1 ELSE 0 END)::int AS changed,
+      sum(CASE WHEN m.status = 'failed' THEN 1 ELSE 0 END)::int AS failed
+    FROM media_jobs m LEFT JOIN content_items i ON i.id = m.item_id
+    WHERE m.brief->>'template' IS NOT NULL GROUP BY 1
+  `) as { template: string; approved: number; changed: number; failed: number }[];
+  return Object.fromEntries(rows.map((r) => [r.template, r.approved - 2 * r.changed - 3 * r.failed]));
+}
+
+/** Templates already used for a client's items this month, for variety. */
+export async function usedTemplates(clientId: string, batch: string): Promise<string[]> {
+  const rows = (await sql()`
+    SELECT m.brief->>'template' AS template FROM media_jobs m JOIN content_items i ON i.id = m.item_id
+    WHERE m.client_id = ${clientId} AND i.batch = ${batch} AND m.brief->>'template' IS NOT NULL
+  `) as { template: string }[];
+  return rows.map((r) => r.template);
 }
 
 /** John re-queues a client's failed renders (after fixing the cause); each costs Higgsfield credit again. Returns how many. */
