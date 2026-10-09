@@ -6,8 +6,9 @@ import type { CarouselAd, StaticAd } from "@/lib/ads-engine";
 import type { MediaBrief } from "@/lib/media";
 
 // Content and ad cards: rendered creatives with downloads, copy for each
-// platform, approve, and "ask for a change". Videos show their script and
-// shot list until rendered, then the video itself.
+// platform, approve, and "ask for a change". Videos and visuals arrive here
+// only once a render has landed (app/studio/[token]/page.tsx); sizes still
+// rendering show a small pill under the finished ones.
 
 type Render = { status: string; url: string | null; aspect: string };
 type Media = Record<string, Render[]>;
@@ -168,7 +169,7 @@ function Body({ item, token, media }: { item: ContentItem; token: string; media?
       </>
     );
   }
-  // Videos and visuals: the finished files, or the brief while they render.
+  // Videos and visuals: the finished files, plus a note for any size still rendering.
   const v = d as unknown as VideoData;
   const done = (media ?? []).filter((m) => m.url);
   const pending = (media ?? []).filter((m) => !m.url);
@@ -187,9 +188,7 @@ function Body({ item, token, media }: { item: ContentItem; token: string; media?
       )}
       {pending.length > 0 && (
         <p className="mt-2 inline-flex rounded-full border border-white/15 px-3 py-1 font-mono text-[11px] text-muted">
-          {pending.some((m) => m.status === "failed") && done.length === 0
-            ? "Video delayed: we're re-making it"
-            : `${kind === "visual" ? "Visual" : "Video"} rendering${pending.length > 1 ? ` (${pending.map((m) => m.aspect).join(", ")})` : ""}: usually ready within the hour`}
+          {`${kind === "visual" ? "Visual" : "Video"} rendering${pending.length > 1 ? ` (${pending.map((m) => m.aspect).join(", ")})` : ""}: usually ready within the hour`}
         </p>
       )}
       <p className="mt-3 text-[15px] font-medium text-ink">{v.title}</p>
