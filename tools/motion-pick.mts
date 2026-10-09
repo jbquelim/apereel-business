@@ -22,9 +22,9 @@ const args = process.argv.slice(2);
 // id=template|a plain description of the product (what the model sees), e.g. 22=pull-back|a white 4-pin CFL socket
 const apply = new Map<number, { template: string | null; product: string | null }>();
 for (const a of args) {
-  const [id, rest] = a.split(/=(.*)/s);
+  const [id, rest] = a.split(/=([^]*)/);
   if (!/^\d+$/.test(id)) continue;
-  const [t, product] = (rest ?? "").split(/\|(.*)/s);
+  const [t, product] = (rest ?? "").split(/\|([^]*)/);
   apply.set(Number(id), { template: t || null, product: product?.trim() || null });
 }
 
