@@ -62,7 +62,8 @@ ${RULES}`,
     const replies = parseJson<{ id?: number | string; data?: Record<string, unknown> }[]>(text) ?? [];
     if (!replies.length) await noteUnreadable(client.id, "content:repair", text);
     for (const r of replies) {
-      const was = chunk.find((c) => c.item.id === Number(r.id))?.item;
+      // Ids as text: bigint ids arrive from the driver as strings, and a strict number compare matched nothing (no repair was ever applied).
+      const was = chunk.find((c) => String(c.item.id) === String(r.id))?.item;
       // Its fields over the original's: a reply that leaves a field out keeps that field as it was.
       if (was && r.data && typeof r.data === "object") out.set(was.id, { ...was.data, ...r.data });
     }
