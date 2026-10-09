@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { neon } from "@neondatabase/serverless";
 import { allowance, getClientByToken, tierFor } from "@/lib/clients";
-import { listContent } from "@/lib/content-engine";
-import { jobsForItems } from "@/lib/media";
+import { listContent, type ContentItem } from "@/lib/content-engine";
+import { jobsForItems, type MediaJob } from "@/lib/media";
 import { getSiteForClient } from "@/lib/site-builder";
 import { StudioItems } from "./studio-items";
 import { WebsiteStudio } from "./website-studio";
@@ -24,6 +24,17 @@ export const metadata: Metadata = { title: "Your studio", robots: { index: false
 export const dynamic = "force-dynamic";
 
 const SERVICE_NAME: Record<string, string> = { "premium-creative": "Content", advertising: "Ads", "web-development": "Website" };
+
+/** Item kinds whose creative is a rendered file (lib/media), not a static image or text. */
+const RENDERED_KINDS = new Set<ContentItem["kind"]>(["video", "animated-ad", "video-ad", "visual"]);
+
+/** True when at least one of the item's renders has finished with a file. Ids are compared as text: bigint columns arrive as strings. */
+function hasRender(jobs: Map<number, MediaJob[]>, itemId: number): boolean {
+  for (const [id, list] of jobs) {
+    if (String(id) === String(itemId)) return list.some((j) => j.status === "done" && !!j.output_url);
+  }
+  return false;
+}
 
 export default async function StudioPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -75,8 +86,12 @@ export default async function StudioPage({ params }: { params: Promise<{ token: 
     const batches = [...new Set(items.map((i) => i.batch))];
     const preparing = !!client.build?.batch && client.build.batch === batches[0] && client.build.status !== "ready";
     const batch = (preparing ? batches[1] : batches[0]) ?? null;
-    const current = items.filter((i) => i.batch === batch);
-    const jobs = await jobsForItems(current.map((i) => i.id));
+    const month = items.filter((i) => i.batch === batch);
+    const jobs = await jobsForItems(month.map((i) => i.id));
+    // A video or visual appears only once a render has landed: an item whose every render is still
+    // queued, running or failed is left out of the client's view (it stays in the database for admin
+    // and the release gate). Static ads, posts and carousels have no render and are unaffected.
+    const current = month.filter((i) => !RENDERED_KINDS.has(i.kind) || hasRender(jobs, i.id));
     body = current.length ? (
       <>
       {preparing && <p className="mt-10 text-[15px] text-muted">This month&apos;s batch is being made and checked. We&apos;ll email you when it&apos;s ready; last month&apos;s is below.</p>}
