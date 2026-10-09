@@ -53,7 +53,9 @@ ${facts.slice(0, 6000)}
 ITEMS:
 ${chunk.map(({ item, issues }) => `ID ${item.id} (${item.kind})\nPROBLEMS: ${issues.map((x) => `${x.check}${x.field ? ` in ${x.field}` : ""}: ${x.detail}`).join("; ")}\nJSON: ${JSON.stringify(item.data)}`).join("\n\n")}
 
-For a "claim" problem, delete the quoted words wherever they appear (don't reword them into a similar claim). Return ONLY JSON: [{ "id": <id>, "data": { ...the full fixed item... } }]
+For a "claim" problem, delete the quoted words wherever they appear (don't reword them into a similar claim).
+For a "cut-off" problem, write that field again as a shorter complete sentence that ends with a full stop and is at least 10 characters under its limit (primaryText 125, headline 40, headlines 30, descriptions 90, text 100); never shorten by dropping letters or trailing off.
+Return ONLY JSON: [{ "id": <id>, "data": { ...the full fixed item... } }]
 
 ${RULES}`,
     }).catch(() => "");
