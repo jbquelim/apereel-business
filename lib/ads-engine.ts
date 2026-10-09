@@ -166,7 +166,7 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
     batch,
     itemKind: "animated-ad",
     mediaKind: "animated-ad",
-    style: "a punchy animated product ad: the photo comes alive with one bold camera move",
+    style: "a punchy animated product ad",
     duration: 6,
     aspect: "1:1",
   });
@@ -174,7 +174,7 @@ export async function generateAdsMonth(client: Client): Promise<{ batch: string;
     batch,
     itemKind: "video-ad",
     mediaKind: "video-ad",
-    style: "a cinematic hero product film, premium lighting and slow deliberate camera work, like a big-brand launch ad",
+    style: "a cinematic hero product film, like a big-brand launch ad",
     duration: 15,
     aspect: "9:16",
     alsoAspects: ["16:9"],

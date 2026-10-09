@@ -266,6 +266,24 @@ export function productFeatures(title: string, photo: { width: number; height: n
   };
 }
 
+/**
+ * A product line the model can picture when the AI's reply is unreadable: the
+ * title without SKUs, specs and certification marks ("a brushed nickel canopy").
+ */
+export function plainProduct(title: string): string {
+  const t = title
+    .replace(/\b[A-Z]{1,6}\d[\w./-]*\b|\b\d+[\w./-]*[A-Z]{2,}[\w./-]*\b/g, " ") // SKUs and part numbers
+    .replace(/\b(c?ULus?|c?CSAus?|UL|CSA|CE|RoHS)\b( (listed|approved|certified))?/gi, " ")
+    .replace(/\b\d+(\.\d+)?\s?(w|v|watts?|volts?|amps?|a|hz|k|awg|in|ips|mm|cm|lbs?)\b\.?/gi, " ")
+    .replace(/\b\d+(-\d+)?(\/\d+)?\s?(in|inch|″)\b\.?/gi, " ")
+    .replace(/[–—]|\s[-]\s/g, ", ")
+    .replace(/\(.*?\)/g, " ")
+    .replace(/[,\s]{2,}/g, ", ")
+    .replace(/^[,\s]+|[,\s.]+$/g, "")
+    .toLowerCase();
+  return `a ${t}`;
+}
+
 // --- Scoring ---
 
 export type Scored<T> = { template: T; score: number; reasons: string[] };

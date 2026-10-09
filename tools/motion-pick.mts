@@ -15,7 +15,7 @@ import { imageSize } from "../lib/image-size";
 import { upgradeImages } from "../lib/image-upgrade";
 import { templateRecord } from "../lib/media";
 import type { MediaBrief, MediaKind } from "../lib/media";
-import { motionBrief, motionById, pickMotion, pickScene, productFeatures, sceneById, scoreMotion, scoreScenes, type Features } from "../lib/motion-templates";
+import { motionBrief, motionById, pickMotion, pickScene, plainProduct, productFeatures, sceneById, scoreMotion, scoreScenes, type Features } from "../lib/motion-templates";
 
 const sql = neon(process.env.DATABASE_URL!);
 const args = process.argv.slice(2);
@@ -26,21 +26,6 @@ for (const a of args) {
   if (!/^\d+$/.test(id)) continue;
   const [t, product] = (rest ?? "").split(/\|([^]*)/);
   apply.set(Number(id), { template: t || null, product: product?.trim() || null });
-}
-
-/** A product line the model can picture: the title without SKUs, specs and certification marks. */
-function plainProduct(title: string): string {
-  const t = title
-    .replace(/\b[A-Z]{1,6}\d[\w./-]*\b|\b\d+[\w./-]*[A-Z]{2,}[\w./-]*\b/g, " ") // SKUs and part numbers
-    .replace(/\b(c?ULus?|c?CSAus?|UL|CSA|CE|RoHS)\b( (listed|approved|certified))?/gi, " ")
-    .replace(/\b\d+(\.\d+)?\s?(w|v|watts?|volts?|amps?|a|hz|k|awg|in|ips|mm|cm|lbs?)\b\.?/gi, " ")
-    .replace(/\b\d+(-\d+)?(\/\d+)?\s?(in|inch|″)\b\.?/gi, " ")
-    .replace(/[–—]|\s[-]\s/g, ", ")
-    .replace(/\(.*?\)/g, " ")
-    .replace(/[,\s]{2,}/g, ", ")
-    .replace(/^[,\s]+|[,\s.]+$/g, "")
-    .toLowerCase();
-  return `a ${t}`;
 }
 
 type Job = { id: number; domain: string; tier: string; kind: MediaKind; status: string; brief: MediaBrief; title: string | null };
