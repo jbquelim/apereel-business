@@ -28,7 +28,9 @@ const CATCH_ALL = /^(all|frontpage|home|sale|new|new-arrivals|best-sellers?|feat
 /** Promotions, not categories ("25% off sitewide", "Black Friday deals"). */
 const PROMO = /\b(sale|off|sitewide|clearance|discount(?:ed)?|deals?|promo|black[- ]friday|cyber[- ]monday|bogo)\b|%/i;
 /** The store's own working collections ("404 recommendations", "Piercing test"), never shown to buyers. */
-const INTERNAL = /\b(test|testing|404|recommendations?|hidden|draft|internal|staff|do[- ]not|upsell|cross[- ]?sell|search|homepage|algolia|klaviyo)\b/i;
+// Also rules and feeds the store keeps for its own systems ("Coffee Retail Exclusions", "EU Related Products
+// (Feeds Cart Page)") and trade-only ranges a retail site shouldn't present ("Wholesale Coffee", "Corporate").
+const INTERNAL = /\b(test|testing|404|recommendations?|hidden|draft|internal|staff|do[- ]not|upsell|cross[- ]?sell|search|homepage|algolia|klaviyo|exclu(?:sions?|ded|de)|feeds?|cart|checkout|related[- ]products|wholesale|b2b|trade[- ]only|corporate|archived?|discontinued|gift[- ]?with[- ]?purchase|gwp|shipping)\b/i;
 
 async function getText(url: string, init?: RequestInit): Promise<{ status: number; text: string } | null> {
   try {
