@@ -59,9 +59,14 @@ export type SceneTemplate = {
   prompt: (s: Slots) => string;
 };
 
-/** Templates proven on a real render (John reviewed it). Until a template is here it isn't used for clients. */
-export const VALIDATED_MOTION = new Set<string>([]);
-export const VALIDATED_SCENES = new Set<string>([]);
+/**
+ * Templates proven on a real render that John reviewed (2026-10-09: push-in and
+ * half orbit on Etlin's animated ads, pull-back on the CFL socket; marble and
+ * velvet, workshop bench on Grand Brass bases). Until a template is here it
+ * isn't used for clients. The rest validate through the MCP at launch.
+ */
+export const VALIDATED_MOTION = new Set<string>(["push-in", "half-orbit", "pull-back"]);
+export const VALIDATED_SCENES = new Set<string>(["marble-velvet", "workshop-bench"]);
 
 /** How many templates a tier draws from, best track record first. */
 export const POOL_BY_TIER: Record<string, number> = { fix: 3, build: 6, grow: 12 };

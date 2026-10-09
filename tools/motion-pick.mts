@@ -19,10 +19,28 @@ import { motionBrief, motionById, pickMotion, pickScene, productFeatures, sceneB
 
 const sql = neon(process.env.DATABASE_URL!);
 const args = process.argv.slice(2);
-const apply = new Map<number, string | null>();
+// id=template|a plain description of the product (what the model sees), e.g. 22=pull-back|a white 4-pin CFL socket
+const apply = new Map<number, { template: string | null; product: string | null }>();
 for (const a of args) {
-  const [id, t] = a.split("=");
-  if (/^\d+$/.test(id)) apply.set(Number(id), t ?? null);
+  const [id, rest] = a.split(/=(.*)/s);
+  if (!/^\d+$/.test(id)) continue;
+  const [t, product] = (rest ?? "").split(/\|(.*)/s);
+  apply.set(Number(id), { template: t || null, product: product?.trim() || null });
+}
+
+/** A product line the model can picture: the title without SKUs, specs and certification marks. */
+function plainProduct(title: string): string {
+  const t = title
+    .replace(/\b[A-Z]{1,6}\d[\w./-]*\b|\b\d+[\w./-]*[A-Z]{2,}[\w./-]*\b/g, " ") // SKUs and part numbers
+    .replace(/\b(c?ULus?|c?CSAus?|UL|CSA|CE|RoHS)\b( (listed|approved|certified))?/gi, " ")
+    .replace(/\b\d+(\.\d+)?\s?(w|v|watts?|volts?|amps?|a|hz|k|awg|in|ips|mm|cm|lbs?)\b\.?/gi, " ")
+    .replace(/\b\d+(-\d+)?(\/\d+)?\s?(in|inch|″)\b\.?/gi, " ")
+    .replace(/[–—]|\s[-]\s/g, ", ")
+    .replace(/\(.*?\)/g, " ")
+    .replace(/[,\s]{2,}/g, ", ")
+    .replace(/^[,\s]+|[,\s.]+$/g, "")
+    .toLowerCase();
+  return `a ${t}`;
 }
 
 type Job = { id: number; domain: string; tier: string; kind: MediaKind; status: string; brief: MediaBrief; title: string | null };
@@ -49,9 +67,10 @@ for (const j of jobs) {
   if (still) {
     const ranked = scoreScenes(f, { record });
     console.log(`   scenes: ${ranked.slice(0, 4).map((r) => `${r.template.id} ${r.score}`).join(" · ")}`);
-    const chosen = apply.has(j.id) ? (apply.get(j.id) ? sceneById(apply.get(j.id)!) : pickScene(f, { record }).template) : null;
+    const a = apply.get(j.id);
+    const chosen = a ? (a.template ? sceneById(a.template) : pickScene(f, { record }).template) : null;
     if (chosen) {
-      const brief: MediaBrief = { ...j.brief, images, template: chosen.id, prompt: chosen.prompt({ product: `the ${title}` }) };
+      const brief: MediaBrief = { ...j.brief, images, template: chosen.id, prompt: chosen.prompt({ product: a?.product ?? plainProduct(title) }) };
       await sql`UPDATE media_jobs SET brief = ${JSON.stringify(brief)}::jsonb, status = 'queued', retries = 0, provider_request_id = NULL, error = NULL, updated_at = now() WHERE id = ${j.id}`;
       console.log(`   → queued with scene "${chosen.name}": ${brief.prompt}`);
     }
@@ -59,9 +78,10 @@ for (const j of jobs) {
     const ranked = scoreMotion(f, { record });
     console.log(`   motion: ${ranked.slice(0, 4).map((r) => `${r.template.id} ${r.score}`).join(" · ")}${ranked.length ? "" : " (none eligible)"}`);
     console.log(`   pick for tier ${j.tier}: ${pickMotion(f, j.tier, { record }).template.name}`);
-    const chosen = apply.has(j.id) ? (apply.get(j.id) ? motionById(apply.get(j.id)!) : pickMotion(f, j.tier, { record }).template) : null;
+    const a = apply.get(j.id);
+    const chosen = a ? (a.template ? motionById(a.template) : pickMotion(f, j.tier, { record }).template) : null;
     if (chosen) {
-      const brief = motionBrief(chosen, { product: `the ${title}` }, f, { title: j.brief.title, duration: j.brief.duration, aspect: j.brief.aspect, images, voiceover: j.brief.voiceover });
+      const brief = motionBrief(chosen, { product: a?.product ?? plainProduct(title) }, f, { title: j.brief.title, duration: j.brief.duration, aspect: j.brief.aspect, images, voiceover: j.brief.voiceover });
       await sql`UPDATE media_jobs SET brief = ${JSON.stringify(brief)}::jsonb, status = 'queued', retries = 0, provider_request_id = NULL, error = NULL, updated_at = now() WHERE id = ${j.id}`;
       console.log(`   → queued with "${chosen.name}": ${brief.prompt}`);
     }
