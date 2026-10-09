@@ -6,7 +6,10 @@ import { historyForMany } from "./market-history";
 import { crawlSite } from "./site-crawl";
 import { platformCatalog } from "./platform-catalog";
 import { uploadedCatalog } from "./catalog-upload";
-import { queueMediaJob, type MediaBrief, type MediaKind } from "./media";
+import { queueMediaJob, templateRecord, usedTemplates, type MediaBrief, type MediaKind } from "./media";
+import { motionBrief, pickMotion, pickScene, plainProduct, productFeatures, type Slots } from "./motion-templates";
+import { drawable } from "./ad-brand";
+import { imageSize } from "./image-size";
 import { storeImages, storedUrls } from "./image-store";
 import { upgradeImages } from "./image-upgrade";
 import { fixItem } from "./content-qa";
@@ -238,9 +241,29 @@ export async function catalogWithPhotos(domain: string): Promise<Product[]> {
 const cut = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 
 /**
- * Video briefs (script, shots, on-screen text and a generation prompt), one
- * per product, built from the product's real photo. Saved as items and
- * queued for rendering.
+ * What a product's photo tells the template score (lib/motion-templates): its
+ * true size and whether the product sits alone on a plain backdrop. A photo
+ * that can't be read scores as unknown rather than stopping the month.
+ */
+async function photoFacts(url: string | null): Promise<{ width: number; height: number; cutout: boolean | null } | null> {
+  if (!url) return null;
+  const size = await imageSize(url).catch(() => null);
+  if (!size) return null;
+  const photo = await drawable(url, 200).catch(() => null);
+  return { width: size.width, height: size.height, cutout: photo ? photo.cutout || photo.plain : null };
+}
+
+/** The AI's description of one product for a render; everything else is the template's. */
+type SlotReply = { productTitle?: string; title?: string; product?: string; surface?: string; caption?: string; voiceover?: string; onScreenText?: string };
+
+const SLOT_RULES = `- "product": one plain line describing the product as the camera sees it: material, colour and form (e.g. "a brushed nickel ceiling canopy with a centre hole"); no SKUs, part numbers, sizes, specs or certification marks.
+- Describe only what is in the photo; never invent parts, colours or finishes.`;
+
+/**
+ * Video briefs, one per product: the camera move, light and shots come from a
+ * tested motion template chosen by score (lib/motion-templates); the AI only
+ * describes the product as the camera sees it and writes the caption. Saved
+ * as items and queued for rendering from the product's real photo.
  */
 export async function writeVideoBriefs(
   client: Client,
@@ -249,11 +272,12 @@ export async function writeVideoBriefs(
   opts: { batch: string; itemKind: string; mediaKind: MediaKind; style: string; duration: number; aspect: MediaBrief["aspect"]; alsoAspects?: MediaBrief["aspect"][] },
 ): Promise<number> {
   if (products.length === 0) return 0;
+  const purpose = `${opts.itemKind}:briefs`;
   const text = await callClaude({
     clientId: client.id,
-    purpose: `${opts.itemKind}:briefs`,
-    maxTokens: 6000,
-    prompt: `Write ${products.length} short video brief(s) for the business below, one per product. Style: ${opts.style}. Each video is about ${opts.duration} seconds, ${opts.aspect}, made from the product's real photo.
+    purpose,
+    maxTokens: 4000,
+    prompt: `Describe each product below for a short video made from its real photo (${opts.style}; about ${opts.duration} seconds, ${opts.aspect}), and write its post caption. The camera work comes from a tested template, not from you: describe only the product.
 
 ${brief}
 
@@ -261,25 +285,35 @@ PRODUCTS:
 ${products.map((p, i) => `${i + 1}. ${p.title}${p.price != null ? ` (${p.currency ?? "$"}${p.price})` : ""}`).join("\n")}
 
 Return ONLY a JSON array, one object per product in order:
-[{ "title": "internal title", "productTitle": "exactly as given", "shots": [{ "seconds": 3, "visual": "what the camera shows", "onScreenText": "max 6 words, optional" }], "voiceover": "optional, max 25 words", "caption": "post caption, 1-2 sentences", "prompt": "one detailed prompt for an image-to-video model animating the product photo: camera move, light, mood; no text in the video" }]
+[{ "productTitle": "exactly as given", "title": "internal title", "product": "one plain line, see the rules", "surface": "optional: the surface it sits on, a few words (e.g. 'a dark matte surface')", "caption": "post caption, 1-2 sentences", "voiceover": "optional, max 25 words", "onScreenText": "optional, max 6 words" }]
 
 ${RULES}
-- Shots add up to about ${opts.duration} seconds. Motion only; never ask the model to render words.`,
+${SLOT_RULES}`,
   });
-  const briefs = parseJson<(MediaBrief & { productTitle: string; caption?: string })[]>(text) ?? [];
+  const replies = parseJson<SlotReply[]>(text) ?? [];
+  // An unreadable reply still gets its videos: the product line is the title made plain.
+  if (!replies.length) await noteUnreadable(client.id, purpose, text);
+  const record = await templateRecord();
+  // Templates this client already got this month, growing with each pick here, so a month varies.
+  const used = await usedTemplates(client.id, opts.batch);
   let n = 0;
-  for (const [i, b] of briefs.slice(0, products.length).entries()) {
-    const product = products.find((p) => p.title === b.productTitle) ?? products[i];
-    const media: MediaBrief = {
-      title: cut(b.title, 120),
+  for (const [i, product] of products.entries()) {
+    const r = replies.find((b) => b.productTitle === product.title) ?? replies[i] ?? {};
+    const features = productFeatures(product.title, await photoFacts(product.image), opts.mediaKind, opts.aspect, []);
+    const pick = pickMotion(features, client.tier, { record, used });
+    used.push(pick.template.id);
+    const slots: Slots = { product: cut(r.product, 200) || plainProduct(product.title), surface: cut(r.surface, 100) || undefined };
+    const media = motionBrief(pick.template, slots, features, {
+      title: cut(r.title, 120) || product.title,
       duration: opts.duration,
       aspect: opts.aspect,
-      images: product?.image ? [product.image] : [],
-      shots: Array.isArray(b.shots) ? b.shots.slice(0, 8).map((s) => ({ seconds: Number(s.seconds) || 2, visual: cut(s.visual, 300), onScreenText: cut(s.onScreenText, 60) || undefined })) : [],
-      voiceover: cut(b.voiceover, 300) || undefined,
-      prompt: cut(b.prompt, 1500),
-    };
-    const itemId = await saveItem(client.id, opts.batch, opts.itemKind, { ...media, productTitle: product?.title ?? b.productTitle, caption: cut(b.caption, 400) }, product ?? null, opts.aspect === "9:16" ? "reels / tiktok" : null);
+      images: product.image ? [product.image] : [],
+      voiceover: cut(r.voiceover, 300) || undefined,
+    });
+    // On-screen text is added in the edit, never rendered: it rides on the closing shot for the studio.
+    const onScreenText = cut(r.onScreenText, 60);
+    if (onScreenText && media.shots.length) media.shots[media.shots.length - 1] = { ...media.shots[media.shots.length - 1], onScreenText };
+    const itemId = await saveItem(client.id, opts.batch, opts.itemKind, { ...media, productTitle: product.title, caption: cut(r.caption, 400) }, product, opts.aspect === "9:16" ? "reels / tiktok" : null);
     await queueMediaJob({ clientId: client.id, itemId, kind: opts.mediaKind, brief: media });
     // Extra sizes of the same film (e.g. 16:9 for YouTube beside 9:16 for Reels and TikTok).
     for (const aspect of opts.alsoAspects ?? []) await queueMediaJob({ clientId: client.id, itemId, kind: opts.mediaKind, brief: { ...media, aspect } });
@@ -353,7 +387,7 @@ export async function generateMonth(client: Client, stage: MonthStage = "posts")
     batch,
     itemKind: "video",
     mediaKind: "short-video",
-    style: "short vertical social video that shows the product off in a few quick moves",
+    style: "a short vertical social video",
     duration: 8,
     aspect: "9:16",
   });
@@ -364,31 +398,50 @@ export async function generateMonth(client: Client, stage: MonthStage = "posts")
 
 /**
  * Premium product visuals: the real product photo as the reference, staged
- * in a premium scene by the image model (lib/media). Claude writes the scene.
+ * in a tested scene chosen by score (lib/motion-templates). The AI only
+ * describes the product as the camera sees it.
  */
 export async function writeVisualBriefs(client: Client, brief: string, products: Product[], batch: string, siteId?: string): Promise<number> {
   if (products.length === 0) return 0;
   const text = await callClaude({
     clientId: client.id,
     purpose: "visuals:briefs",
-    maxTokens: 3000,
-    prompt: `Write a premium product photography scene for each product below, for the business described. The product itself comes from its real photo; you only describe the setting.
+    maxTokens: 2000,
+    prompt: `Describe each product below for a premium product visual made from its real photo, for the business described. The setting comes from a tested scene template, not from you: describe only the product.
 
 ${brief}
 
 PRODUCTS:
 ${products.map((p, i) => `${i + 1}. ${p.title}`).join("\n")}
 
-Return ONLY a JSON array, one per product in order: [{ "productTitle": "exactly as given", "title": "short name for the visual", "prompt": "the scene: surface, background, light, a few props that suit the product and its buyers; editorial, premium, photographic; the product is the hero, centred and sharp" }]`,
+Return ONLY a JSON array, one per product in order: [{ "productTitle": "exactly as given", "title": "short name for the visual", "product": "one plain line, see the rules" }]
+
+${SLOT_RULES}`,
   });
-  const briefs = parseJson<{ productTitle: string; title: string; prompt: string }[]>(text) ?? [];
+  const replies = parseJson<SlotReply[]>(text) ?? [];
+  if (!replies.length) await noteUnreadable(client.id, "visuals:briefs", text);
+  const kind: MediaKind = siteId ? "site-visual" : "product-visual";
+  const aspect: MediaBrief["aspect"] = siteId ? "4:3" : "1:1";
+  const record = await templateRecord();
+  const used = await usedTemplates(client.id, batch);
   let n = 0;
-  for (const [i, b] of briefs.slice(0, products.length).entries()) {
-    const product = products.find((p) => p.title === b.productTitle) ?? products[i];
-    if (!product?.image) continue;
-    const media: MediaBrief = { title: cut(b.title, 120), duration: 0, aspect: siteId ? "4:3" : "1:1", images: [product.image], shots: [], prompt: cut(b.prompt, 1500) };
+  for (const [i, product] of products.entries()) {
+    if (!product.image) continue;
+    const r = replies.find((b) => b.productTitle === product.title) ?? replies[i] ?? {};
+    const features = productFeatures(product.title, await photoFacts(product.image), kind, aspect, []);
+    const scene = pickScene(features, { record, used }).template;
+    used.push(scene.id);
+    const media: MediaBrief = {
+      title: cut(r.title, 120) || product.title,
+      duration: 0,
+      aspect,
+      images: [product.image],
+      shots: [],
+      prompt: scene.prompt({ product: cut(r.product, 200) || plainProduct(product.title) }),
+      template: scene.id,
+    };
     const itemId = siteId ? null : await saveItem(client.id, batch, "visual", { ...media, productTitle: product.title }, product, null);
-    await queueMediaJob({ clientId: client.id, itemId, siteId: siteId ?? null, kind: siteId ? "site-visual" : "product-visual", brief: media });
+    await queueMediaJob({ clientId: client.id, itemId, siteId: siteId ?? null, kind, brief: media });
     n++;
   }
   return n;
