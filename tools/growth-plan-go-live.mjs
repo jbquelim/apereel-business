@@ -3,8 +3,17 @@
 // Before running:
 //   1. Claim the Stripe sandbox (or use your live Stripe account) and create a
 //      RESTRICTED key (Developers → API keys → Create restricted key) with:
-//        Checkout Sessions: Write     (to take payments)
+//        Checkout Sessions: Write     (analyses and service checkouts)
+//        Products: Write, Prices: Write  (tier prices are created on first sale)
+//        Subscriptions: Write         (monthly services, website hosting)
+//        Customers: Write             (customers made at checkout)
+//        Customer portal: Write       (the studio's billing button)
+//        PaymentIntents: Read         (website card kept for hosting)
+//        Tax settings: Read, Tax registrations: Read  (tax only when registered)
 //        Webhook Endpoints: Write     (so this script can register the webhook)
+//      Client stores taking payments through Apereel (lib/connect) also need
+//      Connect: Accounts and Account links: Write; leave out until that's offered.
+//      In live mode also save Settings → Billing → Customer portal once.
 //   2. Add it to .env.local (git-ignored; never paste it into chat):
 //        STRIPE_LIVE_SECRET_KEY=rk_live_...
 //
@@ -27,7 +36,14 @@ import Stripe from "stripe";
 
 const DRY = process.argv.includes("--dry-run");
 const WEBHOOK_URL = "https://www.apereel.com/api/stripe/webhook";
-const EVENTS = ["checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed"];
+// Every event app/api/stripe/webhook handles: payments, and monthly plans ending or failing to renew.
+const EVENTS = [
+  "checkout.session.completed",
+  "checkout.session.async_payment_succeeded",
+  "checkout.session.async_payment_failed",
+  "customer.subscription.deleted",
+  "invoice.payment_failed",
+];
 
 const env = Object.fromEntries(
   readFileSync(new URL("../.env.local", import.meta.url), "utf8")
@@ -63,7 +79,7 @@ const existing = (await stripe.webhookEndpoints.list({ limit: 100 })).data.filte
 for (const e of existing) await stripe.webhookEndpoints.del(e.id);
 const endpoint = await stripe.webhookEndpoints.create({
   url: WEBHOOK_URL,
-  description: "Apereel Growth Plan fulfillment",
+  description: "Apereel payments (analyses, services, hosting)",
   enabled_events: EVENTS,
 });
 if (!endpoint.livemode) {
