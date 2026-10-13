@@ -23,7 +23,8 @@ export default async function PricingPage() {
           Plans show a price for any tier that has one.
         </p>
         <PricingForm
-          services={services.map((s) => ({
+          // Research prices are the analysis checkout's (lib/analysis-tiers), not edited here.
+          services={services.filter((s) => s.slug !== "research-competitive-analysis").map((s) => ({
             slug: s.slug,
             tag: s.tag,
             tiers: s.tiers.map((t) => ({ id: t.id, name: t.name, cadence: t.cadence, price: t.price, from: t.pricePrefix === "from" })),

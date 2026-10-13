@@ -139,7 +139,7 @@ export default async function PricingPage() {
         id="website"
         eyebrow="02 · Website"
         title="A better site, built by AI from your own business."
-        intro="Every tier starts from our library of templates for your industry and our crawl of your site: your products, photos and prices come in, and every fix from your analysis is built in. You ask for changes in plain words and the AI makes them. The tiers differ in design and in how many changes you can ask for. Your analysis fee comes off the price."
+        intro="Every tier starts from our library of templates for your industry and our crawl of your site: your products, photos and prices come in, and every fix from your analysis is built in, so SEO and conversion optimization come with every site. You ask for changes in plain words and the AI makes them. The tiers differ in design and in how many changes you can ask for. Your analysis fee comes off the price."
       >
         <Cards cards={web.tiers.map(fromTier)} featured="build" cta={{ href: (c) => `/start?service=web-development&tier=${c.id}`, label: (c) => `Get ${c.label}` }} />
       </Service>
@@ -165,7 +165,7 @@ export default async function PricingPage() {
       <section className="border-t border-white/10 py-12">
         <p className="mx-auto w-full max-w-[1200px] px-6 text-[13px] leading-relaxed text-muted sm:px-8">
           USD, plus tax where it applies. Monthly services run month to month; cancel anytime. Websites include
-          12 months of hosting, then $10 a month plus tax. An AI change
+          12 months of hosting, then $10 a month plus tax. After launch, a conversion retest and the fix it calls for is $100 each. An AI change
           request is one thing you ask for, such as &ldquo;make the headline shorter&rdquo; or &ldquo;use the
           blue version&rdquo;. Buy any service on its own.
         </p>

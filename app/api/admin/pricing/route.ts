@@ -16,6 +16,7 @@ export async function POST(request: Request) {
   const valid = (body.prices ?? []).filter(
     (p) =>
       SERVICE_TIERS.some((s) => s.slug === p.slug) &&
+      p.slug !== "research-competitive-analysis" &&
       ["fix", "build", "grow"].includes(p.tier) &&
       (p.price === null || (Number.isInteger(p.price) && p.price > 0 && p.price < 1_000_000)) &&
       (p.pricePrefix === null || p.pricePrefix === "from"),

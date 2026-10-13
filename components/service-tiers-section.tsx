@@ -10,7 +10,23 @@ const subscribe = () => () => {};
 const previewing = () => new URLSearchParams(window.location.search).get("tiers") === "preview";
 
 /** `service` is passed only once priced; otherwise preview mode fetches the draft. */
-export function ServiceTiersSection({ service: priced, slug }: { service: ServiceTiers | null; slug: string }) {
+export function ServiceTiersSection({
+  service: priced,
+  slug,
+  heading = "Start where it makes the biggest difference.",
+  note,
+  addOn,
+  cta = { href: "#contact", label: "Talk about which fits" },
+}: {
+  service: ServiceTiers | null;
+  slug: string;
+  heading?: string;
+  /** A line under the heading (e.g. why a website's tiers are shown on the SEO page). */
+  note?: string;
+  /** A priced extra shown under the tiers. */
+  addOn?: { label: string; detail: string };
+  cta?: { href: string; label: string };
+}) {
   const preview = useSyncExternalStore(subscribe, previewing, () => false);
   const [draft, setDraft] = useState<ServiceTiers | null>(null);
   useEffect(() => {
@@ -34,8 +50,9 @@ export function ServiceTiersSection({ service: priced, slug }: { service: Servic
       <div className="mx-auto w-full max-w-[1120px] px-6 sm:px-8">
         <p className="font-mono text-[11px] tracking-[0.24em] text-electric uppercase">Ways to work together</p>
         <h2 className="font-display mt-4 text-3xl font-normal tracking-[-0.02em] text-ink sm:text-4xl">
-          Start where it makes the biggest difference.
+          {heading}
         </h2>
+        {note && <p className="mt-4 max-w-3xl text-[16px] leading-relaxed text-muted">{note}</p>}
         {!isPriced(service) && (
           <p className="mt-4 font-mono text-[12px] text-signal">Preview: prices not set yet.</p>
         )}
@@ -62,11 +79,16 @@ export function ServiceTiersSection({ service: priced, slug }: { service: Servic
             </div>
           ))}
         </div>
+        {addOn && (
+          <p className="mt-6 max-w-3xl text-[15px] leading-relaxed text-ink/85">
+            <span className="font-medium text-ink">{addOn.label}.</span> {addOn.detail}
+          </p>
+        )}
         <a
-          href="#contact"
+          href={cta.href}
           className="press-scale mt-8 inline-flex h-11 items-center rounded-full bg-electric px-6 text-[13px] font-semibold tracking-[0.06em] text-navy uppercase transition-colors hover:bg-electric-deep"
         >
-          Talk about which fits
+          {cta.label}
         </a>
       </div>
     </section>

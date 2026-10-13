@@ -5,7 +5,22 @@
 // unpriced, its tier table stays off the public service page (preview with
 // ?tiers=preview) and reports say the price is confirmed on a call.
 
+import { ANALYSIS_TIERS } from "./analysis-tiers";
+
 export type TierId = "fix" | "build" | "grow";
+
+/**
+ * SEO and conversion optimization are part of every website (web-development),
+ * not services bought on their own. Their pages point to the website tiers.
+ */
+export const INCLUDED_IN_WEBSITE: Record<string, string> = {
+  seo: "SEO is built into every Apereel website: titles, headings, product data for Google and a sitemap. Custom and Signature add a full catalog structured around how buyers search.",
+  "conversion-optimization":
+    "Conversion optimization is built into every Apereel website: every conversion fix from your analysis is part of the build, and Custom and Signature set your product pages against your competitors'.",
+};
+
+/** After launch: one conversion retest and the fix it calls for. */
+export const CONVERSION_RETEST = { price: 100, label: "Conversion retest and fix", detail: "One test on your live site and the fix it calls for, $100 each, whenever you want one." };
 
 export type Tier = {
   id: TierId;
@@ -30,91 +45,19 @@ export const tierLabel = (t: Tier) => t.label ?? (t.id === "fix" ? "Fix" : t.id 
 export type ServiceTiers = { slug: string; tag: string; tiers: [Tier, Tier, Tier] };
 
 export const SERVICE_TIERS: ServiceTiers[] = [
+  // Research is the three paid analyses (lib/analysis-tiers): one source for names, scope and price.
   {
     slug: "research-competitive-analysis",
     tag: "Research & Competitive Analysis",
-    tiers: [
-      {
-        id: "fix",
-        name: "Competitive snapshot",
-        cadence: "one-time",
-        summary: "A fast, evidence-based read on where you stand.",
-        scope: [
-          "Your assortment and pricing against your top five competitors",
-          "The gaps worth acting on, ranked by likely impact",
-          "A walkthrough call to agree what to do first",
-        ],
-        price: null,
-      },
-      {
-        id: "build",
-        name: "Market deep dive",
-        cadence: "project",
-        summary: "The full picture before you commit budget.",
-        scope: [
-          "Category-by-category assortment and price mapping",
-          "Demand mapping: what buyers search for that the market underserves",
-          "An opportunity map with a sequenced plan",
-        ],
-        price: null,
-        pricePrefix: "from",
-      },
-      {
-        id: "grow",
-        name: "Market watch",
-        cadence: "monthly",
-        summary: "Know when competitors move, before it costs you.",
-        scope: [
-          "Monthly tracking of competitor prices, catalogs and marketing tools",
-          "Alerts when a competitor makes a significant move",
-          "A quarterly review of what changed and what to do",
-        ],
-        price: null,
-      },
-    ],
-  },
-  {
-    slug: "seo",
-    tag: "SEO",
-    tiers: [
-      {
-        id: "fix",
-        name: "Technical and on-page fixes",
-        cadence: "one-time",
-        summary: "Fix what stops Google understanding your pages.",
-        scope: [
-          "Titles, headings, meta descriptions and canonical tags on key pages",
-          "Product and breadcrumb structured data",
-          "Indexing and crawl issues",
-        ],
-        price: null,
-      },
-      {
-        id: "build",
-        name: "Catalog architecture",
-        cadence: "project",
-        summary: "Turn your catalog's depth into rankings.",
-        scope: [
-          "Category and product page structure built around how buyers search",
-          "A keyword-to-page map for your commercial searches",
-          "Category hub content that earns rankings",
-        ],
-        price: null,
-        pricePrefix: "from",
-      },
-      {
-        id: "grow",
-        name: "Monthly SEO",
-        cadence: "monthly",
-        summary: "Compounding visibility, reported against revenue.",
-        scope: [
-          "New and improved pages every month",
-          "Ranking and search traffic tracking",
-          "A monthly report tied to leads and sales",
-        ],
-        price: null,
-      },
-    ],
+    tiers: ANALYSIS_TIERS.map((a, i) => ({
+      id: (["fix", "build", "grow"] as const)[i],
+      label: a.name,
+      name: a.tagline,
+      cadence: "one-time",
+      summary: a.delivery,
+      scope: a.includes,
+      price: a.priceCents / 100,
+    })) as [Tier, Tier, Tier],
   },
   {
     slug: "advertising",
@@ -180,7 +123,8 @@ export const SERVICE_TIERS: ServiceTiers[] = [
         scope: [
           "A template for your industry from our library",
           "Your products, photos and prices brought in from our crawl of your site",
-          "Every fix from your analysis built in: product data for Google, titles, headings",
+          "SEO built in: titles, headings, product data for Google and a sitemap",
+          "Every conversion fix from your analysis built in",
           "Up to 5 pages",
           "Hosting for 12 months included, then $10 a month",
           "10 AI change requests",
@@ -198,6 +142,7 @@ export const SERVICE_TIERS: ServiceTiers[] = [
           "Everything in Template",
           "Layouts designed around what makes you different, from your analysis",
           "Product pages set up to beat your competitors', measured page by page",
+          "Catalog SEO: categories structured around how buyers search",
           "Scroll animation and interactive sections",
           "Up to 15 pages, your full catalog",
           "Hosting for 12 months included, then $10 a month",
@@ -223,49 +168,6 @@ export const SERVICE_TIERS: ServiceTiers[] = [
         ],
         price: 500,
         requests: 60,
-      },
-    ],
-  },
-  {
-    slug: "conversion-optimization",
-    tag: "Conversion Optimization",
-    tiers: [
-      {
-        id: "fix",
-        name: "Purchase-path audit",
-        cadence: "one-time",
-        summary: "Find where buyers drop off, and fix the quick wins.",
-        scope: [
-          "Your path from landing to purchase or quote reviewed",
-          "Decision-confidence gaps: pricing, shipping, returns, trust",
-          "Quick wins implemented",
-        ],
-        price: null,
-      },
-      {
-        id: "build",
-        name: "Discovery and product page rebuild",
-        cadence: "project",
-        summary: "Help buyers find the right product and choose it.",
-        scope: [
-          "Navigation, filters and search rebuilt",
-          "Product and category pages redesigned for confidence",
-          "Quote and checkout flows simplified",
-        ],
-        price: null,
-        pricePrefix: "from",
-      },
-      {
-        id: "grow",
-        name: "Monthly testing program",
-        cadence: "monthly",
-        summary: "Measured improvement, month after month.",
-        scope: [
-          "A testing roadmap prioritised by revenue impact",
-          "Tests designed, built and analysed",
-          "A monthly results report",
-        ],
-        price: null,
       },
     ],
   },
@@ -347,8 +249,10 @@ export function recommendTiers(
   const groups = new Map<string, { service: ServiceTiers; tier: Tier; covers: number[] }>();
   const seenServices = new Set<string>();
   priorities.forEach((p, i) => {
-    const service = tiersForService(p.service, services);
-    if (!service) return;
+    // SEO and conversion work is part of the website; research is the analysis they already bought.
+    const slug = /\b(seo|conversion)/i.test(p.service) ? "web-development" : p.service;
+    const service = tiersForService(slug, services);
+    if (!service || service.slug === "research-competitive-analysis") return;
     seenServices.add(service.slug);
     const tierId: TierId = p.effort === "high" ? "build" : "fix";
     const key = `${service.slug}:${tierId}`;
