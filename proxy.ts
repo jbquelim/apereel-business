@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { COMMERCE_PATHS, commerceOn } from "@/lib/commerce";
 
 // Customer websites on their own domains: any host that isn't Apereel's is
 // rewritten to /sites/_host/<host>/<path>, which renders that customer's
@@ -8,7 +9,13 @@ const OWN_HOST = /(^|\.)apereel\.com$|\.vercel\.app$|^localhost$|^127\.0\.0\.1$/
 
 export function proxy(request: NextRequest) {
   const host = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
-  if (!host || OWN_HOST.test(host)) return NextResponse.next();
+  if (!host || OWN_HOST.test(host)) {
+    // While commerce is off on the live site its pages 404 there.
+    if (!commerceOn && COMMERCE_PATHS.test(request.nextUrl.pathname)) {
+      return NextResponse.rewrite(new URL("/_not-found", request.url));
+    }
+    return NextResponse.next();
+  }
   const url = request.nextUrl.clone();
   url.pathname = `/sites/_host/${host}${request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname}`;
   return NextResponse.rewrite(url);

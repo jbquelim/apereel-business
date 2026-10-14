@@ -1,3 +1,5 @@
+import { commerceOn } from "@/lib/commerce";
+
 export const site = {
   name: "Apereel",
   tagline: "Business-First Digital Growth",
@@ -28,7 +30,7 @@ export const site = {
     { href: "/work", label: "Case Studies" },
     { href: "/approach", label: "Approach" },
     { href: "/services", label: "Services" },
-    { href: "/pricing", label: "Pricing" },
+    ...(commerceOn ? [{ href: "/pricing", label: "Pricing" }] : []),
     { href: "/contact", label: "Contact" },
   ],
 } as const;

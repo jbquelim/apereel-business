@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { commerceOn } from "@/lib/commerce";
 import { useEffect, useRef, type ReactNode } from "react";
 import { LBM_OVERLAYS } from "@/components/lbm-overlays";
 
@@ -63,9 +64,9 @@ const CHAPTERS = [
     description:
       "Create posts and short videos that showcase your products and expertise on the platforms your customers already use, so more people discover your business and stay connected.",
     points: ["Content that connects", "Consistent visibility", "A growing following"],
-    href: "/pricing#content",
+    href: commerceOn ? "/pricing#content" : "/services/premium-creative",
     linkLabel: "content",
-    linkText: "Explore content packages",
+    linkText: commerceOn ? "Explore content packages" : undefined,
   },
   {
     id: "advertising",

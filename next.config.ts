@@ -6,6 +6,10 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Read by lib/commerce (server and client) to tell the live site from staging.
+  // VERCEL_URL is set only on real Vercel builds; a pulled .env.local copies
+  // VERCEL_ENV=production but leaves it blank.
+  env: { APEREEL_DEPLOY_ENV: (process.env.VERCEL_URL && process.env.VERCEL_ENV) || "development" },
   // Rendered site visuals (full-size PNGs) are served resized and compressed (lib/site-render optimizeImages).
   images: {
     remotePatterns: [

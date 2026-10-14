@@ -1,3 +1,4 @@
+import { commerceOn } from "@/lib/commerce";
 import type { GrowthReport } from "@/lib/growth-report";
 import { priceLabel, recommendTiers, tierLabel, type ServiceTiers } from "@/lib/service-tiers";
 import { BuyerDemandSection } from "@/components/buyer-demand-section";
@@ -364,7 +365,7 @@ function HowWeCanHelp({
           </div>
         ))}
       </div>
-      {grow && (
+      {grow && commerceOn && (
         <p className="mt-5 max-w-3xl text-[14px] leading-relaxed text-muted">
           This plan spans several areas.{" "}
           <a href="/pricing" className="text-electric underline underline-offset-4">See every service and its tiers</a>{" "}

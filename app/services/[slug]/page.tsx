@@ -1,3 +1,4 @@
+import { commerceOn } from "@/lib/commerce";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -129,7 +130,7 @@ export default async function ServicePage({
         </Container>
       </section>
 
-      {tiers && (
+      {tiers && commerceOn && (
         <ServiceTiersSection
           service={isPriced(tiers) ? tiers : null}
           slug={tiers.slug}

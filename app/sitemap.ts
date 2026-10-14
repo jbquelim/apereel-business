@@ -1,3 +1,4 @@
+import { commerceOn } from "@/lib/commerce";
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/site";
 import { servicePages } from "@/lib/service-pages";
@@ -11,7 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       "work",
       "approach",
       "services",
-      "pricing",
+      ...(commerceOn ? ["pricing"] : []),
       "contact",
       ...(process.env.NEXT_PUBLIC_GROWTH_PLAN === "on" ? ["growth-plan"] : []),
     ].map((path) => ({

@@ -1,5 +1,6 @@
 "use client";
 
+import { commerceOn } from "@/lib/commerce";
 import { useState } from "react";
 import { BuyerDemandSection, type DemandData } from "@/components/buyer-demand-section";
 import { ANALYSIS_TIERS, formatUsd, type AnalysisTierId } from "@/lib/analysis-tiers";
@@ -1321,7 +1322,7 @@ function AuditResults({
         </div>
       )}
 
-      {lead && <GrowthPlanOffer lead={lead} />}
+      {lead && commerceOn && <GrowthPlanOffer lead={lead} />}
     </div>
   );
 }
