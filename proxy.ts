@@ -12,7 +12,7 @@ export function proxy(request: NextRequest) {
   if (!host || OWN_HOST.test(host)) {
     // While commerce is off on the live site its pages 404 there.
     if (!commerceOn && COMMERCE_PATHS.test(request.nextUrl.pathname)) {
-      return NextResponse.rewrite(new URL("/_not-found", request.url));
+      return NextResponse.rewrite(new URL("/_not-found", request.url), { status: 404 });
     }
     return NextResponse.next();
   }
